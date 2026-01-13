@@ -140,6 +140,66 @@ function processTemplate(template: string, ctx: any, parentCtx?: any): string {
         result += processTemplate(elseContent, ctx, parentCtx);
       }
 
+    } else if (tagContent.startsWith('#with ')) {
+      // {{#with (lookup obj key)}} or {{#with path}}
+      const withExpr = tagContent.slice(6).trim();
+      const closeTag = '{{/with}}';
+
+      // Find matching {{/with}}
+      const closePos = findMatchingCloseWith(template, pos);
+      if (closePos === -1) {
+        result += `{{${tagContent}}}`;
+        continue;
+      }
+
+      const blockContent = template.slice(pos, closePos);
+      pos = closePos + closeTag.length;
+
+      // Handle (lookup obj key) expression
+      const lookupMatch = withExpr.match(/^\(lookup\s+([^\s]+)\s+([^\)]+)\)$/);
+      let withValue;
+      if (lookupMatch) {
+        const objPath = lookupMatch[1];
+        const keyPath = lookupMatch[2].trim();
+        let obj = getValue(ctx, objPath);
+        if (obj === undefined && parentCtx) obj = getValue(parentCtx, objPath);
+        let key = getValue(ctx, keyPath);
+        if (key === undefined && parentCtx) key = getValue(parentCtx, keyPath);
+        withValue = obj?.[key];
+      } else {
+        withValue = getValue(ctx, withExpr);
+        if (withValue === undefined && parentCtx) {
+          withValue = getValue(parentCtx, withExpr);
+        }
+      }
+
+      if (isTruthy(withValue)) {
+        result += processTemplate(blockContent, withValue, ctx);
+      }
+
+    } else if (tagContent.startsWith('#unless ')) {
+      // {{#unless condition}} - inverse of #if
+      const condition = tagContent.slice(8).trim();
+      const closeTag = '{{/unless}}';
+
+      const closePos = findMatchingCloseUnless(template, pos);
+      if (closePos === -1) {
+        result += `{{${tagContent}}}`;
+        continue;
+      }
+
+      const blockContent = template.slice(pos, closePos);
+      pos = closePos + closeTag.length;
+
+      let conditionValue = getValue(ctx, condition);
+      if (conditionValue === undefined && parentCtx) {
+        conditionValue = getValue(parentCtx, condition);
+      }
+
+      if (!isTruthy(conditionValue)) {
+        result += processTemplate(blockContent, ctx, parentCtx);
+      }
+
     } else if (tagContent.startsWith('#each ')) {
       // {{#each array}}
       const arrayPath = tagContent.slice(6).trim();
@@ -258,6 +318,54 @@ function findMatchingCloseEach(template: string, startPos: number): number {
   return -1;
 }
 
+// Find matching {{/with}} accounting for nested #with blocks
+function findMatchingCloseWith(template: string, startPos: number): number {
+  let depth = 1;
+  let pos = startPos;
+
+  while (pos < template.length && depth > 0) {
+    const nextWith = template.indexOf('{{#with ', pos);
+    const nextClose = template.indexOf('{{/with}}', pos);
+
+    if (nextClose === -1) return -1;
+
+    if (nextWith !== -1 && nextWith < nextClose) {
+      depth++;
+      pos = nextWith + 8;
+    } else {
+      depth--;
+      if (depth === 0) return nextClose;
+      pos = nextClose + 9;
+    }
+  }
+
+  return -1;
+}
+
+// Find matching {{/unless}} accounting for nested #unless blocks
+function findMatchingCloseUnless(template: string, startPos: number): number {
+  let depth = 1;
+  let pos = startPos;
+
+  while (pos < template.length && depth > 0) {
+    const nextUnless = template.indexOf('{{#unless ', pos);
+    const nextClose = template.indexOf('{{/unless}}', pos);
+
+    if (nextClose === -1) return -1;
+
+    if (nextUnless !== -1 && nextUnless < nextClose) {
+      depth++;
+      pos = nextUnless + 10;
+    } else {
+      depth--;
+      if (depth === 0) return nextClose;
+      pos = nextClose + 11;
+    }
+  }
+
+  return -1;
+}
+
 // Find {{else}} at the current nesting level only
 function findElseInBlock(block: string): number {
   let depth = 0;
@@ -301,6 +409,19 @@ function findElseInBlock(block: string): number {
 
 // Process a variable or helper tag
 function processVariable(tagContent: string, ctx: any, parentCtx?: any): string {
+  // {{timestamp}} - current render time
+  if (tagContent === 'timestamp') {
+    return new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+  }
+
+  // {{encodeUri path}} - URL encode a value
+  if (tagContent.startsWith('encodeUri ')) {
+    const path = tagContent.slice(10).trim();
+    let value = getValue(ctx, path);
+    if (value === undefined && parentCtx) value = getValue(parentCtx, path);
+    return encodeURIComponent(String(value || ''));
+  }
+
   // {{formatCurrency path}}
   if (tagContent.startsWith('formatCurrency ')) {
     const path = tagContent.slice(15).trim();

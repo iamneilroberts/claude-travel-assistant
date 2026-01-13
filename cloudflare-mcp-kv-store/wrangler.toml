@@ -7,11 +7,21 @@ compatibility_date = "2024-09-23"
 [[kv_namespaces]]
 binding = "TRIPS"
 id = "aa119fcdabfe40858f1ce46a5fbf4563" 
-preview_id = "aa119fcdabfe40858f1ce46a5fbf4563" 
+preview_id = "aa119fcdabfe40858f1ce46a5fbf4563"
+
+# R2 bucket for image storage
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "travel-media"
 
 [vars]
 # Security: Comma-separated list of valid keys
 # Each key isolates that user's data via key prefix in KV
-AUTH_KEYS = "Home.Star1,Susie.Star2,Matt.Star3,Test.Alpha1,Test.Beta2,Test.Gamma3"
+AUTH_KEYS = "Kim.d63b7658,Matt.7110274c,Neil.38ecccf5,Susie.65439631,Test.Alpha1,Test.Beta2,Test.Gamma3"
 # GitHub repo for publishing (token set via wrangler secret)
 GITHUB_REPO = "iamneilroberts/SoMoTravel.us"
+# Google Maps API key (for embedded maps in published pages)
+GOOGLE_MAPS_API_KEY = "AIzaSyB4ZqEv-J8jBIk3MNxVblvb6MexsuwkLMA"
+# Stripe publishable key (public, safe to include here)
+# Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET via: wrangler secret put STRIPE_SECRET_KEY
+STRIPE_PUBLISHABLE_KEY = ""

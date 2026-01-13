@@ -244,6 +244,84 @@ export const DEFAULT_TEMPLATE = `<!DOCTYPE html>
         .badge-pending { background: #fff3cd; color: #856404; }
         .badge-phase { background: var(--primary); color: white; }
 
+        /* Video Embeds */
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .video-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .video-embed {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            height: 0;
+            overflow: hidden;
+        }
+
+        .video-embed iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .video-caption {
+            padding: 12px 15px;
+            font-size: 0.95em;
+            color: var(--text);
+            background: var(--bg-light);
+        }
+
+        /* Map Section */
+        .map-item {
+            margin-bottom: 20px;
+        }
+        .map-item:last-child {
+            margin-bottom: 0;
+        }
+        .map-label {
+            margin: 0 0 10px 0;
+            font-size: 1em;
+            color: var(--text);
+        }
+        .map-container {
+            border-radius: var(--radius);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .map-container iframe {
+            width: 100%;
+            height: 300px;
+            border: none;
+        }
+
+        /* Inline maps and videos (contextual) */
+        .lodging-item {
+            margin-bottom: 25px;
+        }
+        .lodging-item:last-child {
+            margin-bottom: 0;
+        }
+        .inline-map {
+            margin-top: 10px;
+        }
+        .inline-map .map-container iframe {
+            height: 250px;
+        }
+        .inline-videos .video-grid {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+
         .footer {
             text-align: center;
             padding: 30px;
@@ -265,6 +343,359 @@ export const DEFAULT_TEMPLATE = `<!DOCTYPE html>
             body { max-width: none; padding: 0; }
             .header { background: var(--primary) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
+
+        /* Image Gallery */
+        .hero-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .hero-gallery.single-image {
+            grid-template-columns: 1fr;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .gallery-image {
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .gallery-image img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.3s;
+        }
+
+        .hero-gallery.single-image .gallery-image img {
+            height: 350px;
+        }
+
+        .gallery-image:hover img {
+            transform: scale(1.02);
+        }
+
+        .gallery-image .caption {
+            padding: 8px 12px;
+            font-size: 0.85em;
+            color: var(--text-light);
+            background: var(--bg-light);
+        }
+
+        .inline-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .inline-gallery .gallery-image img {
+            height: 120px;
+        }
+
+        .inline-gallery .gallery-image .caption {
+            padding: 6px 8px;
+            font-size: 0.8em;
+        }
+
+        /* Tiered Pricing Comparison */
+        .tiers-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .tier-card {
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            background: white;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .tier-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+
+        .tier-card.recommended {
+            border-color: var(--primary);
+            box-shadow: 0 4px 16px rgba(44, 95, 45, 0.2);
+        }
+
+        .tier-header {
+            padding: 20px;
+            text-align: center;
+            background: var(--bg-light);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tier-card.recommended .tier-header {
+            background: var(--primary);
+            color: white;
+        }
+
+        .tier-name {
+            font-size: 1.3em;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .tier-description {
+            font-size: 0.9em;
+            color: var(--text-light);
+        }
+
+        .tier-card.recommended .tier-description {
+            color: rgba(255,255,255,0.85);
+        }
+
+        .tier-price {
+            padding: 20px;
+            text-align: center;
+            background: var(--bg-highlight);
+        }
+
+        .tier-price .total {
+            font-size: 2em;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .tier-price .per-person {
+            font-size: 0.95em;
+            color: var(--text-light);
+            margin-top: 5px;
+        }
+
+        .tier-details {
+            padding: 20px;
+        }
+
+        .tier-details h5 {
+            font-size: 0.85em;
+            text-transform: uppercase;
+            color: var(--text-light);
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+        }
+
+        .tier-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.95em;
+        }
+
+        .tier-item:last-child { border-bottom: none; }
+
+        .tier-item .check {
+            color: var(--secondary);
+            font-weight: bold;
+        }
+
+        .tier-badge {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        /* Mobile: Stack tiers vertically with compact layout */
+        @media (max-width: 800px) {
+            .tiers-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .tier-card {
+                display: grid;
+                grid-template-columns: 1fr auto;
+                grid-template-rows: auto auto;
+            }
+
+            .tier-header {
+                grid-column: 1 / -1;
+                padding: 15px;
+            }
+
+            .tier-price {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                padding: 15px 20px;
+                border-left: 1px solid var(--border);
+            }
+
+            .tier-price .total {
+                font-size: 1.5em;
+            }
+
+            .tier-details {
+                padding: 15px;
+                grid-column: 1;
+                grid-row: 2;
+            }
+
+            .tier-card.recommended {
+                order: -1; /* Show recommended first on mobile */
+            }
+        }
+
+        /* Very small screens: Full stack */
+        @media (max-width: 480px) {
+            .tier-card {
+                display: block;
+            }
+
+            .tier-price {
+                border-left: none;
+                border-top: 1px solid var(--border);
+            }
+
+            .tier-name { font-size: 1.1em; }
+            .tier-price .total { font-size: 1.4em; }
+        }
+
+        /* Comment buttons and modal */
+        .comment-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 12px;
+            font-size: 0.85em;
+            color: var(--text-light);
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .comment-btn:hover {
+            background: var(--bg-light);
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .comment-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .comment-modal.active { display: flex; }
+        .comment-form {
+            background: white;
+            padding: 25px;
+            border-radius: var(--radius);
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .comment-form h3 {
+            margin-bottom: 15px;
+            color: var(--primary);
+        }
+        .comment-form input,
+        .comment-form textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 1em;
+        }
+        .comment-form textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .comment-form-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .comment-form button {
+            padding: 10px 20px;
+            border-radius: var(--radius);
+            font-size: 1em;
+            cursor: pointer;
+        }
+        .comment-form .cancel-btn {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+        .comment-form .submit-btn {
+            background: var(--primary);
+            border: none;
+            color: white;
+        }
+        .comment-form .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .comment-success {
+            text-align: center;
+            padding: 20px;
+            color: var(--primary);
+        }
+
+        /* Reserve Now button */
+        .reserve-btn {
+            display: block;
+            width: 100%;
+            padding: 18px 30px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            font-size: 1.2em;
+            font-weight: 600;
+            border-radius: var(--radius);
+            margin: 30px 0;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .reserve-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .reserve-section {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .reserve-section p {
+            color: var(--text-light);
+            margin-bottom: 15px;
+        }
+
+        /* General comment button */
+        .general-comment {
+            text-align: center;
+            margin: 20px 0;
+        }
     </style>
 </head>
 <body>
@@ -273,6 +704,17 @@ export const DEFAULT_TEMPLATE = `<!DOCTYPE html>
         <div class="subtitle">{{meta.destination}}</div>
         {{#if meta.dates}}<div class="dates">{{meta.dates}}</div>{{/if}}
     </div>
+
+    {{#if images.hero}}
+    <div class="hero-gallery{{#if images.hero.length}}{{#unless images.hero.[1]}} single-image{{/unless}}{{/if}}">
+        {{#each images.hero}}
+        <div class="gallery-image">
+            <img src="{{urls.medium}}" alt="{{default caption 'Trip photo'}}" loading="lazy">
+            {{#if caption}}<div class="caption">{{caption}}</div>{{/if}}
+        </div>
+        {{/each}}
+    </div>
+    {{/if}}
 
     <div class="overview-box">
         <h2>Trip Overview</h2>
@@ -303,6 +745,45 @@ export const DEFAULT_TEMPLATE = `<!DOCTYPE html>
             {{/if}}
         </div>
     </div>
+
+    {{#if _config.showMaps}}
+    {{#if maps}}
+    <div class="section">
+        <div class="section-header">Maps</div>
+        <div class="section-content">
+            {{#each maps}}
+            <div class="map-item">
+                {{#if label}}<h4 class="map-label">{{label}}</h4>{{/if}}
+                <div class="map-container">
+                    <iframe
+                        loading="lazy"
+                        allowfullscreen
+                        referrerpolicy="no-referrer-when-downgrade"
+                        src="https://www.google.com/maps/embed/v1/place?key={{_config.googleMapsApiKey}}&q={{encodeUri location}}">
+                    </iframe>
+                </div>
+            </div>
+            {{/each}}
+        </div>
+    </div>
+    {{else}}
+    {{#if meta.destination}}
+    <div class="section">
+        <div class="section-header">Destination Map</div>
+        <div class="section-content">
+            <div class="map-container">
+                <iframe
+                    loading="lazy"
+                    allowfullscreen
+                    referrerpolicy="no-referrer-when-downgrade"
+                    src="https://www.google.com/maps/embed/v1/place?key={{_config.googleMapsApiKey}}&q={{encodeUri meta.destination}}">
+                </iframe>
+            </div>
+        </div>
+    </div>
+    {{/if}}
+    {{/if}}
+    {{/if}}
 
     {{#if travelers.names}}
     <div class="section">
@@ -337,7 +818,7 @@ export const DEFAULT_TEMPLATE = `<!DOCTYPE html>
 
     {{#if flights}}
     <div class="section">
-        <div class="section-header">Flights</div>
+        <div class="section-header"><span>Flights</span><button class="comment-btn" onclick="openComment('flights', 'Flights')">💬 Comment</button></div>
         <div class="section-content">
             <div class="cards-grid">
                 {{#if flights.outbound}}
@@ -370,10 +851,10 @@ export const DEFAULT_TEMPLATE = `<!DOCTYPE html>
 
     {{#if lodging}}
     <div class="section">
-        <div class="section-header">Accommodations</div>
+        <div class="section-header"><span>Accommodations</span><button class="comment-btn" onclick="openComment('lodging', 'Accommodations')">💬 Comment</button></div>
         <div class="section-content">
-            <div class="cards-grid">
             {{#each lodging}}
+            <div class="lodging-item">
                 <div class="card hotel-card">
                     <h4>{{name}}</h4>
                     <div class="card-detail"><span class="label">Location</span><span class="value">{{location}}</span></div>
@@ -381,8 +862,27 @@ export const DEFAULT_TEMPLATE = `<!DOCTYPE html>
                     {{#if rate}}<div class="card-detail"><span class="label">Rate</span><span class="value">{{formatCurrency rate}}/night</span></div>{{/if}}
                     {{#if url}}<a href="{{url}}" class="card-link" target="_blank">View Hotel</a>{{/if}}
                 </div>
-            {{/each}}
+                {{#if map}}
+                <div class="inline-map">
+                    <div class="map-container">
+                        <iframe loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"
+                            src="https://www.google.com/maps/embed/v1/place?key={{_config.googleMapsApiKey}}&q={{encodeUri map}}">
+                        </iframe>
+                    </div>
+                </div>
+                {{/if}}
+                {{#with (lookup ../images.lodging name)}}
+                <div class="inline-gallery">
+                    {{#each this}}
+                    <div class="gallery-image">
+                        <img src="{{urls.thumbnail}}" alt="{{default caption ../name}}" loading="lazy" onclick="window.open('{{urls.large}}', '_blank')">
+                        {{#if caption}}<div class="caption">{{caption}}</div>{{/if}}
+                    </div>
+                    {{/each}}
+                </div>
+                {{/with}}
             </div>
+            {{/each}}
         </div>
     </div>
     {{/if}}
@@ -422,14 +922,14 @@ export const DEFAULT_TEMPLATE = `<!DOCTYPE html>
 
     {{#if itinerary}}
     <div class="section">
-        <div class="section-header">Day-by-Day Itinerary</div>
+        <div class="section-header"><span>Day-by-Day Itinerary</span><button class="comment-btn" onclick="openComment('itinerary', 'Itinerary')">💬 Comment</button></div>
         <div class="section-content">
             {{#each itinerary}}
             <div class="day-section">
                 <div class="day-header">
                     <div class="day-number">{{day}}</div>
                     <div class="day-info">
-                        <h3>{{location}}</h3>
+                        <h3>{{default title location}}</h3>
                         {{#if date}}<div class="day-date">{{date}}</div>{{/if}}
                     </div>
                 </div>
@@ -442,6 +942,69 @@ export const DEFAULT_TEMPLATE = `<!DOCTYPE html>
                     </div>
                     {{/each}}
                 </div>
+                {{#if map}}
+                <div class="inline-map" style="margin-top: 15px;">
+                    <div class="map-container">
+                        <iframe loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"
+                            src="https://www.google.com/maps/embed/v1/place?key={{_config.googleMapsApiKey}}&q={{encodeUri map}}">
+                        </iframe>
+                    </div>
+                </div>
+                {{/if}}
+                {{#if videos}}
+                <div class="inline-videos" style="margin-top: 15px;">
+                    <div class="video-grid">
+                    {{#each videos}}
+                        <div class="video-card">
+                            <div class="video-embed">
+                                <iframe src="https://www.youtube.com/embed/{{id}}" allowfullscreen loading="lazy"></iframe>
+                            </div>
+                            {{#if caption}}<div class="video-caption">{{caption}}</div>{{/if}}
+                        </div>
+                    {{/each}}
+                    </div>
+                </div>
+                {{/if}}
+                {{#with (lookup ../images.days day)}}
+                <div class="inline-gallery" style="margin-top: 15px;">
+                    {{#each this}}
+                    <div class="gallery-image">
+                        <img src="{{urls.thumbnail}}" alt="{{default caption 'Day photo'}}" loading="lazy" onclick="window.open('{{urls.large}}', '_blank')">
+                        {{#if caption}}<div class="caption">{{caption}}</div>{{/if}}
+                    </div>
+                    {{/each}}
+                </div>
+                {{/with}}
+            </div>
+            {{/each}}
+        </div>
+    </div>
+    {{/if}}
+
+    {{#if tours}}
+    <div class="section">
+        <div class="section-header"><span>Tours & Activities</span><button class="comment-btn" onclick="openComment('tours', 'Tours')">💬 Comment</button></div>
+        <div class="section-content">
+            {{#each tours}}
+            <div class="tour-item" style="margin-bottom: 20px;">
+                <div class="card">
+                    <h4>{{name}}</h4>
+                    {{#if date}}<div class="card-detail"><span class="label">Date</span><span class="value">{{date}}</span></div>{{/if}}
+                    {{#if time}}<div class="card-detail"><span class="label">Time</span><span class="value">{{time}}</span></div>{{/if}}
+                    {{#if duration}}<div class="card-detail"><span class="label">Duration</span><span class="value">{{duration}}</span></div>{{/if}}
+                    {{#if price}}<div class="card-detail"><span class="label">Price</span><span class="value">{{formatCurrency price}}</span></div>{{/if}}
+                    {{#if notes}}<p style="margin-top: 10px; color: var(--text-light);">{{notes}}</p>{{/if}}
+                    {{#if url}}<a href="{{url}}" class="card-link" target="_blank">Book Now</a>{{/if}}
+                </div>
+                {{#if map}}
+                <div class="inline-map" style="margin-top: 10px;">
+                    <div class="map-container">
+                        <iframe loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"
+                            src="https://www.google.com/maps/embed/v1/place?key={{_config.googleMapsApiKey}}&q={{encodeUri map}}">
+                        </iframe>
+                    </div>
+                </div>
+                {{/if}}
             </div>
             {{/each}}
         </div>
@@ -471,6 +1034,88 @@ export const DEFAULT_TEMPLATE = `<!DOCTYPE html>
     </div>
     {{/if}}
 
+    {{#if _config.showVideos}}
+    {{#if media}}
+    <div class="section">
+        <div class="section-header">Helpful Videos</div>
+        <div class="section-content">
+            <div class="video-grid">
+            {{#each media}}
+                <div class="video-card">
+                    <div class="video-embed">
+                        <iframe src="https://www.youtube.com/embed/{{id}}" allowfullscreen loading="lazy"></iframe>
+                    </div>
+                    {{#if caption}}<div class="video-caption">{{caption}}</div>{{/if}}
+                </div>
+            {{/each}}
+            </div>
+        </div>
+    </div>
+    {{/if}}
+    {{/if}}
+
+    {{#if tiers}}
+    <div class="section">
+        <div class="section-header"><span>Package Options</span><button class="comment-btn" onclick="openComment('tiers', 'Package Options')">💬 Comment</button></div>
+        <div class="section-content">
+            <div class="tiers-grid">
+                {{#if tiers.value}}
+                <div class="tier-card">
+                    <div class="tier-header">
+                        <div class="tier-name">{{default tiers.value.name "Essential"}}</div>
+                        <div class="tier-description">{{tiers.value.description}}</div>
+                    </div>
+                    <div class="tier-price">
+                        <div class="total">{{formatCurrency tiers.value.estimatedTotal}}</div>
+                        {{#if tiers.value.perPerson}}<div class="per-person">{{formatCurrency tiers.value.perPerson}} per person</div>{{/if}}
+                    </div>
+                    <div class="tier-details">
+                        {{#if tiers.value.flights}}<div class="tier-item"><span class="check">✓</span><span>{{tiers.value.flights.class}} Class Flights</span></div>{{/if}}
+                        {{#each tiers.value.lodging}}<div class="tier-item"><span class="check">✓</span><span>{{name}}{{#if rate}} - {{formatCurrency rate}}/night{{/if}}</span></div>{{/each}}
+                        {{#each tiers.value.includes}}<div class="tier-item"><span class="check">✓</span><span>{{this}}</span></div>{{/each}}
+                    </div>
+                </div>
+                {{/if}}
+
+                {{#if tiers.premium}}
+                <div class="tier-card recommended">
+                    <div class="tier-header">
+                        <div class="tier-name">{{default tiers.premium.name "Enhanced"}}<span class="tier-badge">RECOMMENDED</span></div>
+                        <div class="tier-description">{{tiers.premium.description}}</div>
+                    </div>
+                    <div class="tier-price">
+                        <div class="total">{{formatCurrency tiers.premium.estimatedTotal}}</div>
+                        {{#if tiers.premium.perPerson}}<div class="per-person">{{formatCurrency tiers.premium.perPerson}} per person</div>{{/if}}
+                    </div>
+                    <div class="tier-details">
+                        {{#if tiers.premium.flights}}<div class="tier-item"><span class="check">✓</span><span>{{tiers.premium.flights.class}} Class Flights</span></div>{{/if}}
+                        {{#each tiers.premium.lodging}}<div class="tier-item"><span class="check">✓</span><span>{{name}}{{#if rate}} - {{formatCurrency rate}}/night{{/if}}</span></div>{{/each}}
+                        {{#each tiers.premium.includes}}<div class="tier-item"><span class="check">✓</span><span>{{this}}</span></div>{{/each}}
+                    </div>
+                </div>
+                {{/if}}
+
+                {{#if tiers.luxury}}
+                <div class="tier-card">
+                    <div class="tier-header">
+                        <div class="tier-name">{{default tiers.luxury.name "Ultimate"}}</div>
+                        <div class="tier-description">{{tiers.luxury.description}}</div>
+                    </div>
+                    <div class="tier-price">
+                        <div class="total">{{formatCurrency tiers.luxury.estimatedTotal}}</div>
+                        {{#if tiers.luxury.perPerson}}<div class="per-person">{{formatCurrency tiers.luxury.perPerson}} per person</div>{{/if}}
+                    </div>
+                    <div class="tier-details">
+                        {{#if tiers.luxury.flights}}<div class="tier-item"><span class="check">✓</span><span>{{tiers.luxury.flights.class}} Class Flights</span></div>{{/if}}
+                        {{#each tiers.luxury.lodging}}<div class="tier-item"><span class="check">✓</span><span>{{name}}{{#if rate}} - {{formatCurrency rate}}/night{{/if}}</span></div>{{/each}}
+                        {{#each tiers.luxury.includes}}<div class="tier-item"><span class="check">✓</span><span>{{this}}</span></div>{{/each}}
+                    </div>
+                </div>
+                {{/if}}
+            </div>
+        </div>
+    </div>
+    {{else}}
     {{#if budget}}
     <div class="section">
         <div class="section-header">Investment Summary</div>
@@ -483,11 +1128,109 @@ export const DEFAULT_TEMPLATE = `<!DOCTYPE html>
         </div>
     </div>
     {{/if}}
+    {{/if}}
+
+    <!-- Reserve Now Section -->
+    <div class="reserve-section">
+        <p>Ready to book? Secure your trip with a deposit.</p>
+        <a href="{{_config.reserveUrl}}" class="reserve-btn" target="_blank">Reserve Now</a>
+    </div>
+
+    <!-- General Comment -->
+    <div class="general-comment">
+        <button class="comment-btn" onclick="openComment('general', 'Overall Trip')">
+            💬 Questions or changes? Let us know
+        </button>
+    </div>
 
     <div class="footer">
         <p>Prepared with care by <span class="brand">SoMo Travel</span></p>
         <p style="margin-top: 5px;">Questions? We're here to help make your trip unforgettable.</p>
+        <div class="qr-section" id="qr-section" style="margin-top: 20px; text-align: center;">
+            <p style="font-size: 0.85em; color: var(--text-light); margin-bottom: 10px;">Scan to view on mobile</p>
+            <img id="qr-code" alt="QR Code" style="width: 120px; height: 120px; border: 1px solid var(--border); border-radius: 8px; padding: 8px; background: white;">
+        </div>
         <p style="margin-top: 15px; font-size: 0.8em;">Generated {{formatDate meta.lastUpdated}}</p>
+        <p style="margin-top: 5px; font-size: 0.7em; color: #999;">Template: default v1.8 | Rendered: {{timestamp}}</p>
     </div>
+
+    <!-- Comment Modal -->
+    <div id="commentModal" class="comment-modal" onclick="if(event.target===this)closeComment()">
+        <div class="comment-form">
+            <h3 id="commentTitle">Comment on Section</h3>
+            <input type="text" id="commentName" placeholder="Your name (optional)">
+            <input type="email" id="commentEmail" placeholder="Email for reply (optional)">
+            <textarea id="commentMessage" placeholder="Your question, feedback, or requested changes..."></textarea>
+            <div class="comment-form-buttons">
+                <button class="cancel-btn" onclick="closeComment()">Cancel</button>
+                <button class="submit-btn" id="submitComment" onclick="submitComment()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Generate QR code for current page URL
+        (function() {
+            var qrImg = document.getElementById('qr-code');
+            var url = encodeURIComponent(window.location.href);
+            qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + url;
+        })();
+
+        // Comment functionality
+        var commentSection = '';
+        var commentItem = '';
+        var tripKey = '{{_config.tripKey}}';
+        var apiEndpoint = '{{_config.apiEndpoint}}';
+
+        function openComment(section, item) {
+            commentSection = section;
+            commentItem = item || '';
+            document.getElementById('commentTitle').textContent = 'Comment on ' + (item || section);
+            document.getElementById('commentModal').classList.add('active');
+            document.getElementById('commentMessage').focus();
+        }
+
+        function closeComment() {
+            document.getElementById('commentModal').classList.remove('active');
+            document.getElementById('commentName').value = '';
+            document.getElementById('commentEmail').value = '';
+            document.getElementById('commentMessage').value = '';
+        }
+
+        function submitComment() {
+            var message = document.getElementById('commentMessage').value.trim();
+            if (!message) return;
+
+            var btn = document.getElementById('submitComment');
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+
+            fetch(apiEndpoint + '/comment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tripKey: tripKey,
+                    section: commentSection,
+                    item: commentItem,
+                    message: message,
+                    name: document.getElementById('commentName').value.trim() || null,
+                    email: document.getElementById('commentEmail').value.trim() || null
+                })
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    document.querySelector('.comment-form').innerHTML = '<div class="comment-success"><h3>✓ Comment Sent!</h3><p>Your travel agent will review your message.</p><button class="cancel-btn" onclick="closeComment();location.reload();">Close</button></div>';
+                } else {
+                    throw new Error('Failed');
+                }
+            })
+            .catch(function() {
+                btn.disabled = false;
+                btn.textContent = 'Send';
+                alert('Failed to send comment. Please try again.');
+            });
+        }
+    </script>
 </body>
 </html>`;
