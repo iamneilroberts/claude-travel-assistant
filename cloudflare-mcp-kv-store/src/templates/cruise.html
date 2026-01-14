@@ -448,6 +448,113 @@
 
         .ship-upgrades li:last-child { margin-bottom: 0; }
 
+        /* Excursion Options Styles */
+        .excursion-port {
+            margin-bottom: 30px;
+        }
+
+        .excursion-port:last-child { margin-bottom: 0; }
+
+        .port-header {
+            background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
+            color: var(--white);
+            padding: 15px 20px;
+            border-radius: var(--radius) var(--radius) 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .port-header h3 { margin: 0; font-size: 1.2em; }
+        .port-header .port-time { font-size: 0.9em; opacity: 0.9; }
+
+        .excursion-options {
+            border: 1px solid var(--border);
+            border-top: none;
+            border-radius: 0 0 var(--radius) var(--radius);
+            overflow: hidden;
+        }
+
+        .excursion-option {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            background: var(--white);
+        }
+
+        .excursion-option:last-child { border-bottom: none; }
+
+        .excursion-option.recommended {
+            background: #f0f9f0;
+            border-left: 4px solid var(--accent);
+        }
+
+        .option-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .option-name {
+            font-weight: 600;
+            color: var(--text);
+            font-size: 1.05em;
+        }
+
+        .option-provider {
+            font-size: 0.85em;
+            color: var(--text-light);
+            margin-top: 3px;
+        }
+
+        .option-price {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .option-details {
+            font-size: 0.9em;
+            color: var(--text-light);
+            margin-bottom: 10px;
+        }
+
+        .option-highlights {
+            font-size: 0.9em;
+            color: var(--text);
+            margin-bottom: 10px;
+        }
+
+        .ship-waits-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .ship-waits-yes {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .ship-waits-no {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .port-recommendation {
+            background: var(--bg-section);
+            padding: 15px 20px;
+            border-top: 1px solid var(--border);
+            font-size: 0.95em;
+            color: var(--text);
+        }
+
+        .port-recommendation strong {
+            color: var(--primary);
+        }
+
         /* Video Grid Styles */
         .video-grid {
             display: grid;
@@ -954,6 +1061,55 @@
                 </div>
                 {{/each}}
             </div>
+        </div>
+        {{/if}}
+
+        <!-- Shore Excursions Section - CRUISE SPECIFIC -->
+        {{#if excursions}}
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon">🏝️</div>
+                <h2>Shore Excursion Options</h2>
+            </div>
+            {{#each excursions}}
+            <div class="excursion-port">
+                <div class="port-header">
+                    <div>
+                        <h3>Day {{portDay}} — {{port}}</h3>
+                        <div class="port-time">{{portDate}} · {{portHours}}</div>
+                    </div>
+                </div>
+                <div class="excursion-options">
+                    {{#each options}}
+                    <div class="excursion-option">
+                        <div class="option-header">
+                            <div>
+                                <div class="option-name">{{name}}</div>
+                                <div class="option-provider">{{provider}}{{#if duration}} · {{duration}}{{/if}}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div class="option-price">${{price}}/pp</div>
+                                {{#if shipWaits}}
+                                <span class="ship-waits-badge ship-waits-yes">Ship Waits ✓</span>
+                                {{else}}
+                                <span class="ship-waits-badge ship-waits-no">Ship Won't Wait</span>
+                                {{/if}}
+                            </div>
+                        </div>
+                        {{#if highlights}}<div class="option-highlights">{{highlights}}</div>{{/if}}
+                        {{#if bestFor}}<div class="option-details"><strong>Best for:</strong> {{bestFor}}</div>{{/if}}
+                        {{#if warning}}<div class="option-details" style="color: #856404;">⚠️ {{warning}}</div>{{/if}}
+                        {{#if url}}<a href="{{url}}" class="card-link" target="_blank">Book Now →</a>{{/if}}
+                    </div>
+                    {{/each}}
+                </div>
+                {{#if recommendation}}
+                <div class="port-recommendation">
+                    <strong>Recommendation:</strong> {{recommendation}}
+                </div>
+                {{/if}}
+            </div>
+            {{/each}}
         </div>
         {{/if}}
 
