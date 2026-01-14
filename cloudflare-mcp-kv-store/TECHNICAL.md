@@ -88,7 +88,7 @@ Cloudflare Workers block `eval()` and `new Function()` for security. Handlebars.
 {user_prefix}/trip-id          → Trip JSON data
 {user_prefix}/_activity-log    → User's activity history
 _templates/default             → Built into worker (fallback)
-_templates/somotravel-cruisemasters → Custom branded template
+_templates/cruise-planners → Custom branded template
 _system-prompt                 → Optional custom system prompt
 ```
 
@@ -210,7 +210,7 @@ Returns available templates for publishing.
 
 ```typescript
 // Response
-{ templates: ["default", "somotravel-cruisemasters"] }
+{ templates: ["default", "cruise-planners"] }
 ```
 
 #### preview_publish
@@ -231,7 +231,7 @@ Renders HTML and pushes to GitHub. Updates trips.json metadata.
 // Input
 {
   tripId: "caribbean-morris-fall-2026",
-  template: "somotravel-cruisemasters",
+  template: "cruise-planners",
   filename: "morris-caribbean-2026",  // optional, defaults to tripId
   category: "proposal"  // testing|proposal|confirmed|deposit_paid|paid_in_full|active|past
 }
@@ -469,7 +469,7 @@ Metadata file that powers the somotravel.us index page:
 │                                                                     │
 │    preview_publish({                                                │
 │      tripId: "caribbean-morris-fall-2026",                         │
-│      template: "somotravel-cruisemasters"                          │
+│      template: "cruise-planners"                          │
 │    })                                                               │
 │                                                                     │
 │    → Returns rendered HTML for review                               │
@@ -481,7 +481,7 @@ Metadata file that powers the somotravel.us index page:
 │                                                                     │
 │    publish_trip({                                                   │
 │      tripId: "caribbean-morris-fall-2026",                         │
-│      template: "somotravel-cruisemasters",                         │
+│      template: "cruise-planners",                         │
 │      filename: "morris-caribbean-2026",                            │
 │      category: "proposal"                                          │
 │    })                                                               │
@@ -612,7 +612,7 @@ The custom template engine supports Handlebars-like syntax:
 | Template | Location | Description |
 |----------|----------|-------------|
 | `default` | `src/default-template.ts` | Green-themed, built into worker |
-| `somotravel-cruisemasters` | KV: `_templates/somotravel-cruisemasters` | Cruise Planners branded (blue/green) |
+| `cruise-planners` | KV: `_templates/cruise-planners` | Cruise Planners branded (blue/green) |
 
 ### Adding New Templates
 
@@ -722,7 +722,7 @@ cloudflare-mcp-kv-store/
 │   ├── simple-template.ts     # Custom template engine
 │   ├── default-template.ts    # Default HTML template
 │   └── templates/
-│       └── somotravel-cruisemasters.html
+│       └── cruise-planners.html
 ├── wrangler.toml              # Cloudflare config
 ├── package.json
 ├── tsconfig.json

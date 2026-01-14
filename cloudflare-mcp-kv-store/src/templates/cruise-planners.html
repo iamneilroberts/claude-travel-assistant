@@ -737,6 +737,27 @@
         </div>
         {{/if}}
 
+        <!-- Featured Links Section -->
+        {{#if featuredLinks}}
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon">🔗</div>
+                <h2>Useful Resources</h2>
+            </div>
+            <div class="cards-grid">
+                {{#each featuredLinks}}
+                <div class="card">
+                    <div class="card-body">
+                        <h4 style="color: var(--primary); margin-bottom: 8px;">{{title}}</h4>
+                        <p style="font-size: 0.95em; color: var(--text-light); margin-bottom: 12px;">{{description}}</p>
+                        <a href="{{url}}" class="card-link" target="_blank">View Resource →</a>
+                    </div>
+                </div>
+                {{/each}}
+            </div>
+        </div>
+        {{/if}}
+
         <!-- Pricing Section -->
         {{#if budget}}
         <div class="section">

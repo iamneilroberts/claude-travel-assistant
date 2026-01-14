@@ -54,6 +54,18 @@ function isTruthy(value: any): boolean {
   return true;
 }
 
+// Escape HTML entities to prevent XSS
+function escapeHtml(str: string): string {
+  const escapeMap: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  };
+  return str.replace(/[&<>"']/g, c => escapeMap[c]);
+}
+
 // Find matching closing tag, accounting for nesting
 function findMatchingClose(template: string, openTag: string, closeTag: string, startPos: number): number {
   let depth = 1;
@@ -364,7 +376,7 @@ function processVariable(tagContent: string, ctx: any, parentCtx?: any): string 
     const path = tagContent.slice(11).trim();
     let value = getValue(ctx, path);
     if (value === undefined && parentCtx) value = getValue(parentCtx, path);
-    return capitalize(String(value || ''));
+    return escapeHtml(capitalize(String(value || '')));
   }
 
   // {{pluralize count "singular" "plural"}}
@@ -380,7 +392,7 @@ function processVariable(tagContent: string, ctx: any, parentCtx?: any): string 
   if (defaultMatch) {
     let value = getValue(ctx, defaultMatch[1]);
     if (value === undefined && parentCtx) value = getValue(parentCtx, defaultMatch[1]);
-    return (value !== undefined && value !== null && value !== '') ? String(value) : defaultMatch[2];
+    return escapeHtml((value !== undefined && value !== null && value !== '') ? String(value) : defaultMatch[2]);
   }
 
   // Simple variable {{path}}
@@ -390,8 +402,8 @@ function processVariable(tagContent: string, ctx: any, parentCtx?: any): string 
   }
 
   if (value === undefined || value === null) return '';
-  if (typeof value === 'object') return JSON.stringify(value);
-  return String(value);
+  if (typeof value === 'object') return escapeHtml(JSON.stringify(value));
+  return escapeHtml(String(value));
 }
 
 // Main export

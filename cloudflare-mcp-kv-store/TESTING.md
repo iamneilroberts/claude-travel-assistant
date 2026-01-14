@@ -82,7 +82,8 @@ The AI analyzes logistics, timing, missing data, budget alignment, and seasonal 
 
 **Expected:** Returns list including:
 - `default` (green theme)
-- `somotravel-cruisemasters` (Cruise Planners branded)
+- `cruise-planners` (Cruise Planners branded)
+- `cruise` (cruise-specific with ship info, ports, dining)
 
 ---
 
@@ -101,7 +102,7 @@ The AI analyzes logistics, timing, missing data, budget alignment, and seasonal 
 
 ## Test 9: Preview with Different Template
 
-**Say:** "Preview [trip-id] using the somotravel-cruisemasters template"
+**Say:** "Preview [trip-id] using the cruise-planners template"
 
 **Expected:**
 - Returns a preview URL

@@ -54,7 +54,8 @@ Key-based isolation: `Home.Star1` → data stored under `home_star1/` prefix. Ea
 
 ## Templates
 - `default` - Green theme (built into worker)
-- `somotravel-cruisemasters` - Cruise Planners branded (KV)
+- `cruise-planners` - Cruise Planners branded (KV)
+- `cruise` - Cruise-specific with ship info, ports, dining, credits (KV)
 
 ## Key Files
 - `src/worker.ts` - MCP server + GitHub integration
