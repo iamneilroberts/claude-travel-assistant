@@ -270,100 +270,21 @@ function processTemplate(template: string, ctx: any, parentCtx?: any): string {
   return result;
 }
 
-// Find matching {{/if}} accounting for nested #if blocks
+// Convenience wrappers for each block type
 function findMatchingCloseIf(template: string, startPos: number): number {
-  let depth = 1;
-  let pos = startPos;
-
-  while (pos < template.length && depth > 0) {
-    const nextIf = template.indexOf('{{#if ', pos);
-    const nextClose = template.indexOf('{{/if}}', pos);
-
-    if (nextClose === -1) return -1;
-
-    if (nextIf !== -1 && nextIf < nextClose) {
-      depth++;
-      pos = nextIf + 6;
-    } else {
-      depth--;
-      if (depth === 0) return nextClose;
-      pos = nextClose + 7;
-    }
-  }
-
-  return -1;
+  return findMatchingClose(template, '{{#if ', '{{/if}}', startPos);
 }
 
-// Find matching {{/each}} accounting for nested #each blocks
 function findMatchingCloseEach(template: string, startPos: number): number {
-  let depth = 1;
-  let pos = startPos;
-
-  while (pos < template.length && depth > 0) {
-    const nextEach = template.indexOf('{{#each ', pos);
-    const nextClose = template.indexOf('{{/each}}', pos);
-
-    if (nextClose === -1) return -1;
-
-    if (nextEach !== -1 && nextEach < nextClose) {
-      depth++;
-      pos = nextEach + 8;
-    } else {
-      depth--;
-      if (depth === 0) return nextClose;
-      pos = nextClose + 9;
-    }
-  }
-
-  return -1;
+  return findMatchingClose(template, '{{#each ', '{{/each}}', startPos);
 }
 
-// Find matching {{/with}} accounting for nested #with blocks
 function findMatchingCloseWith(template: string, startPos: number): number {
-  let depth = 1;
-  let pos = startPos;
-
-  while (pos < template.length && depth > 0) {
-    const nextWith = template.indexOf('{{#with ', pos);
-    const nextClose = template.indexOf('{{/with}}', pos);
-
-    if (nextClose === -1) return -1;
-
-    if (nextWith !== -1 && nextWith < nextClose) {
-      depth++;
-      pos = nextWith + 8;
-    } else {
-      depth--;
-      if (depth === 0) return nextClose;
-      pos = nextClose + 9;
-    }
-  }
-
-  return -1;
+  return findMatchingClose(template, '{{#with ', '{{/with}}', startPos);
 }
 
-// Find matching {{/unless}} accounting for nested #unless blocks
 function findMatchingCloseUnless(template: string, startPos: number): number {
-  let depth = 1;
-  let pos = startPos;
-
-  while (pos < template.length && depth > 0) {
-    const nextUnless = template.indexOf('{{#unless ', pos);
-    const nextClose = template.indexOf('{{/unless}}', pos);
-
-    if (nextClose === -1) return -1;
-
-    if (nextUnless !== -1 && nextUnless < nextClose) {
-      depth++;
-      pos = nextUnless + 10;
-    } else {
-      depth--;
-      if (depth === 0) return nextClose;
-      pos = nextClose + 11;
-    }
-  }
-
-  return -1;
+  return findMatchingClose(template, '{{#unless ', '{{/unless}}', startPos);
 }
 
 // Find {{else}} at the current nesting level only

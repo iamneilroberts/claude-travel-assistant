@@ -20,8 +20,9 @@ bucket_name = "travel-media"
 AUTH_KEYS = "Kim.d63b7658,Matt.7110274c,Neil.38ecccf5,Susie.65439631,Test.Alpha1,Test.Beta2,Test.Gamma3"
 # GitHub repo for publishing (token set via wrangler secret)
 GITHUB_REPO = "iamneilroberts/SoMoTravel.us"
-# Google Maps API key (for embedded maps in published pages)
-GOOGLE_MAPS_API_KEY = "AIzaSyB4ZqEv-J8jBIk3MNxVblvb6MexsuwkLMA"
+# Google Maps API key - set via: wrangler secret put GOOGLE_MAPS_API_KEY
 # Stripe publishable key (public, safe to include here)
 # Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET via: wrangler secret put STRIPE_SECRET_KEY
 STRIPE_PUBLISHABLE_KEY = ""
+# YouTube Data API v3 key - set via: wrangler secret put YOUTUBE_API_KEY
+# Get key from: https://console.cloud.google.com/apis/credentials
