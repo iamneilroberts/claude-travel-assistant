@@ -83,6 +83,7 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
       <button class="nav-tab" onclick="showTab('activity')">Activity</button>
       <button class="nav-tab" onclick="showTab('users')">Users</button>
       <button class="nav-tab" onclick="showTab('billing')">Billing</button>
+      <button class="nav-tab" onclick="showTab('messages')">Messages</button>
     </div>
   </div>
 
@@ -213,6 +214,41 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
       <div class="section">
         <h2>User Subscriptions</h2>
         <div id="subscriptionsTable"><div class="loading">Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- MESSAGES TAB -->
+    <div id="tab-messages" class="tab-content">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="label">Active Broadcasts</div><div class="value" id="activeBroadcasts">-</div></div>
+        <div class="stat-card"><div class="label">Open Threads</div><div class="value" id="openThreads">-</div></div>
+        <div class="stat-card"><div class="label">Unread Replies</div><div class="value" id="unreadReplies">-</div></div>
+      </div>
+      <div class="section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <h2>Broadcast Announcements</h2>
+          <button class="btn btn-primary" onclick="showBroadcastModal()">+ New Broadcast</button>
+        </div>
+        <div id="broadcastsTable"><div class="loading">Loading...</div></div>
+      </div>
+      <div class="section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <h2>Direct Message Threads</h2>
+          <button class="btn btn-primary" onclick="showDirectMessageModal()">+ New Message</button>
+        </div>
+        <div class="filter-row">
+          <select id="threadFilterUser" onchange="applyThreadFilters()"><option value="">All Users</option></select>
+          <select id="threadFilterStatus" onchange="applyThreadFilters()">
+            <option value="">All Status</option>
+            <option value="open">Open</option>
+            <option value="closed">Closed</option>
+          </select>
+          <select id="threadFilterUnread" onchange="applyThreadFilters()">
+            <option value="">All Messages</option>
+            <option value="unread">With Unread Replies</option>
+          </select>
+        </div>
+        <div id="threadsTable"><div class="loading">Loading...</div></div>
       </div>
     </div>
   </div>
@@ -350,6 +386,79 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
           <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- New Broadcast Modal -->
+  <div id="broadcastModal" class="modal">
+    <div class="modal-content">
+      <h3>New Broadcast Announcement</h3>
+      <div class="form-group">
+        <label>Title *</label>
+        <input type="text" id="broadcastTitle" placeholder="Maintenance Notice" required>
+      </div>
+      <div class="form-group">
+        <label>Message *</label>
+        <textarea id="broadcastBody" rows="4" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;" placeholder="Your announcement message..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Priority</label>
+        <select id="broadcastPriority">
+          <option value="normal">Normal</option>
+          <option value="urgent">Urgent</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Expires (optional)</label>
+        <input type="datetime-local" id="broadcastExpires">
+      </div>
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button class="btn btn-primary" onclick="createBroadcast()">Send to All Users</button>
+        <button class="btn btn-secondary" onclick="closeBroadcastModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Direct Message Modal -->
+  <div id="directMessageModal" class="modal">
+    <div class="modal-content">
+      <h3>Send Direct Message</h3>
+      <div class="form-group">
+        <label>Recipient *</label>
+        <select id="messageRecipient">
+          <option value="">Select user...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Subject *</label>
+        <input type="text" id="messageSubject" placeholder="Question about your trip">
+      </div>
+      <div class="form-group">
+        <label>Message *</label>
+        <textarea id="messageBody" rows="5" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;" placeholder="Your message..."></textarea>
+      </div>
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button class="btn btn-primary" onclick="sendDirectMessage()">Send Message</button>
+        <button class="btn btn-secondary" onclick="closeDirectMessageModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Thread Detail Modal -->
+  <div id="threadDetailModal" class="modal">
+    <div class="modal-content" style="max-width:700px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h3 id="threadDetailSubject">Thread Subject</h3>
+        <button class="btn btn-secondary btn-small" onclick="closeThreadDetailModal()">Close</button>
+      </div>
+      <div id="threadMessages" style="max-height:400px;overflow-y:auto;margin-bottom:20px;border:1px solid #eee;border-radius:8px;padding:15px;background:#fafafa;"></div>
+      <div style="border-top:1px solid #eee;padding-top:15px;">
+        <textarea id="threadReplyBody" rows="3" placeholder="Type your reply..." style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;margin-bottom:10px;"></textarea>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button class="btn btn-secondary" onclick="closeThread()">Close Thread</button>
+          <button class="btn btn-primary" onclick="sendThreadReply()">Send Reply</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1115,9 +1224,254 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
       }
     }
 
+    // ========== MESSAGES ==========
+    let broadcastsCache = [];
+    let threadsCache = [];
+    let currentThread = null;
+
+    async function loadMessages() {
+      try {
+        const data = await api('/admin/messages');
+        broadcastsCache = data.broadcasts || [];
+        threadsCache = data.directThreads || [];
+
+        document.getElementById('activeBroadcasts').textContent = data.stats.activeBroadcasts;
+        document.getElementById('openThreads').textContent = data.stats.openThreads;
+        document.getElementById('unreadReplies').textContent = data.stats.unreadUserReplies;
+
+        renderBroadcasts();
+        populateThreadUserFilter();
+        applyThreadFilters();
+      } catch (e) {
+        document.getElementById('broadcastsTable').innerHTML = '<p style="color:#c00;">Error: ' + e.message + '</p>';
+      }
+    }
+
+    function renderBroadcasts() {
+      if (broadcastsCache.length === 0) {
+        document.getElementById('broadcastsTable').innerHTML = '<p style="color:#666;text-align:center;padding:30px;">No broadcast announcements. Click "+ New Broadcast" to send one to all users.</p>';
+        return;
+      }
+
+      const html = \`<table>
+        <thead><tr><th>Time</th><th>Title</th><th>Priority</th><th>Stats</th><th>Actions</th></tr></thead>
+        <tbody>\${broadcastsCache.map(b => \`
+          <tr>
+            <td style="font-size:11px;">\${formatTime(b.createdAt)}</td>
+            <td><strong>\${b.title}</strong><br><small style="color:#666;">\${b.body.length > 80 ? b.body.substring(0, 80) + '...' : b.body}</small></td>
+            <td><span class="badge \${b.priority === 'urgent' ? 'badge-red' : 'badge-blue'}">\${b.priority}</span></td>
+            <td style="font-size:11px;">\${b.stats.pending} pending / \${b.stats.dismissed} dismissed</td>
+            <td><button class="btn btn-small btn-secondary" onclick="deleteBroadcast('\${b.id}')">Delete</button></td>
+          </tr>
+        \`).join('')}</tbody>
+      </table>\`;
+      document.getElementById('broadcastsTable').innerHTML = html;
+    }
+
+    function populateThreadUserFilter() {
+      const select = document.getElementById('threadFilterUser');
+      const userIds = [...new Set(threadsCache.map(t => t.userId))];
+      select.innerHTML = '<option value="">All Users</option>' +
+        userIds.map(uid => {
+          const t = threadsCache.find(x => x.userId === uid);
+          return \`<option value="\${uid}">\${t?.userName || uid}</option>\`;
+        }).join('');
+    }
+
+    function applyThreadFilters() {
+      const userFilter = document.getElementById('threadFilterUser').value;
+      const statusFilter = document.getElementById('threadFilterStatus').value;
+      const unreadFilter = document.getElementById('threadFilterUnread').value;
+
+      let filtered = threadsCache;
+      if (userFilter) filtered = filtered.filter(t => t.userId === userFilter);
+      if (statusFilter) filtered = filtered.filter(t => t.status === statusFilter);
+      if (unreadFilter === 'unread') filtered = filtered.filter(t => t.unreadCount > 0);
+
+      renderThreads(filtered);
+    }
+
+    function renderThreads(threads) {
+      if (threads.length === 0) {
+        document.getElementById('threadsTable').innerHTML = '<p style="color:#666;text-align:center;padding:30px;">No message threads. Click "+ New Message" to send a direct message to a user.</p>';
+        return;
+      }
+
+      const html = \`<table>
+        <thead><tr><th>User</th><th>Subject</th><th>Last Message</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>\${threads.map(t => \`
+          <tr style="cursor:pointer;" onclick="viewThread('\${t.id}', '\${t.userId}')">
+            <td>\${t.userName}\${t.unreadCount > 0 ? '<br><span class="badge badge-red">' + t.unreadCount + ' unread</span>' : ''}</td>
+            <td><strong>\${t.subject}</strong><br><small style="color:#666;">\${t.lastMessage?.preview || ''}</small></td>
+            <td style="font-size:11px;color:#666;">\${t.lastMessage?.timestamp ? formatTime(t.lastMessage.timestamp) : ''}<br>\${t.lastMessage?.sender === 'user' ? '← User' : '→ Admin'}</td>
+            <td><span class="badge \${t.status === 'open' ? 'badge-green' : 'badge-gray'}">\${t.status}</span></td>
+            <td><button class="btn btn-small btn-primary" onclick="event.stopPropagation();viewThread('\${t.id}', '\${t.userId}')">View</button></td>
+          </tr>
+        \`).join('')}</tbody>
+      </table>\`;
+      document.getElementById('threadsTable').innerHTML = html;
+    }
+
+    async function viewThread(threadId, userId) {
+      try {
+        const data = await api('/admin/messages/thread/' + userId + '/' + threadId);
+        currentThread = { ...data.thread, userId };
+
+        document.getElementById('threadDetailSubject').textContent = currentThread.subject + ' (with ' + currentThread.userName + ')';
+
+        const messagesHtml = currentThread.messages.map(m => \`
+          <div style="margin-bottom:15px;padding:10px;border-radius:8px;\${m.sender === 'admin' ? 'background:#e3f2fd;margin-left:40px;' : 'background:#fff;margin-right:40px;border:1px solid #ddd;'}">
+            <div style="font-size:11px;color:#666;margin-bottom:5px;">
+              <strong>\${m.senderName || m.sender}</strong> - \${new Date(m.timestamp).toLocaleString()}
+              \${!m.read && m.sender === 'user' ? '<span class="badge badge-red" style="margin-left:5px;">New</span>' : ''}
+            </div>
+            <div style="white-space:pre-wrap;">\${m.body}</div>
+          </div>
+        \`).join('');
+
+        document.getElementById('threadMessages').innerHTML = messagesHtml;
+        document.getElementById('threadReplyBody').value = '';
+        document.getElementById('threadDetailModal').classList.add('active');
+
+        // Mark user messages as read
+        await api('/admin/messages/thread/' + userId + '/' + threadId + '/mark-read', { method: 'POST' });
+        loadMessages();
+      } catch (e) {
+        alert('Error loading thread: ' + e.message);
+      }
+    }
+
+    function showBroadcastModal() {
+      document.getElementById('broadcastTitle').value = '';
+      document.getElementById('broadcastBody').value = '';
+      document.getElementById('broadcastPriority').value = 'normal';
+      document.getElementById('broadcastExpires').value = '';
+      document.getElementById('broadcastModal').classList.add('active');
+    }
+
+    function closeBroadcastModal() {
+      document.getElementById('broadcastModal').classList.remove('active');
+    }
+
+    async function createBroadcast() {
+      const title = document.getElementById('broadcastTitle').value;
+      const body = document.getElementById('broadcastBody').value;
+      const priority = document.getElementById('broadcastPriority').value;
+      const expiresInput = document.getElementById('broadcastExpires').value;
+
+      if (!title || !body) {
+        alert('Title and message are required');
+        return;
+      }
+
+      try {
+        await api('/admin/messages/broadcast', {
+          method: 'POST',
+          body: JSON.stringify({
+            title,
+            body,
+            priority,
+            expiresAt: expiresInput ? new Date(expiresInput).toISOString() : null
+          })
+        });
+        closeBroadcastModal();
+        loadMessages();
+        alert('Broadcast sent to all users!');
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    async function deleteBroadcast(broadcastId) {
+      if (!confirm('Delete this broadcast? Users who haven\\'t seen it won\\'t receive it.')) return;
+      try {
+        await api('/admin/messages/broadcast/' + broadcastId, { method: 'DELETE' });
+        loadMessages();
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    function showDirectMessageModal() {
+      // Populate user dropdown
+      const select = document.getElementById('messageRecipient');
+      select.innerHTML = '<option value="">Select user...</option>' +
+        usersCache.map(u => \`<option value="\${u.userId}">\${u.name} (\${u.email || u.userId})</option>\`).join('');
+      document.getElementById('messageSubject').value = '';
+      document.getElementById('messageBody').value = '';
+      document.getElementById('directMessageModal').classList.add('active');
+    }
+
+    function closeDirectMessageModal() {
+      document.getElementById('directMessageModal').classList.remove('active');
+    }
+
+    async function sendDirectMessage() {
+      const userId = document.getElementById('messageRecipient').value;
+      const subject = document.getElementById('messageSubject').value;
+      const body = document.getElementById('messageBody').value;
+
+      if (!userId || !subject || !body) {
+        alert('All fields are required');
+        return;
+      }
+
+      try {
+        await api('/admin/messages/direct', {
+          method: 'POST',
+          body: JSON.stringify({ userId, subject, body })
+        });
+        closeDirectMessageModal();
+        loadMessages();
+        alert('Message sent to user!');
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    function closeThreadDetailModal() {
+      document.getElementById('threadDetailModal').classList.remove('active');
+    }
+
+    async function sendThreadReply() {
+      if (!currentThread) return;
+
+      const body = document.getElementById('threadReplyBody').value;
+      if (!body) {
+        alert('Please enter a reply message');
+        return;
+      }
+
+      try {
+        await api('/admin/messages/thread/' + currentThread.userId + '/' + currentThread.id, {
+          method: 'PUT',
+          body: JSON.stringify({ body })
+        });
+        viewThread(currentThread.id, currentThread.userId);
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    async function closeThread() {
+      if (!currentThread) return;
+      if (!confirm('Close this thread? The user can still reply to reopen it.')) return;
+
+      try {
+        await api('/admin/messages/thread/' + currentThread.userId + '/' + currentThread.id, {
+          method: 'PUT',
+          body: JSON.stringify({ status: 'closed' })
+        });
+        closeThreadDetailModal();
+        loadMessages();
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
     // ========== INIT ==========
     async function init() {
-      await Promise.all([loadStats(), loadUsers(), loadActivity(), loadTrips(), loadComments(), loadSupport(), loadBillingStats(), loadPromoCodes()]);
+      await Promise.all([loadStats(), loadUsers(), loadActivity(), loadTrips(), loadComments(), loadSupport(), loadBillingStats(), loadPromoCodes(), loadMessages()]);
       renderRecentActivity();
       renderSubscriptions();
     }

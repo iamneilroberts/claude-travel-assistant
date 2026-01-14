@@ -10,71 +10,11 @@ import { getGalleryPageHtml, GalleryImage } from './gallery-page';
 import { ADMIN_DASHBOARD_HTML } from './admin-dashboard';
 import { getSubscribePageHtml, SUBSCRIBE_SUCCESS_HTML } from './subscribe-pages';
 import { renderTripHtml } from './template-renderer';
+import type { Env, UserProfile, MonthlyUsage, JsonRpcRequest, JsonRpcResponse } from './types';
 
-interface Env {
-  TRIPS: KVNamespace;
-  MEDIA: R2Bucket;     // R2 bucket for image storage
-  AUTH_KEYS: string;  // Comma-separated list of valid keys (fallback)
-  ADMIN_KEY: string;  // Admin API key for dashboard
-  GITHUB_TOKEN: string;  // GitHub PAT for publishing
-  GITHUB_REPO: string;   // GitHub repo for publishing (e.g., "owner/repo")
-  GOOGLE_MAPS_API_KEY: string;  // Google Maps API key for embedded maps
-  // Stripe configuration
-  STRIPE_SECRET_KEY: string;       // Stripe secret key (via wrangler secret)
-  STRIPE_WEBHOOK_SECRET: string;   // Stripe webhook signing secret (via wrangler secret)
-  STRIPE_PUBLISHABLE_KEY: string;  // Stripe publishable key (in wrangler.toml)
-  YOUTUBE_API_KEY: string;         // YouTube Data API v3 key
-}
-
-// User profile stored at _users/{userId}
-interface UserProfile {
-  userId: string;           // e.g., "home_star1"
-  authKey: string;          // e.g., "Home.Star1"
-  name: string;             // Agent name
-  email: string;            // Agent email
-  phone?: string;           // Agent phone
-  agency: {
-    name: string;           // e.g., "SOMO Travel"
-    franchise?: string;     // e.g., "Cruise Planners"
-    logo?: string;          // URL to logo image
-    website?: string;       // Agency website
-    bookingUrl?: string;    // URL for client payments/deposits
-  };
-  template?: string;        // Preferred template (default: "default")
-  branding?: {
-    primaryColor?: string;  // e.g., "#1a5f7a"
-    accentColor?: string;   // e.g., "#e67e22"
-  };
-  created: string;          // ISO date
-  lastActive: string;       // ISO date
-  status: 'active' | 'inactive' | 'pending' | 'suspended';
-  // Subscription fields (optional for backward compatibility)
-  subscription?: {
-    stripeCustomerId: string;         // Stripe Customer ID (cus_xxx)
-    stripeSubscriptionId?: string;    // Stripe Subscription ID (sub_xxx)
-    tier: 'trial' | 'starter' | 'professional' | 'agency' | 'none';
-    status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'unpaid';
-    currentPeriodStart: string;       // ISO date
-    currentPeriodEnd: string;         // ISO date
-    trialEnd?: string;                // ISO date (if on trial)
-    cancelAtPeriodEnd: boolean;       // User requested cancellation
-    publishLimit: number;             // -1 for unlimited
-    appliedPromoCode?: string;        // Promo code used at signup
-  };
-}
-
-// Monthly usage tracking stored at _usage/{userId}/{YYYY-MM}
-interface MonthlyUsage {
-  userId: string;
-  period: string;              // "2026-01"
-  publishCount: number;
-  publishedTrips: Array<{
-    tripId: string;
-    publishedAt: string;
-    filename: string;
-  }>;
-  lastUpdated: string;
-}
+// Base URLs
+const WORKER_BASE_URL = 'https://voygent.somotravel.workers.dev';
+const SITE_BASE_URL = 'https://somotravel.us';
 
 // Stripe API helper (Cloudflare Workers can't use full Stripe SDK)
 async function stripeRequest(
@@ -206,6 +146,20 @@ async function getStripeCustomerIndex(env: Env, customerId: string): Promise<str
   return await env.TRIPS.get(`_stripe-customers/${customerId}`, "text");
 }
 
+// Auth key index helpers for O(1) lookups
+async function setAuthKeyIndex(env: Env, authKey: string, userId: string): Promise<void> {
+  await env.TRIPS.put(`_auth-index/${authKey}`, userId);
+}
+
+async function getAuthKeyIndex(env: Env, authKey: string): Promise<string | null> {
+  return await env.TRIPS.get(`_auth-index/${authKey}`, "text");
+}
+
+// Helper to base64 encode strings for GitHub API
+function toBase64(str: string): string {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+
 // Find user by Stripe customer ID (uses index for O(1) lookup)
 async function findUserByStripeCustomerId(env: Env, customerId: string): Promise<UserProfile | null> {
   // Try index first (O(1))
@@ -230,7 +184,7 @@ async function findUserByStripeCustomerId(env: Env, customerId: string): Promise
 
 // Generate setup email for new user
 function generateSetupEmail(user: UserProfile): { subject: string; body: string } {
-  const mcpUrl = `https://voygent.somotravel.workers.dev/sse?key=${user.authKey}`;
+  const mcpUrl = `${WORKER_BASE_URL}/sse?key=${user.authKey}`;
 
   return {
     subject: `Welcome to Voygent - Your Travel Planning Assistant`,
@@ -311,522 +265,15 @@ async function getValidAuthKeys(env: Env): Promise<string[]> {
   return env.AUTH_KEYS ? env.AUTH_KEYS.split(',').map(k => k.trim()) : [];
 }
 
-// Default system prompt - can be overridden by storing at key "_system-prompt"
-const DEFAULT_SYSTEM_PROMPT = `# SOMO Travel Assistant
-
-You are a travel planning assistant for SOMO Travel (Cruise Planners franchise, Mobile AL).
-
-## ALWAYS Show This Welcome Block
-
-At the start of EVERY conversation, after loading context, display:
-
-\`\`\`
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🧳 SOMO Travel Assistant
-
-📍 Last activity: {lastTrip} - {lastAction}
-📋 Active trips: {count}
-
-Quick Commands:
-  "my trips"     → List all trips
-  "new trip"     → Start planning a new trip
-  "status"       → Current trip progress
-  "validate"     → Check for issues & missing info
-  "comments"     → View client feedback & questions
-  "quote check"  → What's needed to get a quote?
-  "profitability"→ Estimate commissions & suggest upsells
-  "publish"      → Publish trip to somotravel.us
-  "hand-over"    → Summary for booking follow-up
-  "add photo"    → Add an image to the proposal
-  "my photos"    → Browse uploaded images
-  "support"      → Report a bug or request help
-
-Just describe what you need — I'll help plan it!
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-\`\`\`
-
-## What This Tool Does
-
-I help plan trips from initial idea to quotable package:
-- Store and track multiple trips across sessions
-- Research destinations, flights, hotels, tours
-- Build day-by-day itineraries
-- Find hidden gems and local experiences
-- Generate hand-over summaries for booking
-
-Everything syncs across devices — start on your phone, continue on desktop.
-
----
-
-## Adding Photos to Proposals
-
-When user wants to add an image (hotel photo, activity image, etc.):
-
-1. **Use prepare_image_upload tool** - this generates an upload link
-   - Pass: tripId (if known), category (hero/lodging/activity/destination), description
-   - Returns: uploadUrl (for user) and expectedUrls (you'll know the final URL)
-
-2. **Give user the upload link** - tell them to click it, paste/drop their image, then say "done"
-
-3. **After user confirms upload** - use the image URL in the trip or tell them it's ready
-
-**Example flow:**
-- User: "I want to add a photo of the hotel"
-- You: Call prepare_image_upload(tripId: "italy-2026", category: "lodging", description: "Florence hotel")
-- You: "Click here to upload your image: [link]. Let me know when you're done!"
-- User: "done" or "uploaded"
-- You: "Got it! I've added the photo to your Florence hotel section."
-
-**To browse existing photos:** Call prepare_image_upload without an image need - just tell user to visit the gallery link, or say "my photos" to get the gallery URL.
-
-**Gallery URL format:** https://voygent.somotravel.workers.dev/gallery?key=USER_KEY&trip=TRIP_ID
-
----
-
-## Discovery Mode (New Trips)
-
-**For new trips, be conversational and gather essentials before building.**
-
-### Must-Have Information (ask if missing):
-
-1. **Travelers**: How many? Ages? Names? (couples, families, solo?)
-2. **Dates**: When? Flexible or fixed? How long?
-3. **Destination**: Where? Open to suggestions?
-4. **Budget**: Ballpark per person or total?
-5. **Occasion**: Birthday, anniversary, reunion, just because?
-
-### Good-to-Know (ask naturally in conversation):
-
-- **Travel style**: Relaxed vs. packed schedule?
-- **Interests**: History, food, adventure, beaches, culture, nightlife?
-- **Physical considerations**: Mobility issues? Health concerns?
-- **Experience level**: First-time travelers or seasoned?
-- **Must-haves**: Anything non-negotiable?
-- **Must-avoids**: Dealbreakers?
-
-### Discovery Flow:
-
-1. Start friendly — ask about the trip idea
-2. Gather essentials through natural conversation (don't interrogate)
-3. Confirm understanding: "So you're looking for..."
-4. Once you have enough to work with (or client has no more to share), say:
-   "Great, I have enough to start building! Let me save this and begin researching..."
-5. Create the trip JSON using the **Standard Trip Schema** below and move to destination/planning phase
-
-**Don't stay in discovery forever** — if the client seems done sharing, move forward.
-
-### Standard Trip Schema (Use This for All New Trips)
-
-\`\`\`json
-{
-  "meta": {
-    "tripId": "destination-client-date",
-    "clientName": "Client Name(s) - Trip Title",
-    "destination": "Primary Destination",
-    "dates": "Date range string",
-    "phase": "discovery",
-    "lastUpdated": "ISO date"
-  },
-  "travelers": {
-    "count": 2,
-    "names": ["Name 1", "Name 2"],
-    "notes": "Any special notes"
-  },
-  "dates": { "start": "2026-10-15", "end": "2026-10-25", "duration": 10 },
-  "budget": { "perPerson": null, "total": null, "level": "moderate" },
-  "preferences": { "vibe": "", "mustHave": [], "avoid": [] },
-  "flights": {
-    "outbound": { "date": "", "route": "", "airline": "" },
-    "return": { "date": "", "route": "", "airline": "" }
-  },
-  "lodging": [
-    { "name": "", "location": "", "dates": "", "rate": null, "url": "", "map": "Hotel Name, City" }
-  ],
-  "itinerary": [
-    { "day": 1, "title": "Day 1 Title", "date": "", "activities": [], "map": "Location for this day", "videos": [{ "id": "youtubeId", "caption": "About this area" }] }
-  ],
-  "tours": [
-    { "name": "", "date": "", "map": "Tour meeting point" }
-  ],
-  "dining": [],
-  "extras": {}
-}
-\`\`\`
-
-**Key rules:**
-- \`lodging\` is an **array** (not \`lodging.options\`)
-- \`itinerary\` is an **array** (not \`itinerary.days.day1\`)
-- \`meta.clientName\` is the main title shown in published pages
-
-### Tiered Proposals (Default for All Trips)
-
-**Always create tiered options** (value/premium/luxury) when building proposals. Clients appreciate having choices. Add a \`tiers\` object:
-
-\`\`\`json
-{
-  "tiers": {
-    "value": {
-      "name": "Essential",
-      "description": "Comfortable 3-star hotels, standard rooms",
-      "lodging": [{ "name": "Hotel A", "rate": 120 }],
-      "flights": { "class": "Economy", "price": 800 },
-      "extras": "Self-guided activities, standard transfers",
-      "estimatedTotal": 2500,
-      "perPerson": 1250
-    },
-    "premium": {
-      "name": "Enhanced",
-      "description": "4-star hotels, upgraded rooms, some extras",
-      "lodging": [{ "name": "Hotel B", "rate": 220 }],
-      "flights": { "class": "Premium Economy", "price": 1400 },
-      "extras": "Guided tour included, airport transfers",
-      "estimatedTotal": 4200,
-      "perPerson": 2100
-    },
-    "luxury": {
-      "name": "Ultimate",
-      "description": "5-star hotels, suites, premium experiences",
-      "lodging": [{ "name": "Hotel C", "rate": 450 }],
-      "flights": { "class": "Business", "price": 3500 },
-      "extras": "Private guides, VIP transfers, spa credits",
-      "estimatedTotal": 8500,
-      "perPerson": 4250
-    }
-  }
-}
-\`\`\`
-
-**Tier guidelines:**
-- Same itinerary/destinations across all tiers
-- Vary: lodging quality, room type, flight class, included extras
-- Show clear price differential between tiers
-- Value = budget-conscious, Premium = best value (mark as recommended), Luxury = top-tier experience
-
-### Maps (REQUIRED - Add to Every Trip)
-
-**ALWAYS add maps** to trips. Maps appear inline with the content they relate to.
-
-**Inline maps** (placed contextually in the proposal):
-\`\`\`json
-{
-  "lodging": [
-    { "name": "Camp Bay Lodge", "location": "Camp Bay, Roatan", "map": "Camp Bay Lodge, Roatan, Honduras" }
-  ],
-  "itinerary": [
-    { "day": 1, "title": "Explore West Bay", "map": "West Bay Beach, Roatan" }
-  ],
-  "tours": [
-    { "name": "Snorkeling Tour", "map": "West End Divers, Roatan" }
-  ]
-}
-\`\`\`
-
-**General maps** (shown in dedicated section for overview):
-\`\`\`json
-{
-  "maps": [
-    { "location": "Roatan, Honduras", "label": "Destination Overview" }
-  ]
-}
-\`\`\`
-
-**Best practices:**
-- Add \`map\` field to EVERY lodging item (hotel address)
-- Add \`map\` field to itinerary days when location changes significantly
-- Add \`map\` field to tours with specific meeting points
-- Use \`maps\` array for destination overviews and airports
-- Be specific: "Hilton Rome, Via del Corso" not just "Rome"
-
-**Disable maps:** Set \`meta.showMaps: false\` only if user explicitly requests no maps.
-
-### YouTube Videos (REQUIRED - Add to Every Trip)
-
-**ALWAYS search for and add helpful videos** to trips. Videos appear inline with relevant content.
-
-**Inline videos** (placed with related itinerary days):
-\`\`\`json
-{
-  "itinerary": [
-    {
-      "day": 1,
-      "title": "Snorkeling at West Bay",
-      "videos": [{ "id": "abc123", "caption": "Snorkeling in Roatan - what to expect" }]
-    }
-  ]
-}
-\`\`\`
-
-**General videos** (shown in dedicated section):
-\`\`\`json
-{
-  "media": [
-    { "id": "xyz789", "caption": "First time in Honduras - travel tips" }
-  ]
-}
-\`\`\`
-
-**How to find videos:**
-1. Use the \`youtube_search\` tool with queries like "[destination] travel guide", "[activity] tips", "[location] walking tour"
-2. Results include view counts - prefer popular videos (higher views = crowd-vetted quality)
-3. Good channels: Rick Steves, Wolters World, Kara and Nate, destination-specific creators
-4. Use the returned video \`id\` directly - no need to extract from URLs
-
-**What to include:**
-- Destination overview video (ALWAYS)
-- Activity-specific videos for tours/excursions
-- Transit/navigation tips for complex destinations
-- Food/restaurant guides
-- Cultural etiquette videos
-
-**Disable videos:** Set \`meta.showVideos: false\` only if user explicitly requests no videos.
-
----
-
-## Planning Phases
-
-| Phase | What's Needed |
-|-------|---------------|
-| 1. Discovery | Client info, preferences, must-haves |
-| 2. Destinations | Day-by-day routing |
-| 3. Flights | Routes, airlines, estimated cost |
-| 4. Lodging | Options with URLs and rates |
-| 5. Transport | Rental cars, trains, transfers |
-| 6. Tours | Activities with booking links |
-| 7. Extras | Dining, hidden gems, photo ops |
-| 8. Proposal | Final package ready to quote |
-
-A trip is **quotable** once phases 1-5 are complete.
-
----
-
-## Commands Reference
-
-| Say This | What Happens |
-|----------|--------------|
-| \`my trips\` | List all trips with status |
-| \`new trip\` | Start discovery for new trip |
-| \`[trip name]\` | Load that specific trip |
-| \`status\` | Show current phase and blockers |
-| \`validate [trip]\` | Check for issues, missing info, bad logistics |
-| \`next\` | What's the single next action? |
-| \`quote check\` | What's missing to quote this? |
-| \`comments\` | View all new client comments |
-| \`comments [trip]\` | View comments for specific trip |
-| \`profitability [trip]\` | Estimate commissions, suggest upsells |
-| \`publish [trip]\` | Publish trip to somotravel.us |
-| \`import quote\` | Parse booking confirmation and update trip |
-| \`hand-over\` | Generate booking follow-up summary |
-| \`save\` | Force save current progress |
-
----
-
-## Numbered Menus (IMPORTANT)
-
-**Always number trips and options so users can reply with just a number.**
-
-When listing trips:
-\`\`\`
-Your Trips:
-1. uk-narrowboat-oct-2026 — Roberts & Jones (proposal)
-2. caribbean-cruise-dec-2026 — Smith Family (discovery)
-3. italy-spring-2027 — Johnson Anniversary (research)
-
-Reply with a number to open that trip, or say "new trip" to start fresh.
-\`\`\`
-
-When offering options:
-\`\`\`
-What would you like to do?
-1. Open the trip and show status
-2. Validate for missing info
-3. Preview or publish
-4. View client comments
-5. Start a new trip
-
-Just reply with a number!
-\`\`\`
-
-**Handle numeric replies:** If user says "1", "2", etc., map it to the numbered option you just presented. Don't ask "what do you mean by 1?" — execute the action.
-
----
-
-## Core Rules
-
-1. **NEVER write HTML directly**: To publish or preview trips, ONLY use the \`preview_publish\` and \`publish_trip\` MCP tools. Do NOT generate HTML code yourself. Do NOT create HTML files. The tools render templates automatically.
-2. **Use patch_trip for small updates**: Changing status, phase, or a few fields? Use \`patch_trip\` — it's much faster than rewriting the whole document
-3. **Use save_trip for big changes**: Adding new sections, restructuring, or initial trip creation
-4. **Update meta.status**: Briefly describe what changed (this feeds the activity log)
-5. **URLs required**: Every hotel, tour, restaurant needs a working link
-6. **Verify recommendations**: Confirm places exist and are open
-7. **Be helpful, not robotic**: Chat naturally, especially in discovery
-8. **Use numbered menus**: Always number trips and options so users can reply with just "1" or "2"
-
-### When to Use Each Save Method
-
-| Change Type | Use This |
-|-------------|----------|
-| Update status/phase | \`patch_trip\` |
-| Change a few fields | \`patch_trip\` |
-| Add a new section | \`save_trip\` |
-| Create new trip | \`save_trip\` |
-| Major restructure | \`save_trip\` |
-
----
-
-## Signature Touches (Include in Every Trip)
-
-- 🌊 Water feature or scenic viewpoint
-- 🥐 Local breakfast spot near lodging
-- 💎 Hidden gem (not in guidebooks)
-- 🆓 Free but memorable experience
-- 📸 Photo op locations
-
----
-
-## Hand-Over Document
-
-Before ending a session, offer to generate a hand-over:
-
-\`\`\`
-Want a hand-over summary? I'll list what's ready to quote
-and what still needs work.
-\`\`\`
-
-Hand-over includes:
-- **Ready to Quote**: Items with enough detail for booking systems
-- **Needs Research**: Items requiring more work
-- **Open Questions**: Things to ask the client
-- **Next Priority**: Single most important next step
-
----
-
-## Publishing Trips to somotravel.us
-
-⚠️ **CRITICAL**: NEVER write HTML code yourself. NEVER create HTML files. ONLY use these MCP tools:
-- \`preview_publish(tripId, template)\` → publishes to draft URL for preview (returns clickable link)
-- \`publish_trip(tripId, template, filename, category)\` → publishes to main site
-
-The tools handle all HTML generation using templates. Your job is to ensure trip data is structured correctly, then call the tools. Both tools return URLs the user can click to view the result.
-
-### Publishing Workflow
-
-1. **List available templates**: \`list_templates\` - get exact template names (required!)
-2. **Preview first**: \`preview_publish(tripId, template)\` - publishes draft, returns clickable preview URL
-3. **Publish**: \`publish_trip(tripId, template, filename, category)\` - publish to main site
-
-### Available Templates
-
-**IMPORTANT**: Always call \`list_templates\` first to get exact template names. Do not guess template names.
-
-| Template Name (exact) | Description |
-|----------------------|-------------|
-| \`default\` | Green-themed professional layout |
-| \`somotravel-cruisemasters\` | Cruise Planners branded (blue/green) - use this for Kim/SoMo Travel |
-
-### Category Options
-
-| Category | When to Use |
-|----------|-------------|
-| \`testing\` | Development/test trips (default) |
-| \`proposal\` | Client proposals not yet confirmed |
-| \`confirmed\` | Confirmed bookings |
-| \`deposit_paid\` | Deposit received |
-| \`paid_in_full\` | Fully paid |
-| \`active\` | Currently traveling |
-| \`past\` | Completed trips |
-
-### Publishing Commands
-
-| Say This | What Happens |
-|----------|--------------|
-| \`publish [trip]\` | Publish trip to somotravel.us |
-| \`preview [trip]\` | Preview HTML before publishing |
-| \`list templates\` | Show available templates |
-
-Example: "publish uk-narrowboat-oct-2026 using somotravel-cruisemasters template as proposal"
-
-### Standard Publishable Schema
-
-**IMPORTANT**: Before publishing, ensure the trip data matches this schema. If the trip uses a different structure, restructure it first using \`save_trip\`.
-
-\`\`\`json
-{
-  "meta": {
-    "clientName": "Trip title for header",
-    "destination": "Destination subtitle",
-    "dates": "Date range string",
-    "phase": "discovery|proposal|confirmed",
-    "lastUpdated": "ISO date"
-  },
-  "travelers": {
-    "count": 4,
-    "names": ["Name 1", "Name 2"],
-    "notes": "Optional notes"
-  },
-  "dates": {
-    "duration": 10
-  },
-  "budget": {
-    "perPerson": 2500,
-    "total": 10000
-  },
-  "flights": {
-    "outbound": { "date": "Oct 15", "route": "ATL → LHR", "airline": "Delta" },
-    "return": { "date": "Oct 25", "route": "LHR → ATL", "airline": "Delta" }
-  },
-  "lodging": [
-    { "name": "Hotel Name", "location": "City", "dates": "Oct 15-18", "rate": 200, "url": "https://..." }
-  ],
-  "itinerary": [
-    {
-      "location": "Day 1 - London",
-      "date": "Oct 15, 2026",
-      "activities": [
-        { "name": "Activity title", "notes": "Description", "url": "https://..." }
-      ]
-    }
-  ]
-}
-\`\`\`
-
-**Common restructuring needed:**
-- \`itinerary.days.day1, day2\` → Convert to array format shown above
-- \`lodging.options\` → Flatten to \`lodging\` array
-- Missing \`meta.clientName\` → Add from trip title
-- \`narrowboat.recommendedCompanies\` → The templates support this natively
-
----
-
-## Error Handling
-
-- **Dead URL**: Note it and find alternative
-- **Place closed**: Flag and suggest replacement
-- **Can't verify**: Mark for manual check
-`;
-
-// MCP JSON-RPC Types
-interface JsonRpcRequest {
-  jsonrpc: "2.0";
-  method: string;
-  params?: any;
-  id?: number | string;
-}
-
-interface JsonRpcResponse {
-  jsonrpc: "2.0";
-  result?: any;
-  error?: { code: number; message: string; data?: any };
-  id: number | string | null;
-}
 
 // CORS helper - restricts to known domains
 function getCorsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("Origin") || "";
   const allowedOrigins = [
-    "https://somotravel.us",
+    SITE_BASE_URL,
     "https://www.somotravel.us",
     "https://claude.ai",
-    "https://voygent.somotravel.workers.dev",
+    WORKER_BASE_URL,
     "http://localhost:3000",  // Local development
   ];
 
@@ -1077,7 +524,7 @@ export default {
             }
           });
 
-          const imageUrl = `https://voygent.somotravel.workers.dev/media/${filename}`;
+          const imageUrl = `${WORKER_BASE_URL}/media/${filename}`;
 
           return new Response(JSON.stringify({
             success: true,
@@ -1151,7 +598,7 @@ export default {
 
         images.push({
           key: object.key,
-          url: `https://voygent.somotravel.workers.dev/media/${object.key}`,
+          url: `${WORKER_BASE_URL}/media/${object.key}`,
           category: meta.category || object.key.split('/')[0] || 'uploads',
           uploaded: meta.uploaded || object.uploaded.toISOString(),
           size: object.size
@@ -1562,6 +1009,8 @@ export default {
         };
 
         await env.TRIPS.put(`_users/${userId}`, JSON.stringify(user));
+        // Set index for O(1) auth key lookups
+        await setAuthKeyIndex(env, authKey, userId);
 
         // Generate setup email content
         const setupEmail = generateSetupEmail(user);
@@ -2144,6 +1593,358 @@ export default {
         });
       }
 
+      // ========== ADMIN MESSAGES ==========
+
+      // GET /admin/messages - List all broadcasts and direct message thread summaries
+      if (url.pathname === "/admin/messages" && request.method === "GET") {
+        // Load broadcasts
+        const broadcastData = await env.TRIPS.get("_admin_messages/broadcasts", "json") as { messages: any[] } | null;
+        const broadcasts = broadcastData?.messages || [];
+
+        // Get all users for counting dismissals
+        const userStateKeys = await env.TRIPS.list({ prefix: "_admin_messages/user_states/" });
+        const dismissalCounts: Record<string, number> = {};
+
+        for (const key of userStateKeys.keys) {
+          const state = await env.TRIPS.get(key.name, "json") as { dismissedBroadcasts: string[] } | null;
+          if (state?.dismissedBroadcasts) {
+            for (const id of state.dismissedBroadcasts) {
+              dismissalCounts[id] = (dismissalCounts[id] || 0) + 1;
+            }
+          }
+        }
+
+        // Get total user count for stats
+        const userKeys = await env.TRIPS.list({ prefix: "_users/" });
+        const totalUsers = userKeys.keys.length;
+
+        // Enrich broadcasts with stats
+        const now = new Date().toISOString();
+        const enrichedBroadcasts = broadcasts
+          .filter(b => !b.expiresAt || b.expiresAt > now)
+          .map(b => ({
+            ...b,
+            stats: {
+              totalUsers,
+              dismissed: dismissalCounts[b.id] || 0,
+              pending: totalUsers - (dismissalCounts[b.id] || 0)
+            }
+          }));
+
+        // Load all direct message threads
+        const threadKeys = await env.TRIPS.list({ prefix: "_admin_messages/threads/" });
+        const directThreads: any[] = [];
+        let unreadUserReplies = 0;
+
+        // Load user names for display
+        const usersData: Record<string, UserProfile> = {};
+        for (const key of userKeys.keys) {
+          const user = await env.TRIPS.get(key.name, "json") as UserProfile;
+          if (user) usersData[user.userId] = user;
+        }
+
+        for (const key of threadKeys.keys) {
+          const userId = key.name.replace("_admin_messages/threads/", "");
+          const data = await env.TRIPS.get(key.name, "json") as { threads: any[] } | null;
+
+          if (data?.threads) {
+            for (const thread of data.threads) {
+              const unreadCount = thread.messages.filter((m: any) => m.sender === "user" && !m.read).length;
+              unreadUserReplies += unreadCount;
+
+              const lastMsg = thread.messages[thread.messages.length - 1];
+              directThreads.push({
+                id: thread.id,
+                userId,
+                userName: usersData[userId]?.name || userId,
+                subject: thread.subject,
+                status: thread.status,
+                lastMessage: {
+                  sender: lastMsg?.sender,
+                  preview: lastMsg?.body?.substring(0, 100) || "",
+                  timestamp: lastMsg?.timestamp
+                },
+                unreadCount,
+                messageCount: thread.messages.length,
+                updatedAt: thread.updatedAt
+              });
+            }
+          }
+        }
+
+        // Sort threads by most recent activity
+        directThreads.sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
+
+        return new Response(JSON.stringify({
+          broadcasts: enrichedBroadcasts,
+          directThreads,
+          stats: {
+            activeBroadcasts: enrichedBroadcasts.length,
+            openThreads: directThreads.filter(t => t.status === "open").length,
+            unreadUserReplies
+          }
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+
+      // POST /admin/messages/broadcast - Create a broadcast announcement
+      if (url.pathname === "/admin/messages/broadcast" && request.method === "POST") {
+        const body = await request.json() as {
+          title: string;
+          body: string;
+          priority?: "normal" | "urgent";
+          expiresAt?: string;
+        };
+
+        if (!body.title || !body.body) {
+          return new Response(JSON.stringify({ error: "title and body are required" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+
+        const broadcastData = await env.TRIPS.get("_admin_messages/broadcasts", "json") as { messages: any[] } | null || { messages: [] };
+
+        const newBroadcast = {
+          id: `broadcast_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          type: "announcement",
+          title: body.title,
+          body: body.body,
+          priority: body.priority || "normal",
+          createdAt: new Date().toISOString(),
+          expiresAt: body.expiresAt || null,
+          createdBy: "admin"
+        };
+
+        broadcastData.messages.unshift(newBroadcast);
+        await env.TRIPS.put("_admin_messages/broadcasts", JSON.stringify(broadcastData));
+
+        return new Response(JSON.stringify({
+          success: true,
+          message: newBroadcast
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+
+      // DELETE /admin/messages/broadcast/:id - Delete a broadcast
+      if (url.pathname.startsWith("/admin/messages/broadcast/") && request.method === "DELETE") {
+        const broadcastId = url.pathname.replace("/admin/messages/broadcast/", "");
+
+        const broadcastData = await env.TRIPS.get("_admin_messages/broadcasts", "json") as { messages: any[] } | null;
+        if (!broadcastData?.messages) {
+          return new Response(JSON.stringify({ error: "Broadcast not found" }), {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+
+        const idx = broadcastData.messages.findIndex(m => m.id === broadcastId);
+        if (idx === -1) {
+          return new Response(JSON.stringify({ error: "Broadcast not found" }), {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+
+        broadcastData.messages.splice(idx, 1);
+        await env.TRIPS.put("_admin_messages/broadcasts", JSON.stringify(broadcastData));
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+
+      // POST /admin/messages/direct - Send a direct message to a user
+      if (url.pathname === "/admin/messages/direct" && request.method === "POST") {
+        const body = await request.json() as {
+          userId: string;
+          subject: string;
+          body: string;
+          threadId?: string;
+        };
+
+        if (!body.userId || !body.subject || !body.body) {
+          return new Response(JSON.stringify({ error: "userId, subject, and body are required" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+
+        const threadsKey = `_admin_messages/threads/${body.userId}`;
+        const threadsData = await env.TRIPS.get(threadsKey, "json") as { threads: any[] } | null || { threads: [] };
+
+        const newMessage = {
+          id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          sender: "admin",
+          senderName: "Voygent Support",
+          body: body.body,
+          timestamp: new Date().toISOString(),
+          read: false
+        };
+
+        let thread;
+        if (body.threadId) {
+          // Reply to existing thread
+          thread = threadsData.threads.find(t => t.id === body.threadId);
+          if (!thread) {
+            return new Response(JSON.stringify({ error: "Thread not found" }), {
+              status: 404,
+              headers: { ...corsHeaders, "Content-Type": "application/json" }
+            });
+          }
+          thread.messages.push(newMessage);
+          thread.updatedAt = new Date().toISOString();
+          thread.status = "open";
+        } else {
+          // Create new thread
+          thread = {
+            id: `thread_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            subject: body.subject,
+            status: "open",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            messages: [newMessage]
+          };
+          threadsData.threads.unshift(thread);
+        }
+
+        await env.TRIPS.put(threadsKey, JSON.stringify(threadsData));
+
+        return new Response(JSON.stringify({
+          success: true,
+          thread: {
+            id: thread.id,
+            subject: thread.subject,
+            status: thread.status,
+            messageCount: thread.messages.length
+          },
+          messageId: newMessage.id
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+
+      // GET /admin/messages/thread/:userId/:threadId - Get thread details
+      if (url.pathname.match(/^\/admin\/messages\/thread\/[^/]+\/[^/]+$/) && request.method === "GET") {
+        const parts = url.pathname.split("/");
+        const threadId = parts.pop()!;
+        const userId = parts.pop()!;
+
+        const threadsData = await env.TRIPS.get(`_admin_messages/threads/${userId}`, "json") as { threads: any[] } | null;
+        const thread = threadsData?.threads?.find(t => t.id === threadId);
+
+        if (!thread) {
+          return new Response(JSON.stringify({ error: "Thread not found" }), {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+
+        // Get user info
+        const user = await env.TRIPS.get(`_users/${userId}`, "json") as UserProfile | null;
+
+        return new Response(JSON.stringify({
+          thread: {
+            ...thread,
+            userId,
+            userName: user?.name || userId,
+            userEmail: user?.email || ""
+          }
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+
+      // PUT /admin/messages/thread/:userId/:threadId - Admin reply or update thread
+      if (url.pathname.match(/^\/admin\/messages\/thread\/[^/]+\/[^/]+$/) && request.method === "PUT") {
+        const parts = url.pathname.split("/");
+        const threadId = parts.pop()!;
+        const userId = parts.pop()!;
+
+        const body = await request.json() as {
+          body?: string;
+          status?: "open" | "closed";
+        };
+
+        const threadsKey = `_admin_messages/threads/${userId}`;
+        const threadsData = await env.TRIPS.get(threadsKey, "json") as { threads: any[] } | null;
+
+        if (!threadsData?.threads) {
+          return new Response(JSON.stringify({ error: "Thread not found" }), {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+
+        const thread = threadsData.threads.find(t => t.id === threadId);
+        if (!thread) {
+          return new Response(JSON.stringify({ error: "Thread not found" }), {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+
+        // Add reply if body provided
+        if (body.body) {
+          thread.messages.push({
+            id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            sender: "admin",
+            senderName: "Voygent Support",
+            body: body.body,
+            timestamp: new Date().toISOString(),
+            read: false
+          });
+          thread.status = "open";
+        }
+
+        // Update status if provided
+        if (body.status) {
+          thread.status = body.status;
+        }
+
+        thread.updatedAt = new Date().toISOString();
+        await env.TRIPS.put(threadsKey, JSON.stringify(threadsData));
+
+        return new Response(JSON.stringify({
+          success: true,
+          thread: {
+            id: thread.id,
+            status: thread.status,
+            messageCount: thread.messages.length
+          }
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+
+      // POST /admin/messages/thread/:userId/:threadId/mark-read - Mark user messages as read
+      if (url.pathname.match(/^\/admin\/messages\/thread\/[^/]+\/[^/]+\/mark-read$/) && request.method === "POST") {
+        const parts = url.pathname.replace("/mark-read", "").split("/");
+        const threadId = parts.pop()!;
+        const userId = parts.pop()!;
+
+        const threadsKey = `_admin_messages/threads/${userId}`;
+        const threadsData = await env.TRIPS.get(threadsKey, "json") as { threads: any[] } | null;
+
+        if (threadsData?.threads) {
+          const thread = threadsData.threads.find(t => t.id === threadId);
+          if (thread) {
+            for (const msg of thread.messages) {
+              if (msg.sender === "user") {
+                msg.read = true;
+              }
+            }
+            await env.TRIPS.put(threadsKey, JSON.stringify(threadsData));
+          }
+        }
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+
       return new Response(JSON.stringify({ error: "Admin endpoint not found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -2165,10 +1966,10 @@ export default {
       // Legacy auth via KV or env var
       keyPrefix = getKeyPrefix(requestKey);
     } else {
-      // Check KV for user profile with matching authKey
-      const userKeys = await env.TRIPS.list({ prefix: "_users/" });
-      for (const key of userKeys.keys) {
-        const user = await env.TRIPS.get(key.name, "json") as UserProfile;
+      // Try auth key index first (O(1))
+      const userId = await getAuthKeyIndex(env, requestKey);
+      if (userId) {
+        const user = await env.TRIPS.get(`_users/${userId}`, "json") as UserProfile;
         if (user && user.authKey === requestKey) {
           userProfile = user;
           keyPrefix = user.userId + '/';
@@ -2176,10 +1977,31 @@ export default {
           // Update lastActive timestamp (async, don't wait)
           ctx.waitUntil((async () => {
             user.lastActive = new Date().toISOString().split('T')[0];
-            await env.TRIPS.put(key.name, JSON.stringify(user));
+            await env.TRIPS.put(`_users/${userId}`, JSON.stringify(user));
           })());
+        }
+      }
 
-          break;
+      // Fallback to scan (for migration) if index miss
+      if (!userProfile) {
+        const userKeys = await env.TRIPS.list({ prefix: "_users/" });
+        for (const key of userKeys.keys) {
+          const user = await env.TRIPS.get(key.name, "json") as UserProfile;
+          if (user && user.authKey === requestKey) {
+            userProfile = user;
+            keyPrefix = user.userId + '/';
+
+            // Backfill index for future lookups
+            await setAuthKeyIndex(env, requestKey, user.userId);
+
+            // Update lastActive timestamp (async, don't wait)
+            ctx.waitUntil((async () => {
+              user.lastActive = new Date().toISOString().split('T')[0];
+              await env.TRIPS.put(key.name, JSON.stringify(user));
+            })());
+
+            break;
+          }
         }
       }
 
@@ -2371,6 +2193,21 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
             }
           },
           {
+            name: "get_prompt",
+            description: "Load a specialized prompt/guide by name. Use this to get detailed instructions for specific scenarios like cruise planning, handling trip changes, or destination research.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                name: {
+                  type: "string",
+                  description: "Prompt name: 'cruise-instructions', 'handle-changes', 'research-destination', 'flight-search', 'validate-trip', 'import-quote', 'analyze-profitability'",
+                  enum: ["cruise-instructions", "handle-changes", "research-destination", "flight-search", "validate-trip", "import-quote", "analyze-profitability"]
+                }
+              },
+              required: ["name"]
+            }
+          },
+          {
             name: "get_comments",
             description: "Get client comments/feedback for a trip. Shows questions and requests from clients viewing the proposal.",
             inputSchema: {
@@ -2418,33 +2255,42 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
             }
           },
           {
-            name: "upload_image",
-            description: "Upload an image to get URLs. Returns thumbnail (200px), medium (800px), and large (1600px) versions. Use for support screenshots or trip images.",
+            name: "reply_to_admin",
+            description: "Reply to a direct message from admin. Use when user wants to respond to an admin message or ask a follow-up question about something admin sent.",
             inputSchema: {
               type: "object",
               properties: {
-                imageData: { type: "string", description: "Base64-encoded image data (PNG/JPG)" },
-                category: { type: "string", enum: ["support", "hero", "lodging", "activity", "destination"], description: "Image category (default: support)" },
-                tripId: { type: "string", description: "Trip ID if category is hero/lodging/activity/destination" },
-                label: { type: "string", description: "Optional label for the image (e.g., hotel name, activity name)" }
+                threadId: { type: "string", description: "The thread ID to reply to (from adminMessages in get_context response)" },
+                message: { type: "string", description: "The user's reply message" }
               },
-              required: ["imageData"]
+              required: ["threadId", "message"]
+            }
+          },
+          {
+            name: "dismiss_admin_message",
+            description: "Dismiss/acknowledge an admin message so it stops appearing. Use for announcements after user has seen them, or to mark direct message threads as read.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                messageId: { type: "string", description: "The message or thread ID to dismiss" },
+                type: { type: "string", enum: ["broadcast", "thread"], description: "Type: 'broadcast' for announcements, 'thread' for direct messages" }
+              },
+              required: ["messageId", "type"]
             }
           },
           {
             name: "add_trip_image",
-            description: "Add an image to a trip. Use EITHER imageUrl (from prepare_image_upload - PREFERRED) OR imageData (base64). Attaches image to the specified location in the trip.",
+            description: "Add an image to a trip using a URL from prepare_image_upload. IMPORTANT: You must use prepare_image_upload first to get the imageUrl - base64 image data is NOT supported.",
             inputSchema: {
               type: "object",
               properties: {
                 tripId: { type: "string", description: "The trip ID" },
-                imageUrl: { type: "string", description: "URL of already-uploaded image (from prepare_image_upload). PREFERRED - use this instead of imageData when available." },
-                imageData: { type: "string", description: "Base64-encoded image data. Only use if imageUrl not available." },
+                imageUrl: { type: "string", description: "URL of already-uploaded image (from prepare_image_upload). REQUIRED." },
                 target: { type: "string", enum: ["hero", "lodging", "activity", "day"], description: "Where to attach the image" },
                 itemName: { type: "string", description: "For lodging/activity: the name of the hotel or activity. For day: the day number (e.g., '1', '2')." },
                 caption: { type: "string", description: "Optional caption for the image" }
               },
-              required: ["tripId", "target"]
+              required: ["tripId", "target", "imageUrl"]
             }
           },
           {
@@ -2491,7 +2337,7 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
           systemPrompt = await env.TRIPS.get("_system-prompt", "text");
         }
         if (!systemPrompt) {
-          systemPrompt = DEFAULT_SYSTEM_PROMPT;
+          throw new Error("System prompt not found in KV. Upload to _prompts/system-prompt");
         }
 
         // Get activity log (user-specific)
@@ -2579,6 +2425,77 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
           }
         }
 
+        // Check for admin messages (broadcasts and direct messages)
+        const adminMessages: { broadcasts: any[]; directMessages: any[] } = { broadcasts: [], directMessages: [] };
+        const now = new Date().toISOString();
+
+        // 1. Check broadcasts
+        const broadcastData = await env.TRIPS.get("_admin_messages/broadcasts", "json") as { messages: any[] } | null;
+        const userMessageState = await env.TRIPS.get(`_admin_messages/user_states/${userId}`, "json") as {
+          dismissedBroadcasts: string[];
+          lastChecked: string;
+        } | null;
+
+        const dismissedIds = new Set(userMessageState?.dismissedBroadcasts || []);
+
+        if (broadcastData?.messages) {
+          for (const broadcast of broadcastData.messages) {
+            // Skip if dismissed or expired
+            if (dismissedIds.has(broadcast.id)) continue;
+            if (broadcast.expiresAt && broadcast.expiresAt < now) continue;
+
+            adminMessages.broadcasts.push({
+              id: broadcast.id,
+              type: "announcement",
+              title: broadcast.title,
+              body: broadcast.body,
+              priority: broadcast.priority,
+              createdAt: broadcast.createdAt
+            });
+          }
+        }
+
+        // 2. Check direct message threads
+        const userThreadsData = await env.TRIPS.get(`_admin_messages/threads/${userId}`, "json") as { threads: any[] } | null;
+
+        if (userThreadsData?.threads) {
+          for (const thread of userThreadsData.threads) {
+            // Find unread admin messages
+            const unreadAdminMsgs = thread.messages.filter((m: any) => m.sender === "admin" && !m.read);
+
+            if (unreadAdminMsgs.length > 0) {
+              adminMessages.directMessages.push({
+                threadId: thread.id,
+                subject: thread.subject,
+                status: thread.status,
+                unreadCount: unreadAdminMsgs.length,
+                latestMessage: unreadAdminMsgs[unreadAdminMsgs.length - 1]
+              });
+            }
+          }
+        }
+
+        // Build admin message instruction
+        const hasAdminMessages = adminMessages.broadcasts.length > 0 || adminMessages.directMessages.length > 0;
+        let adminMessageInstruction = '';
+
+        if (hasAdminMessages) {
+          const parts = [];
+          if (adminMessages.broadcasts.length > 0) {
+            const urgent = adminMessages.broadcasts.filter(b => b.priority === 'urgent');
+            if (urgent.length > 0) {
+              parts.push(`${urgent.length} URGENT announcement(s)`);
+            }
+            if (adminMessages.broadcasts.length > urgent.length) {
+              parts.push(`${adminMessages.broadcasts.length - urgent.length} announcement(s)`);
+            }
+          }
+          if (adminMessages.directMessages.length > 0) {
+            parts.push(`${adminMessages.directMessages.length} direct message(s) from admin`);
+          }
+          adminMessageInstruction = ` 📬 ADMIN MESSAGES: You have ${parts.join(' and ')}. Display these to the user and help them respond or dismiss.`;
+        }
+
         // Build response
         const commentInstruction = totalActiveComments > 0
           ? ` 🚨 TOP PRIORITY: Display ALL ${totalActiveComments} active client comment(s) FIRST, before anything else. ${newCommentCount > 0 ? `(${newCommentCount} NEW) ` : ''}These comments will keep appearing until the user says to dismiss them. Use 'dismiss_comments' when user acknowledges.`
@@ -2590,12 +2507,13 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
 
         // Build user's upload/gallery URLs
         const userAuthKey = userProfile?.authKey || authKey;
-        const uploadUrl = `https://voygent.somotravel.workers.dev/upload?key=${encodeURIComponent(userAuthKey)}`;
-        const galleryUrl = `https://voygent.somotravel.workers.dev/gallery?key=${encodeURIComponent(userAuthKey)}`;
+        const uploadUrl = `${WORKER_BASE_URL}/upload?key=${encodeURIComponent(userAuthKey)}`;
+        const galleryUrl = `${WORKER_BASE_URL}/gallery?key=${encodeURIComponent(userAuthKey)}`;
 
         // Build base result
+        const hasNotifications = totalActiveComments > 0 || adminReplies.length > 0 || hasAdminMessages;
         const baseResult: any = {
-          _instruction: "Use the following as your system instructions for this conversation." + commentInstruction + adminReplyInstruction + (totalActiveComments === 0 && adminReplies.length === 0 ? " Display the session card, then await user direction." : ""),
+          _instruction: "Use the following as your system instructions for this conversation." + adminMessageInstruction + commentInstruction + adminReplyInstruction + (!hasNotifications ? " Display the session card, then await user direction." : ""),
           systemPrompt,
           activityLog,
           activeTrips: tripKeys,
@@ -2616,6 +2534,34 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
         if (adminReplies.length > 0) {
           baseResult._PRIORITY_MESSAGE = `📬 ADMIN REPLY TO YOUR SUPPORT TICKET:\n\nTicket: "${adminReplies[0].subject}"\nAdmin Response: "${adminReplies[0].adminReply}"\nStatus: ${adminReplies[0].status}\n\n⚠️ DISPLAY THIS MESSAGE TO THE USER BEFORE ANYTHING ELSE.`;
           baseResult.adminReplies = adminReplies;
+        }
+
+        // Add admin messages (broadcasts and direct messages) if present
+        if (hasAdminMessages) {
+          let priorityMsg = baseResult._PRIORITY_MESSAGE || '';
+
+          // Format broadcasts
+          if (adminMessages.broadcasts.length > 0) {
+            priorityMsg += '\n\n📢 ANNOUNCEMENTS:\n';
+            for (const b of adminMessages.broadcasts) {
+              priorityMsg += `\n[${b.priority === 'urgent' ? '🚨 URGENT' : 'Announcement'}] ${b.title}\n`;
+              priorityMsg += `${b.body}\n`;
+              priorityMsg += `(Dismiss with: dismiss_admin_message("${b.id}", "broadcast"))\n`;
+            }
+          }
+
+          // Format direct messages
+          if (adminMessages.directMessages.length > 0) {
+            priorityMsg += '\n\n💬 DIRECT MESSAGES FROM ADMIN:\n';
+            for (const dm of adminMessages.directMessages) {
+              priorityMsg += `\n[Thread: ${dm.subject}]\n`;
+              priorityMsg += `"${dm.latestMessage.body}"\n`;
+              priorityMsg += `(Reply with: reply_to_admin("${dm.threadId}", "your message") or dismiss with: dismiss_admin_message("${dm.threadId}", "thread"))\n`;
+            }
+          }
+
+          baseResult._PRIORITY_MESSAGE = priorityMsg;
+          baseResult.adminMessages = adminMessages;
         }
 
         resultContent = baseResult;
@@ -3005,6 +2951,23 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
           _instruction: instruction
         };
       }
+      else if (name === "get_prompt") {
+        const { name: promptName } = args;
+
+        // Load the requested prompt from KV
+        const promptKey = `_prompts/${promptName}`;
+        const promptContent = await env.TRIPS.get(promptKey, "text");
+
+        if (!promptContent) {
+          throw new Error(`Prompt '${promptName}' not found. Available prompts: cruise-instructions, handle-changes, research-destination, validate-trip, import-quote, analyze-profitability`);
+        }
+
+        resultContent = {
+          promptName,
+          content: promptContent,
+          _note: "Use this guidance for the current task. The instructions above are specialized for this scenario."
+        };
+      }
       else if (name === "get_comments") {
         const { tripId, markAsRead = true } = args;
 
@@ -3154,206 +3117,116 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
           message: `✓ Support request submitted! Ticket ID: ${ticket.id}. An admin will review your request soon.`
         };
       }
-      else if (name === "upload_image") {
-        const { imageData, category = "support", tripId, label } = args;
+      else if (name === "reply_to_admin") {
+        const { threadId, message } = args;
+        const userId = keyPrefix.slice(0, -1);
 
-        // Validate base64 image data
-        if (!imageData || typeof imageData !== 'string') {
-          throw new Error("imageData is required and must be a base64 string");
+        // Load user's threads
+        const threadsKey = `_admin_messages/threads/${userId}`;
+        const threadsData = await env.TRIPS.get(threadsKey, "json") as { threads: any[] } | null;
+
+        if (!threadsData?.threads) {
+          throw new Error("No message threads found. You may not have any messages from admin.");
         }
 
-        // Validate tripId for trip-related categories
-        if (category !== "support" && !tripId) {
-          throw new Error(`tripId is required for category '${category}'`);
+        const thread = threadsData.threads.find(t => t.id === threadId);
+        if (!thread) {
+          throw new Error(`Thread '${threadId}' not found. Check the threadId from adminMessages in get_context.`);
         }
 
-        // Strip data URL prefix if present
-        let cleanBase64 = imageData;
-        if (imageData.startsWith('data:')) {
-          const commaIndex = imageData.indexOf(',');
-          if (commaIndex !== -1) {
-            cleanBase64 = imageData.slice(commaIndex + 1);
+        // Add user's reply
+        const newMessage = {
+          id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          sender: "user",
+          senderName: userProfile?.name || userId,
+          body: message,
+          timestamp: new Date().toISOString(),
+          read: false  // Admin hasn't seen it yet
+        };
+
+        thread.messages.push(newMessage);
+        thread.updatedAt = new Date().toISOString();
+        thread.status = "open";  // Re-open if was closed
+
+        // Mark admin messages as read since user is replying
+        for (const msg of thread.messages) {
+          if (msg.sender === "admin") {
+            msg.read = true;
           }
         }
 
-        // Clean up base64: remove whitespace and handle URL-safe encoding
-        cleanBase64 = cleanBase64
-          .replace(/[\s\r\n]+/g, '')  // Remove all whitespace/newlines
-          .replace(/-/g, '+')          // URL-safe to standard
-          .replace(/_/g, '/');         // URL-safe to standard
+        await env.TRIPS.put(threadsKey, JSON.stringify(threadsData));
 
-        // Ensure proper padding (base64 length must be divisible by 4)
-        const paddingNeeded = (4 - (cleanBase64.length % 4)) % 4;
-        cleanBase64 += '='.repeat(paddingNeeded);
-
-        // Decode base64 to binary with better error handling
-        let binaryData: Uint8Array;
-        try {
-          binaryData = Uint8Array.from(atob(cleanBase64), c => c.charCodeAt(0));
-        } catch (e: any) {
-          // Find invalid characters for debugging
-          const validChars = /^[A-Za-z0-9+/=]+$/;
-          const invalidChars = cleanBase64.split('').filter(c => !validChars.test(c));
-          throw new Error(`Base64 decode failed: ${e.message}. Length: ${cleanBase64.length}, Invalid chars: ${JSON.stringify([...new Set(invalidChars)].slice(0, 10))}, First 50: ${cleanBase64.slice(0, 50)}, Last 20: ${cleanBase64.slice(-20)}`);
-        }
-
-        // Detect image type from magic bytes (more reliable than data URL)
-        let contentType = 'image/png';
-        let extension = 'png';
-
-        if (binaryData[0] === 0xFF && binaryData[1] === 0xD8 && binaryData[2] === 0xFF) {
-          contentType = 'image/jpeg';
-          extension = 'jpg';
-        } else if (binaryData[0] === 0x89 && binaryData[1] === 0x50 && binaryData[2] === 0x4E && binaryData[3] === 0x47) {
-          contentType = 'image/png';
-          extension = 'png';
-        } else if (binaryData[0] === 0x47 && binaryData[1] === 0x49 && binaryData[2] === 0x46) {
-          contentType = 'image/gif';
-          extension = 'gif';
-        } else if (binaryData[0] === 0x52 && binaryData[1] === 0x49 && binaryData[2] === 0x46 && binaryData[3] === 0x46 &&
-                   binaryData[8] === 0x57 && binaryData[9] === 0x45 && binaryData[10] === 0x42 && binaryData[11] === 0x50) {
-          contentType = 'image/webp';
-          extension = 'webp';
-        }
-
-        // Generate unique filename and path based on category
-        const timestamp = Date.now();
-        const random = Math.random().toString(36).slice(2, 8);
-        const safeLabel = label ? label.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 30) : '';
-        const filename = safeLabel ? `${safeLabel}-${random}.${extension}` : `img-${timestamp}-${random}.${extension}`;
-
-        let key: string;
-        if (category === "support") {
-          key = `support/${filename}`;
-        } else {
-          // Store under trips/tripId/category/filename
-          key = `trips/${tripId}/${category}/${filename}`;
-        }
-
-        // Upload original to R2
-        await env.MEDIA.put(key, binaryData, {
-          httpMetadata: { contentType },
-          customMetadata: {
-            category,
-            tripId: tripId || '',
-            label: label || '',
-            uploaded: new Date().toISOString()
-          }
-        });
-
-        // Base URL for the image
-        const baseUrl = `https://voygent.somotravel.workers.dev/media/${key}`;
-
-        // Return URLs for different sizes (size param handled by media endpoint)
         resultContent = {
           success: true,
-          urls: {
-            original: baseUrl,
-            large: `${baseUrl}?w=1600`,    // 1600px wide
-            medium: `${baseUrl}?w=800`,    // 800px wide
-            thumbnail: `${baseUrl}?w=200`  // 200px wide
-          },
-          key,
-          message: category === "support"
-            ? `✓ Image uploaded. Use this URL: ${baseUrl}`
-            : `✓ Image uploaded for ${category}. URLs available in thumbnail (200px), medium (800px), and large (1600px) sizes.`
+          message: `✓ Reply sent to admin. Thread: "${thread.subject}". The admin will be notified of your response.`
         };
       }
-      else if (name === "add_trip_image") {
-        const { tripId, imageUrl, imageData, target, itemName, caption } = args;
+      else if (name === "dismiss_admin_message") {
+        const { messageId, type } = args;
+        const userId = keyPrefix.slice(0, -1);
 
-        if (!imageUrl && !imageData) {
-          throw new Error("Either imageUrl or imageData is required");
-        }
+        if (type === "broadcast") {
+          // Add to user's dismissed broadcasts list
+          const stateKey = `_admin_messages/user_states/${userId}`;
+          const state = await env.TRIPS.get(stateKey, "json") as {
+            dismissedBroadcasts: string[];
+            lastChecked: string;
+          } | null || { dismissedBroadcasts: [], lastChecked: new Date().toISOString() };
 
-        // Get image URLs - either from provided URL or by uploading base64
-        const category = target === "day" ? "itinerary" : target;
-        let uploadResult: any;
+          if (!state.dismissedBroadcasts.includes(messageId)) {
+            state.dismissedBroadcasts.push(messageId);
+          }
+          state.lastChecked = new Date().toISOString();
 
-        if (imageUrl) {
-          // Use the already-uploaded image URL directly
-          uploadResult = {
-            urls: {
-              original: imageUrl,
-              large: `${imageUrl}?w=1600`,
-              medium: `${imageUrl}?w=800`,
-              thumbnail: `${imageUrl}?w=200`
-            },
-            key: imageUrl.replace('https://voygent.somotravel.workers.dev/media/', '')
+          await env.TRIPS.put(stateKey, JSON.stringify(state));
+
+          resultContent = {
+            success: true,
+            message: `✓ Announcement dismissed. It won't appear again.`
+          };
+        } else if (type === "thread") {
+          // Mark all messages in thread as read
+          const threadsKey = `_admin_messages/threads/${userId}`;
+          const threadsData = await env.TRIPS.get(threadsKey, "json") as { threads: any[] } | null;
+
+          if (threadsData?.threads) {
+            const thread = threadsData.threads.find(t => t.id === messageId);
+            if (thread) {
+              for (const msg of thread.messages) {
+                msg.read = true;
+              }
+              thread.updatedAt = new Date().toISOString();
+              await env.TRIPS.put(threadsKey, JSON.stringify(threadsData));
+            }
+          }
+
+          resultContent = {
+            success: true,
+            message: `✓ Message thread marked as read. You can still reply later using reply_to_admin if needed.`
           };
         } else {
-          // Upload from base64 data
-          uploadResult = await (async () => {
-            // Strip data URL prefix if present
-            let cleanBase64 = imageData;
-            if (imageData.startsWith('data:')) {
-              const commaIndex = imageData.indexOf(',');
-              if (commaIndex !== -1) {
-                cleanBase64 = imageData.slice(commaIndex + 1);
-              }
-            }
-
-            // Clean up base64: remove whitespace and handle URL-safe encoding
-            cleanBase64 = cleanBase64
-              .replace(/[\s\r\n]+/g, '')  // Remove all whitespace/newlines
-              .replace(/-/g, '+')          // URL-safe to standard
-              .replace(/_/g, '/');         // URL-safe to standard
-
-            // Ensure proper padding (base64 length must be divisible by 4)
-            const paddingNeeded = (4 - (cleanBase64.length % 4)) % 4;
-            cleanBase64 += '='.repeat(paddingNeeded);
-
-            // Decode base64 to binary with better error handling
-            let binaryData: Uint8Array;
-            try {
-              binaryData = Uint8Array.from(atob(cleanBase64), c => c.charCodeAt(0));
-            } catch (e: any) {
-              const validChars = /^[A-Za-z0-9+/=]+$/;
-              const invalidChars = cleanBase64.split('').filter((c: string) => !validChars.test(c));
-              throw new Error(`Base64 decode failed: ${e.message}. Length: ${cleanBase64.length}, Invalid chars: ${JSON.stringify([...new Set(invalidChars)].slice(0, 10))}, First 50: ${cleanBase64.slice(0, 50)}, Last 20: ${cleanBase64.slice(-20)}`);
-            }
-
-            // Detect image type from magic bytes
-            let contentType = 'image/png';
-            let extension = 'png';
-
-            if (binaryData[0] === 0xFF && binaryData[1] === 0xD8 && binaryData[2] === 0xFF) {
-              contentType = 'image/jpeg';
-              extension = 'jpg';
-            } else if (binaryData[0] === 0x89 && binaryData[1] === 0x50 && binaryData[2] === 0x4E && binaryData[3] === 0x47) {
-              contentType = 'image/png';
-              extension = 'png';
-            } else if (binaryData[0] === 0x47 && binaryData[1] === 0x49 && binaryData[2] === 0x46) {
-              contentType = 'image/gif';
-              extension = 'gif';
-            } else if (binaryData[0] === 0x52 && binaryData[1] === 0x49 && binaryData[2] === 0x46 && binaryData[3] === 0x46 &&
-                       binaryData[8] === 0x57 && binaryData[9] === 0x45 && binaryData[10] === 0x42 && binaryData[11] === 0x50) {
-              contentType = 'image/webp';
-              extension = 'webp';
-            }
-            const timestamp = Date.now();
-            const random = Math.random().toString(36).slice(2, 8);
-            const safeLabel = itemName ? itemName.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 30) : '';
-            const filename = safeLabel ? `${safeLabel}-${random}.${extension}` : `img-${timestamp}-${random}.${extension}`;
-            const key = `trips/${tripId}/${category}/${filename}`;
-
-            await env.MEDIA.put(key, binaryData, {
-              httpMetadata: { contentType },
-              customMetadata: { category, tripId, label: itemName || '', caption: caption || '' }
-            });
-
-            const baseUrl = `https://voygent.somotravel.workers.dev/media/${key}`;
-            return {
-              urls: {
-                original: baseUrl,
-                large: `${baseUrl}?w=1600`,
-                medium: `${baseUrl}?w=800`,
-                thumbnail: `${baseUrl}?w=200`
-              },
-              key
-            };
-          })();
+          throw new Error("Invalid type. Use 'broadcast' for announcements or 'thread' for direct messages.");
         }
+      }
+      else if (name === "add_trip_image") {
+        const { tripId, imageUrl, target, itemName, caption } = args;
+
+        if (!imageUrl) {
+          throw new Error("imageUrl is required. Use prepare_image_upload to get an upload link first, then use the returned imageUrl here. Base64 image data is NOT supported.");
+        }
+
+        // Use the provided image URL (from prepare_image_upload)
+        const category = target === "day" ? "itinerary" : target;
+        const uploadResult = {
+          urls: {
+            original: imageUrl,
+            large: `${imageUrl}?w=1600`,
+            medium: `${imageUrl}?w=800`,
+            thumbnail: `${imageUrl}?w=200`
+          },
+          key: imageUrl.replace(`${WORKER_BASE_URL}/media/`, '')
+        };
 
         // Load the trip data
         const tripKey = keyPrefix + tripId;
@@ -3476,11 +3349,11 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
         if (tripId) uploadParams.set('trip', tripId);
         if (description) uploadParams.set('desc', description);
 
-        const uploadUrl = `https://voygent.somotravel.workers.dev/upload?${uploadParams.toString()}`;
+        const uploadUrl = `${WORKER_BASE_URL}/upload?${uploadParams.toString()}`;
 
         // The final image URL (extension will be determined by actual file type)
         // We'll use a placeholder extension that the upload page will correct
-        const imageUrlBase = `https://voygent.somotravel.workers.dev/media/${basePath}/${imageId}`;
+        const imageUrlBase = `${WORKER_BASE_URL}/media/${basePath}/${imageId}`;
 
         resultContent = {
           uploadUrl,
@@ -3672,9 +3545,6 @@ async function publishToGitHub(
     'Accept': 'application/vnd.github.v3+json'
   };
 
-  // Helper to base64 encode
-  const toBase64 = (str: string) => btoa(unescape(encodeURIComponent(str)));
-
   // 1. Check if HTML file exists (to get SHA for update)
   let htmlSha: string | null = null;
   const checkUrl = `${baseUrl}/${filename}?ref=main`;
@@ -3763,7 +3633,7 @@ async function publishToGitHub(
   }
 
   // Return public URL
-  return `https://somotravel.us/${filename}`;
+  return `${SITE_BASE_URL}/${filename}`;
 }
 
 /**
@@ -3781,9 +3651,6 @@ async function publishDraftToGitHub(
     'User-Agent': 'Voygent-MCP',
     'Accept': 'application/vnd.github.v3+json'
   };
-
-  // Helper to base64 encode
-  const toBase64 = (str: string) => btoa(unescape(encodeURIComponent(str)));
 
   // Check if file exists (to get SHA for update)
   let fileSha: string | null = null;
@@ -3817,5 +3684,5 @@ async function publishDraftToGitHub(
   }
 
   // Return public URL
-  return `https://somotravel.us/${filename}`;
+  return `${SITE_BASE_URL}/${filename}`;
 }
