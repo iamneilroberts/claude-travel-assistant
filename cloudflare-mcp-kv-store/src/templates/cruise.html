@@ -250,6 +250,80 @@
 
         .card-link:hover { background: var(--accent-dark); }
 
+        /* Card Images */
+        .card-image {
+            width: 100%;
+            max-height: 180px;
+            object-fit: cover;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .card-gallery img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .card-gallery img:hover {
+            transform: scale(1.05);
+        }
+
+        /* Hide broken images and collapse empty containers */
+        img[src=""], img:not([src]), img.broken {
+            display: none !important;
+        }
+        .card-gallery:empty, .hero-gallery:empty {
+            display: none !important;
+        }
+
+        .image-caption {
+            font-size: 0.85em;
+            color: var(--text-light);
+            text-align: center;
+            margin-top: 5px;
+        }
+
+        /* Hero Gallery */
+        .hero-gallery {
+            display: flex;
+            overflow-x: auto;
+            gap: 0;
+            background: var(--primary-dark);
+            padding: 0;
+        }
+
+        .hero-gallery-item {
+            flex: 0 0 auto;
+            position: relative;
+        }
+
+        .hero-gallery-item img {
+            height: 250px;
+            width: auto;
+            display: block;
+        }
+
+        .hero-gallery-item .image-caption {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 8px 12px;
+            font-size: 0.9em;
+        }
+
         /* Flight Cards */
         .flight-card .card-header {
             background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
@@ -793,6 +867,29 @@
             .header-bar, .hero { background: var(--primary) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .card:hover { transform: none; box-shadow: var(--shadow); }
         }
+
+        /* Respect reduced motion preferences */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+            .card:hover { transform: none; }
+            .card-gallery img:hover { transform: none; }
+        }
+
+        /* Utility classes for common inline styles */
+        .mt-1 { margin-top: 8px; }
+        .mt-2 { margin-top: 12px; }
+        .mt-3 { margin-top: 20px; }
+        .mb-2 { margin-bottom: 12px; }
+        .mb-3 { margin-bottom: 20px; }
+        .text-muted { color: var(--text-light); font-size: 0.9em; }
+        .text-primary { color: var(--primary); }
+        .font-bold { font-weight: 600; }
+        .small-link { margin-top: 8px; padding: 6px 12px; font-size: 0.85em; }
     </style>
 </head>
 <body>
@@ -807,12 +904,26 @@
     </div>
 
     <!-- Hero Section -->
-    <div class="hero">
+    <div class="hero" {{#if heroImage}}style="background: linear-gradient(rgba(27, 97, 156, 0.85), rgba(21, 74, 120, 0.9)), url('{{heroImage}}') center/cover;"{{/if}}>
         <h1>{{meta.clientName}}</h1>
         <div class="destination">{{meta.destination}}</div>
         {{#if meta.dates}}<div class="dates-badge">{{meta.dates}}</div>{{/if}}
         <div class="tagline">Let's Get You There - Your Adventure Awaits!</div>
     </div>
+
+    <!-- Hero Images Gallery (if multiple) -->
+    {{#if images.hero}}
+    <div class="hero-gallery">
+        {{#each images.hero}}
+        {{#if urls.medium}}
+        <div class="hero-gallery-item">
+            <img src="{{urls.medium}}" alt="{{caption}}" loading="lazy" decoding="async" width="400" height="250" onerror="this.parentElement.style.display='none'">
+            {{#if caption}}<div class="image-caption">{{caption}}</div>{{/if}}
+        </div>
+        {{/if}}
+        {{/each}}
+    </div>
+    {{/if}}
 
     <!-- Main Content -->
     <div class="content">
@@ -908,6 +1019,14 @@
                         <strong>Stateroom:</strong> {{cruiseInfo.cabin.stateroom}}
                         {{#if cruiseInfo.cabin.bedding}} | <strong>Bedding:</strong> {{cruiseInfo.cabin.bedding}}{{/if}}
                     </p>
+                </div>
+                {{/if}}
+
+                {{#if cruiseInfo.cabin.images}}
+                <div class="card-gallery" style="margin-top: 20px;">
+                    {{#each cruiseInfo.cabin.images}}
+                    {{#if urls.medium}}<img src="{{urls.medium}}" alt="{{caption}}" title="{{caption}}" loading="lazy" decoding="async" width="300" height="200" onerror="this.style.display='none'">{{/if}}
+                    {{/each}}
                 </div>
                 {{/if}}
 
@@ -1099,7 +1218,7 @@
                         {{#if highlights}}<div class="option-highlights">{{highlights}}</div>{{/if}}
                         {{#if bestFor}}<div class="option-details"><strong>Best for:</strong> {{bestFor}}</div>{{/if}}
                         {{#if warning}}<div class="option-details" style="color: #856404;">⚠️ {{warning}}</div>{{/if}}
-                        {{#if url}}<a href="{{url}}" class="card-link" target="_blank">Book Now →</a>{{/if}}
+                        {{#if url}}<a href="{{url}}" class="card-link" target="_blank" rel="noopener noreferrer">Book Now →</a>{{/if}}
                     </div>
                     {{/each}}
                 </div>
@@ -1274,12 +1393,19 @@
             <div class="cards-grid">
                 {{#each lodging}}
                 <div class="card">
+                    {{#if images}}
+                    {{#each images}}
+                    {{#if urls.medium}}<img src="{{urls.medium}}" alt="{{caption}}" class="card-image" loading="lazy" decoding="async" width="400" height="180" onerror="this.style.display='none'">{{/if}}
+                    {{/each}}
+                    {{/if}}
                     <div class="card-header">{{name}}</div>
                     <div class="card-body">
                         <div class="card-detail"><span class="label">Location</span><span class="value">{{location}}</span></div>
-                        {{#if dates}}<div class="card-detail"><span class="label">Dates</span><span class="value">{{dates}}</span></div>{{/if}}
+                        {{#if nights}}<div class="card-detail"><span class="label">Nights</span><span class="value">{{nights}}</span></div>{{/if}}
+                        {{#if checkIn}}<div class="card-detail"><span class="label">Check-in</span><span class="value">{{checkIn}}</span></div>{{/if}}
+                        {{#if checkOut}}<div class="card-detail"><span class="label">Check-out</span><span class="value">{{checkOut}}</span></div>{{/if}}
                         {{#if rate}}<div class="card-detail"><span class="label">Rate</span><span class="value">{{formatCurrency rate}}/night</span></div>{{/if}}
-                        {{#if url}}<a href="{{url}}" class="card-link" target="_blank">View Property →</a>{{/if}}
+                        {{#if url}}<a href="{{url}}" class="card-link" target="_blank" rel="noopener noreferrer">View Property →</a>{{/if}}
                     </div>
                 </div>
                 {{/each}}
@@ -1304,11 +1430,25 @@
                     </div>
                 </div>
                 <div class="day-content">
+                    {{#if images}}
+                    <div class="card-gallery" style="margin-bottom: 20px;">
+                        {{#each images}}
+                        {{#if urls.medium}}<img src="{{urls.medium}}" alt="{{caption}}" title="{{caption}}" loading="lazy" decoding="async" width="300" height="200" onerror="this.style.display='none'">{{/if}}
+                        {{/each}}
+                    </div>
+                    {{/if}}
                     {{#each activities}}
                     <div class="activity">
+                        {{#if images}}
+                        <div class="card-gallery" style="margin-bottom: 10px;">
+                            {{#each images}}
+                            {{#if urls.thumbnail}}<img src="{{urls.thumbnail}}" alt="{{caption}}" title="{{caption}}" loading="lazy" decoding="async" width="150" height="100" onerror="this.style.display='none'">{{/if}}
+                            {{/each}}
+                        </div>
+                        {{/if}}
                         <div class="activity-title">{{name}}</div>
                         {{#if notes}}<div class="activity-details">{{notes}}</div>{{/if}}
-                        {{#if url}}<a href="{{url}}" class="card-link" style="margin-top: 8px; padding: 6px 12px; font-size: 0.85em;" target="_blank">More Info →</a>{{/if}}
+                        {{#if url}}<a href="{{url}}" class="card-link" style="margin-top: 8px; padding: 6px 12px; font-size: 0.85em;" target="_blank" rel="noopener noreferrer">More Info →</a>{{/if}}
                     </div>
                     {{/each}}
                 </div>
@@ -1332,7 +1472,7 @@
                         <p style="font-weight: 600; color: var(--text);">{{extras.hiddenGem.name}}</p>
                         <p style="margin-top: 10px;">{{extras.hiddenGem.why}}</p>
                         {{#if extras.hiddenGem.howToDoIt}}<p style="margin-top: 10px;"><strong>Pro Tip:</strong> {{extras.hiddenGem.howToDoIt}}</p>{{/if}}
-                        {{#if extras.hiddenGem.url}}<a href="{{extras.hiddenGem.url}}" class="card-link" target="_blank">Learn More →</a>{{/if}}
+                        {{#if extras.hiddenGem.url}}<a href="{{extras.hiddenGem.url}}" class="card-link" target="_blank" rel="noopener noreferrer">Learn More →</a>{{/if}}
                     </div>
                 </div>
                 {{/if}}
@@ -1384,7 +1524,7 @@
                     <div class="card-body">
                         <h4 style="color: var(--primary); margin-bottom: 8px;">{{title}}</h4>
                         <p style="font-size: 0.95em; color: var(--text-light); margin-bottom: 12px;">{{description}}</p>
-                        <a href="{{url}}" class="card-link" target="_blank">View Resource →</a>
+                        <a href="{{url}}" class="card-link" target="_blank" rel="noopener noreferrer">View Resource →</a>
                     </div>
                 </div>
                 {{/each}}

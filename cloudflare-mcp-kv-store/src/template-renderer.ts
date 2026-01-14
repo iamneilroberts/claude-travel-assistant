@@ -34,18 +34,29 @@ export function buildAgentInfo(userProfile: UserProfile | null): AgentInfo {
 
 /**
  * Get template HTML by name
- * Returns default template if name is "default", otherwise loads from KV
+ * Loads from KV first, falls back to DEFAULT_TEMPLATE only if KV entry not found or on error
  */
 export async function getTemplateHtml(env: Env, templateName: string): Promise<string> {
+  try {
+    // Try to load from KV first
+    const kvTemplate = await env.TRIPS.get(`_templates/${templateName}`, "text");
+    if (kvTemplate) {
+      return kvTemplate;
+    }
+  } catch (err) {
+    // KV read failed - fall back to built-in for "default", rethrow for others
+    if (templateName !== "default") {
+      throw new Error(`Template '${templateName}' failed to load: ${err}`);
+    }
+    // For "default", continue to built-in fallback below
+  }
+
+  // Fall back to built-in default template only for "default"
   if (templateName === "default") {
     return DEFAULT_TEMPLATE;
   }
 
-  const customTemplate = await env.TRIPS.get(`_templates/${templateName}`, "text");
-  if (!customTemplate) {
-    throw new Error(`Template '${templateName}' not found.`);
-  }
-  return customTemplate;
+  throw new Error(`Template '${templateName}' not found.`);
 }
 
 /**

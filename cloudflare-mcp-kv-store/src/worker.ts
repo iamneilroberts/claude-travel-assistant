@@ -2286,8 +2286,8 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
               properties: {
                 tripId: { type: "string", description: "The trip ID" },
                 imageUrl: { type: "string", description: "URL of already-uploaded image (from prepare_image_upload). REQUIRED." },
-                target: { type: "string", enum: ["hero", "lodging", "activity", "day"], description: "Where to attach the image" },
-                itemName: { type: "string", description: "For lodging/activity: the name of the hotel or activity. For day: the day number (e.g., '1', '2')." },
+                target: { type: "string", enum: ["hero", "lodging", "activity", "day", "cabin"], description: "Where to attach the image. Use 'cabin' for cruise stateroom photos." },
+                itemName: { type: "string", description: "For lodging/activity: the name of the hotel or activity. For day: the day number (e.g., '1', '2'). Not needed for hero or cabin." },
                 caption: { type: "string", description: "Optional caption for the image" }
               },
               required: ["tripId", "target", "imageUrl"]
@@ -3285,6 +3285,8 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
 
         if (target === "hero") {
           tripData.images.hero.push(imageEntry);
+          // Set heroImage field for easy template access (uses latest hero image)
+          tripData.heroImage = uploadResult.urls.large;
         } else if (target === "lodging") {
           if (!itemName) throw new Error("itemName required for lodging images (hotel name)");
 
@@ -3294,8 +3296,18 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
             actualItemName = matchedName;
           }
 
+          // Store in images object (legacy)
           if (!tripData.images.lodging[actualItemName]) tripData.images.lodging[actualItemName] = [];
           tripData.images.lodging[actualItemName].push(imageEntry);
+
+          // Also store directly on the lodging item for template rendering
+          if (tripData.lodging && Array.isArray(tripData.lodging)) {
+            const lodgingItem = tripData.lodging.find((l: any) => l.name === actualItemName);
+            if (lodgingItem) {
+              if (!lodgingItem.images) lodgingItem.images = [];
+              lodgingItem.images.push(imageEntry);
+            }
+          }
         } else if (target === "activity") {
           if (!itemName) throw new Error("itemName required for activity images (activity name)");
 
@@ -3306,12 +3318,50 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
             actualItemName = matchedName;
           }
 
+          // Store in images object (legacy)
           if (!tripData.images.activities[actualItemName]) tripData.images.activities[actualItemName] = [];
           tripData.images.activities[actualItemName].push(imageEntry);
+
+          // Also store directly on the activity for template rendering
+          if (tripData.itinerary && Array.isArray(tripData.itinerary)) {
+            for (const day of tripData.itinerary) {
+              if (day.activities && Array.isArray(day.activities)) {
+                const activity = day.activities.find((a: any) => a.name === actualItemName);
+                if (activity) {
+                  if (!activity.images) activity.images = [];
+                  activity.images.push(imageEntry);
+                  break;
+                }
+              }
+            }
+          }
         } else if (target === "day") {
           if (!itemName) throw new Error("itemName required for day images (day number)");
+
+          // Store in images object (legacy)
           if (!tripData.images.days[itemName]) tripData.images.days[itemName] = [];
           tripData.images.days[itemName].push(imageEntry);
+
+          // Also store directly on the day for template rendering
+          const dayNum = parseInt(itemName, 10);
+          if (tripData.itinerary && Array.isArray(tripData.itinerary)) {
+            const dayItem = tripData.itinerary.find((d: any) => d.day === dayNum || d.day === itemName);
+            if (dayItem) {
+              if (!dayItem.images) dayItem.images = [];
+              dayItem.images.push(imageEntry);
+            }
+          }
+        } else if (target === "cabin") {
+          // Cabin images for cruise trips - store on cruiseInfo.cabin
+          if (!tripData.images.cabin) tripData.images.cabin = [];
+          tripData.images.cabin.push(imageEntry);
+
+          // Also store directly on cruiseInfo.cabin for template rendering
+          // Initialize cruiseInfo if it doesn't exist so cabin images are always accessible
+          if (!tripData.cruiseInfo) tripData.cruiseInfo = {};
+          if (!tripData.cruiseInfo.cabin) tripData.cruiseInfo.cabin = {};
+          if (!tripData.cruiseInfo.cabin.images) tripData.cruiseInfo.cabin.images = [];
+          tripData.cruiseInfo.cabin.images.push(imageEntry);
         }
 
         // Save updated trip

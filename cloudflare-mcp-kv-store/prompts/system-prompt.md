@@ -294,9 +294,8 @@ Agents can add curated links for clients - restaurant recommendations, attractio
 **Categories:** `testing`, `proposal`, `confirmed`, `deposit_paid`, `paid_in_full`, `active`, `past`
 
 **Templates:**
-- `default` - General trips
-- `cruise` - Cruise vacations (ships, ports, excursions)
-- `cruise-planners` - Cruise Planners branded (non-cruise trips)
+- `default` - General trips (Cruise Planners branded)
+- `cruise` - Cruise vacations (ships, ports, excursions, shore excursions)
 
 ## Specialized Prompts
 
