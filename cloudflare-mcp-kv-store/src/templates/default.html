@@ -381,7 +381,252 @@
 
         .activity:last-child { margin-bottom: 0; }
         .activity-title { font-weight: 600; color: var(--text); margin-bottom: 5px; }
+        .activity-time { font-size: 0.85em; color: var(--primary); font-weight: 600; margin-bottom: 3px; }
         .activity-details { font-size: 0.95em; color: var(--text-light); }
+
+        /* Day Description & Info Boxes */
+        .day-description {
+            font-size: 1.05em;
+            color: var(--text);
+            line-height: 1.7;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: var(--white);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .cruise-info-box {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            background: var(--bg-section);
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .cruise-info-item {
+            text-align: center;
+        }
+
+        .cruise-info-item .label {
+            font-size: 0.75em;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .cruise-info-item .value {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 0.95em;
+        }
+
+        /* Dining Section */
+        .dining-section {
+            background: linear-gradient(135deg, #fff8f0 0%, #fff 100%);
+            border: 1px solid #f0d9c0;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 15px;
+        }
+
+        .dining-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: #c7880a;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+
+        .dining-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0d9c0;
+            font-size: 0.95em;
+        }
+
+        .dining-item:last-child { border-bottom: none; }
+
+        .dining-item .meal-type {
+            font-weight: 600;
+            color: var(--text);
+            margin-right: 8px;
+        }
+
+        .dining-item .meal-desc {
+            color: var(--text-light);
+        }
+
+        /* Highlights & Tips */
+        .day-highlights {
+            background: var(--secondary-light);
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 15px;
+        }
+
+        .day-highlights h5 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-size: 0.95em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .day-highlights ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .day-highlights li {
+            margin-bottom: 5px;
+            font-size: 0.95em;
+            color: var(--text);
+        }
+
+        .day-tips {
+            background: #fff8e6;
+            border-left: 4px solid #f5a623;
+            border-radius: 0 8px 8px 0;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+        }
+
+        .day-tips h5 {
+            color: #c7880a;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .day-tips ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .day-tips li {
+            margin-bottom: 4px;
+            font-size: 0.9em;
+            color: var(--text);
+        }
+
+        /* Shopping Section */
+        .day-shopping {
+            background: var(--bg-light);
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+        }
+
+        .day-shopping h5 {
+            color: var(--text);
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .shopping-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .shopping-tag {
+            background: var(--white);
+            border: 1px solid var(--border);
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            color: var(--text);
+        }
+
+        /* Day Videos */
+        .day-videos {
+            background: var(--bg-light);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .day-videos h5 {
+            color: var(--text);
+            margin-bottom: 12px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+        }
+
+        .video-embed {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+            border-radius: 8px;
+            background: #000;
+        }
+
+        .video-embed iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .video-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--text);
+            transition: border-color 0.2s;
+        }
+
+        .video-link:hover {
+            border-color: var(--primary);
+        }
+
+        .video-link .video-icon {
+            color: #ff0000;
+            font-size: 1.5em;
+        }
+
+        .video-link .video-title {
+            font-weight: 500;
+        }
+
+        /* Dining Links */
+        .dining-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .dining-link:hover {
+            text-decoration: underline;
+        }
 
         /* Pricing Section */
         .pricing-box {
@@ -639,6 +884,26 @@
                 {{/if}}
             </div>
         </div>
+        {{else}}
+        {{#if travelers.details}}
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon">👥</div>
+                <h2>Your Travel Party</h2>
+            </div>
+            <div class="content-box">
+                <div class="traveler-list">
+                    {{#each travelers.details}}<span class="traveler-badge">{{name}}</span>{{/each}}
+                </div>
+                {{#if travelers.notes}}
+                <div class="highlight-box">
+                    <h4>Trip Notes</h4>
+                    <p>{{travelers.notes}}</p>
+                </div>
+                {{/if}}
+            </div>
+        </div>
+        {{/if}}
         {{/if}}
 
         <!-- Preferences Section -->
@@ -720,7 +985,10 @@
                     {{#if images}}
                     {{#each images}}
                     {{#if urls.medium}}<img src="{{urls.medium}}" alt="{{caption}}" class="card-image" loading="lazy" decoding="async" width="400" height="180" onerror="this.style.display='none'">{{/if}}
+                    {{#if url}}<img src="{{url}}" alt="{{caption}}" class="card-image" loading="lazy" decoding="async" width="400" height="180" onerror="this.style.display='none'">{{/if}}
                     {{/each}}
+                    {{else}}
+                    {{#if image}}<img src="{{image}}" alt="{{name}}" class="card-image" loading="lazy" decoding="async" width="400" height="180" onerror="this.style.display='none'">{{/if}}
                     {{/if}}
                     <div class="card-header">{{name}}</div>
                     <div class="card-body">
@@ -803,8 +1071,9 @@
                 <div class="day-header">
                     <div class="day-number">{{day}}</div>
                     <div class="day-info">
-                        <h3>{{location}}</h3>
+                        <h3>{{default title location}}</h3>
                         {{#if date}}<div class="day-date">{{date}}</div>{{/if}}
+                        {{#if location}}{{#if title}}<div class="day-date">{{location}}</div>{{/if}}{{/if}}
                     </div>
                 </div>
                 <div class="day-content">
@@ -815,6 +1084,35 @@
                         {{/each}}
                     </div>
                     {{/if}}
+
+                    {{#if description}}
+                    <div class="day-description">{{description}}</div>
+                    {{/if}}
+
+                    {{#if cruiseInfo}}
+                    <div class="cruise-info-box">
+                        {{#if cruiseInfo.distance}}
+                        <div class="cruise-info-item">
+                            <div class="label">Distance</div>
+                            <div class="value">{{cruiseInfo.distance}}</div>
+                        </div>
+                        {{/if}}
+                        {{#if cruiseInfo.locks}}
+                        <div class="cruise-info-item">
+                            <div class="label">Locks</div>
+                            <div class="value">{{cruiseInfo.locks}}</div>
+                        </div>
+                        {{/if}}
+                        {{#if cruiseInfo.time}}
+                        <div class="cruise-info-item">
+                            <div class="label">Cruise Time</div>
+                            <div class="value">{{cruiseInfo.time}}</div>
+                        </div>
+                        {{/if}}
+                    </div>
+                    {{/if}}
+
+                    {{#if activities}}
                     {{#each activities}}
                     <div class="activity">
                         {{#if images}}
@@ -824,11 +1122,95 @@
                             {{/each}}
                         </div>
                         {{/if}}
+                        {{#if time}}<div class="activity-time">{{time}}</div>{{/if}}
                         <div class="activity-title">{{name}}</div>
+                        {{#if description}}<div class="activity-details">{{description}}</div>{{/if}}
                         {{#if notes}}<div class="activity-details">{{notes}}</div>{{/if}}
                         {{#if url}}<a href="{{url}}" class="card-link small-link" target="_blank" rel="noopener noreferrer">More Info →</a>{{/if}}
                     </div>
                     {{/each}}
+                    {{/if}}
+
+                    {{#if dining}}
+                    <div class="dining-section">
+                        <div class="dining-header">🍽️ Dining</div>
+                        {{#if dining.recommended}}
+                        <div class="dining-item">
+                            <span class="meal-type">Recommended:</span>
+                            {{#if dining.url}}<a href="{{dining.url}}" class="dining-link" target="_blank" rel="noopener noreferrer">{{dining.recommended}}</a>{{else}}<span class="meal-desc">{{dining.recommended}}</span>{{/if}}
+                        </div>
+                        {{/if}}
+                        {{#if dining.description}}
+                        <div class="dining-item">
+                            <span class="meal-desc">{{dining.description}}</span>
+                        </div>
+                        {{/if}}
+                        {{#if dining.breakfast}}
+                        <div class="dining-item">
+                            <span class="meal-type">Breakfast:</span>
+                            {{#if dining.breakfastUrl}}<a href="{{dining.breakfastUrl}}" class="dining-link" target="_blank" rel="noopener noreferrer">{{dining.breakfast}}</a>{{else}}<span class="meal-desc">{{dining.breakfast}}</span>{{/if}}
+                        </div>
+                        {{/if}}
+                        {{#if dining.lunch}}
+                        <div class="dining-item">
+                            <span class="meal-type">Lunch:</span>
+                            {{#if dining.lunchUrl}}<a href="{{dining.lunchUrl}}" class="dining-link" target="_blank" rel="noopener noreferrer">{{dining.lunch}}</a>{{else}}<span class="meal-desc">{{dining.lunch}}</span>{{/if}}
+                        </div>
+                        {{/if}}
+                        {{#if dining.dinner}}
+                        <div class="dining-item">
+                            <span class="meal-type">Dinner:</span>
+                            {{#if dining.dinnerUrl}}<a href="{{dining.dinnerUrl}}" class="dining-link" target="_blank" rel="noopener noreferrer">{{dining.dinner}}</a>{{else}}<span class="meal-desc">{{dining.dinner}}</span>{{/if}}
+                        </div>
+                        {{/if}}
+                    </div>
+                    {{/if}}
+
+                    {{#if highlights}}
+                    <div class="day-highlights">
+                        <h5>⭐ Highlights</h5>
+                        <ul>
+                        {{#each highlights}}
+                            <li>{{this}}</li>
+                        {{/each}}
+                        </ul>
+                    </div>
+                    {{/if}}
+
+                    {{#if tips}}
+                    <div class="day-tips">
+                        <h5>💡 Tips</h5>
+                        <ul>
+                        {{#each tips}}
+                            <li>{{this}}</li>
+                        {{/each}}
+                        </ul>
+                    </div>
+                    {{/if}}
+
+                    {{#if shopping}}
+                    <div class="day-shopping">
+                        <h5>🛍️ Shopping</h5>
+                        <div class="shopping-tags">
+                        {{#each shopping}}
+                            <span class="shopping-tag">{{this}}</span>
+                        {{/each}}
+                        </div>
+                    </div>
+                    {{/if}}
+
+                    {{#if videos}}
+                    <div class="day-videos">
+                        <h5>🎬 Helpful Videos</h5>
+                        <div class="video-grid">
+                        {{#each videos}}
+                            <div class="video-embed">
+                                <iframe src="https://www.youtube.com/embed/{{id}}" title="{{title}}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                            </div>
+                        {{/each}}
+                        </div>
+                    </div>
+                    {{/if}}
                 </div>
             </div>
             {{/each}}
@@ -890,6 +1272,66 @@
         </div>
         {{/if}}
 
+        <!-- Tiered Pricing Section -->
+        {{#if tiers}}
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon">📊</div>
+                <h2>Package Options</h2>
+            </div>
+            <div class="cards-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+                {{#if tiers.value}}
+                <div class="card" style="border-top: 4px solid var(--secondary);">
+                    <div class="card-header" style="background: var(--secondary); color: var(--text);">{{default tiers.value.name "Value"}}</div>
+                    <div class="card-body">
+                        {{#if tiers.value.description}}<p style="margin-bottom: 15px; color: var(--text-light);">{{tiers.value.description}}</p>{{/if}}
+                        {{#if tiers.value.includes}}<ul style="margin-bottom: 15px;">{{#each tiers.value.includes}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
+                        <div style="text-align: center; padding-top: 15px; border-top: 1px solid var(--border);">
+                            <div style="font-size: 1.6em; font-weight: 700; color: var(--primary);">{{formatCurrency tiers.value.estimatedTotal}}</div>
+                            {{#if tiers.value.perPerson}}<div style="font-size: 0.9em; color: var(--text-light);">{{formatCurrency tiers.value.perPerson}} per person</div>{{/if}}
+                        </div>
+                    </div>
+                </div>
+                {{/if}}
+                {{#if tiers.premium}}
+                <div class="card" style="border-top: 4px solid var(--accent); transform: scale(1.02);">
+                    <div class="card-header" style="background: var(--accent);">
+                        <span>{{default tiers.premium.name "Premium"}}</span>
+                        <span style="margin-left: 10px; background: var(--white); color: var(--accent); padding: 2px 8px; border-radius: 10px; font-size: 0.75em;">Recommended</span>
+                    </div>
+                    <div class="card-body">
+                        {{#if tiers.premium.description}}<p style="margin-bottom: 15px; color: var(--text-light);">{{tiers.premium.description}}</p>{{/if}}
+                        {{#if tiers.premium.includes}}<ul style="margin-bottom: 15px;">{{#each tiers.premium.includes}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
+                        <div style="text-align: center; padding-top: 15px; border-top: 1px solid var(--border);">
+                            <div style="font-size: 1.6em; font-weight: 700; color: var(--accent);">{{formatCurrency tiers.premium.estimatedTotal}}</div>
+                            {{#if tiers.premium.perPerson}}<div style="font-size: 0.9em; color: var(--text-light);">{{formatCurrency tiers.premium.perPerson}} per person</div>{{/if}}
+                        </div>
+                    </div>
+                </div>
+                {{/if}}
+                {{#if tiers.luxury}}
+                <div class="card" style="border-top: 4px solid #c7880a;">
+                    <div class="card-header" style="background: linear-gradient(135deg, #c7880a 0%, #f5a623 100%);">{{default tiers.luxury.name "Luxury"}}</div>
+                    <div class="card-body">
+                        {{#if tiers.luxury.description}}<p style="margin-bottom: 15px; color: var(--text-light);">{{tiers.luxury.description}}</p>{{/if}}
+                        {{#if tiers.luxury.includes}}<ul style="margin-bottom: 15px;">{{#each tiers.luxury.includes}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
+                        <div style="text-align: center; padding-top: 15px; border-top: 1px solid var(--border);">
+                            <div style="font-size: 1.6em; font-weight: 700; color: #c7880a;">{{formatCurrency tiers.luxury.estimatedTotal}}</div>
+                            {{#if tiers.luxury.perPerson}}<div style="font-size: 0.9em; color: var(--text-light);">{{formatCurrency tiers.luxury.perPerson}} per person</div>{{/if}}
+                        </div>
+                    </div>
+                </div>
+                {{/if}}
+            </div>
+            {{#if tiers.notes}}
+            <div class="highlight-box" style="margin-top: 20px;">
+                <h4>Pricing Notes</h4>
+                <p>{{tiers.notes}}</p>
+            </div>
+            {{/if}}
+        </div>
+        {{/if}}
+
         <!-- Pricing Section -->
         {{#if budget}}
         <div class="section">
@@ -898,9 +1340,18 @@
                 <h2>Investment Summary</h2>
             </div>
             <div class="pricing-box">
+                {{#each budget.lineItems}}
+                <div class="pricing-row">
+                    <span>{{label}}{{#if notes}} <span style="font-size: 0.85em; color: var(--text-light);">({{notes}})</span>{{/if}}</span>
+                    <span>{{formatCurrency amount}}</span>
+                </div>
+                {{/each}}
                 {{#if budget.perPerson}}<div class="pricing-row"><span>Per Person</span><span>{{formatCurrency budget.perPerson}}</span></div>{{/if}}
                 {{#if travelers.count}}<div class="pricing-row"><span>Number of Travelers</span><span>{{travelers.count}}</span></div>{{/if}}
                 {{#if budget.total}}<div class="pricing-row total"><span>Total Trip Investment</span><span>{{formatCurrency budget.total}}</span></div>{{/if}}
+                {{#if budget.notes}}
+                <p style="margin-top: 15px; font-size: 0.9em; color: var(--text-light);">{{budget.notes}}</p>
+                {{/if}}
             </div>
         </div>
         {{/if}}

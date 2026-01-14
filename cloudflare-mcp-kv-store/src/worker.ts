@@ -254,6 +254,30 @@ function getKeyPrefix(authKey: string): string {
   return authKey.toLowerCase().replace(/[^a-z0-9]/g, '_') + '/';
 }
 
+// Comment index helpers for O(1) comment lookups
+// Index stores trip IDs that have active (non-dismissed) comments
+async function addToCommentIndex(env: Env, keyPrefix: string, tripId: string): Promise<void> {
+  const indexKey = `${keyPrefix}_comment-index`;
+  const existing = await env.TRIPS.get(indexKey, "json") as string[] | null;
+  const index = new Set(existing || []);
+  index.add(tripId);
+  await env.TRIPS.put(indexKey, JSON.stringify([...index]));
+}
+
+async function removeFromCommentIndex(env: Env, keyPrefix: string, tripId: string): Promise<void> {
+  const indexKey = `${keyPrefix}_comment-index`;
+  const existing = await env.TRIPS.get(indexKey, "json") as string[] | null;
+  if (!existing) return;
+  const index = new Set(existing);
+  index.delete(tripId);
+  await env.TRIPS.put(indexKey, JSON.stringify([...index]));
+}
+
+async function getCommentIndex(env: Env, keyPrefix: string): Promise<string[]> {
+  const indexKey = `${keyPrefix}_comment-index`;
+  return await env.TRIPS.get(indexKey, "json") as string[] || [];
+}
+
 // Get valid auth keys (check KV first, then fall back to env var)
 async function getValidAuthKeys(env: Env): Promise<string[]> {
   // First check KV for auth keys
@@ -354,6 +378,15 @@ export default {
 
         // Save
         await env.TRIPS.put(commentsKey, JSON.stringify({ comments }));
+
+        // Update comment index for efficient lookups
+        // tripKey format: "user_prefix/trip-id" - extract both parts
+        const slashIndex = body.tripKey.indexOf('/');
+        if (slashIndex > 0) {
+          const keyPrefix = body.tripKey.substring(0, slashIndex + 1); // includes trailing /
+          const tripId = body.tripKey.substring(slashIndex + 1);
+          await addToCommentIndex(env, keyPrefix, tripId);
+        }
 
         return new Response(JSON.stringify({ success: true, commentCount: comments.length }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -2200,8 +2233,8 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
               properties: {
                 name: {
                   type: "string",
-                  description: "Prompt name: 'cruise-instructions', 'handle-changes', 'research-destination', 'flight-search', 'validate-trip', 'import-quote', 'analyze-profitability'",
-                  enum: ["cruise-instructions", "handle-changes", "research-destination", "flight-search", "validate-trip", "import-quote", "analyze-profitability"]
+                  description: "Prompt name: 'cruise-instructions', 'handle-changes', 'research-destination', 'flight-search', 'validate-trip', 'import-quote', 'analyze-profitability', 'trip-schema'",
+                  enum: ["cruise-instructions", "handle-changes", "research-destination", "flight-search", "validate-trip", "import-quote", "analyze-profitability", "trip-schema"]
                 }
               },
               required: ["name"]
@@ -2354,12 +2387,14 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
           .map(k => k.name.replace(keyPrefix, ''))  // Remove prefix for display
           .filter(k => !k.startsWith("_") && !k.includes("/_"));
 
-        // Check for ACTIVE comments (not dismissed) across all trips
+        // Check for ACTIVE comments using index (O(1) instead of O(n) trips)
         let totalActiveComments = 0;
         let newCommentCount = 0;
         const activeComments: { tripId: string; comments: any[] }[] = [];
 
-        for (const tripId of tripKeys) {
+        // Use comment index for efficient lookup - only fetch trips we know have comments
+        const commentIndex = await getCommentIndex(env, keyPrefix);
+        for (const tripId of commentIndex) {
           const commentsKey = `${keyPrefix}${tripId}/_comments`;
           const data = await env.TRIPS.get(commentsKey, "json") as { comments: any[] } | null;
           if (data?.comments?.length) {
@@ -2386,7 +2421,13 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
               // Mark as read (but not dismissed) since they're being displayed
               const updatedComments = data.comments.map(c => ({ ...c, read: true }));
               await env.TRIPS.put(commentsKey, JSON.stringify({ comments: updatedComments }));
+            } else {
+              // Index is stale - all comments dismissed, clean it up
+              await removeFromCommentIndex(env, keyPrefix, tripId);
             }
+          } else {
+            // Index is stale - no comments exist, clean it up
+            await removeFromCommentIndex(env, keyPrefix, tripId);
           }
         }
 
@@ -2676,11 +2717,10 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
         // Update last session timestamp
         activityLog.lastSession = new Date().toISOString();
 
-        // Update active trips list
-        const allKeys = await env.TRIPS.list({ prefix: keyPrefix });
-        activityLog.tripsActive = allKeys.keys
-          .map(k => k.name.replace(keyPrefix, ''))
-          .filter(k => !k.startsWith("_"));
+        // Add trip to active list if not already present (O(1) vs O(n) list scan)
+        if (!activityLog.tripsActive.includes(args.key)) {
+          activityLog.tripsActive.push(args.key);
+        }
 
         await env.TRIPS.put(activityLogKey, JSON.stringify(activityLog));
 
@@ -2753,6 +2793,28 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
       else if (name === "delete_trip") {
         const fullKey = keyPrefix + args.key;
         await env.TRIPS.delete(fullKey);
+
+        // Update activity log - remove from active trips list
+        const activityLogKey = keyPrefix + "_activity-log";
+        const activityLog = await env.TRIPS.get(activityLogKey, "json") as any;
+        if (activityLog?.tripsActive) {
+          activityLog.tripsActive = activityLog.tripsActive.filter((t: string) => t !== args.key);
+          activityLog.recentChanges.unshift({
+            tripId: args.key,
+            tripName: args.key,
+            change: "Deleted",
+            timestamp: new Date().toISOString()
+          });
+          if (activityLog.recentChanges.length > 20) {
+            activityLog.recentChanges = activityLog.recentChanges.slice(0, 20);
+          }
+          activityLog.lastSession = new Date().toISOString();
+          await env.TRIPS.put(activityLogKey, JSON.stringify(activityLog));
+        }
+
+        // Also remove from comment index if present
+        await removeFromCommentIndex(env, keyPrefix, args.key);
+
         resultContent = `Deleted ${args.key}`;
       }
       else if (name === "list_templates") {
@@ -2796,7 +2858,8 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
           tripId,
           template,
           message: `Preview ready! View at ${previewUrl}`,
-          note: "This is a draft preview. When ready, use publish_trip to publish to the main site."
+          note: "This is a draft preview. When ready, use publish_trip to publish to the main site.",
+          cacheNote: "GitHub Pages may take up to 1 minute to update. If you don't see the latest changes, use hard refresh (Ctrl+Shift+R or Cmd+Shift+R)."
         };
       }
       else if (name === "publish_trip") {
@@ -2877,6 +2940,7 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
           tripId,
           template,
           message: `Published! View at ${publicUrl}`,
+          cacheNote: "GitHub Pages may take up to 1 minute to update. If you don't see the latest changes, use hard refresh (Ctrl+Shift+R or Cmd+Shift+R).",
           ...(Object.keys(usageInfo).length > 0 && { usage: usageInfo })
         };
       }
@@ -3073,6 +3137,13 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
           });
 
           await env.TRIPS.put(commentsKey, JSON.stringify({ comments: updatedComments }));
+
+          // Update comment index - remove trip if no more active comments
+          const hasActiveComments = updatedComments.some(c => !c.dismissed);
+          if (!hasActiveComments) {
+            await removeFromCommentIndex(env, keyPrefix, tripId);
+          }
+
           resultContent = `✓ Dismissed ${dismissedCount} comment(s) for trip '${tripId}'. They will no longer appear in session start.`;
         }
       }

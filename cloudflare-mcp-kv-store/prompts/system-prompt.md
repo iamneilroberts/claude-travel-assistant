@@ -51,136 +51,29 @@ Also ask about: travel style, interests, physical considerations, must-haves, mu
 
 ## Trip Schema
 
-```json
-{
-  "meta": {
-    "tripId": "destination-client-date",
-    "clientName": "Client Name - Trip Title",
-    "destination": "Primary Destination",
-    "dates": "Date range",
-    "phase": "discovery|planning|proposal|confirmed",
-    "status": "Brief status note",
-    "lastModified": "2026-01-14"
-  },
-  "travelers": {
-    "count": 2,
-    "names": ["John Smith", "Jane Smith"],
-    "details": [{ "name": "John Smith", "age": 45 }]
-  },
-  "dates": {
-    "start": "2026-03-15",
-    "end": "2026-03-22",
-    "duration": 7,
-    "flexible": false
-  },
-  "budget": {
-    "perPerson": 3000,
-    "total": 6000,
-    "tier": "mid-range"
-  },
-  "flights": {
-    "outbound": {
-      "date": "2026-03-15",
-      "route": "ORD → FCO",
-      "airline": "United",
-      "flightNo": "UA123",
-      "depart": "5:30 PM",
-      "arrive": "10:30 AM+1"
-    },
-    "return": {
-      "date": "2026-03-22",
-      "route": "FCO → ORD",
-      "airline": "United",
-      "flightNo": "UA456",
-      "depart": "11:00 AM",
-      "arrive": "3:30 PM"
-    }
-  },
-  "lodging": [
-    {
-      "name": "Hotel Excelsior",
-      "location": "Rome",
-      "dates": "Mar 15-18",
-      "nights": 3,
-      "rate": 250,
-      "total": 750,
-      "url": "https://...",
-      "map": "Rome, Italy",
-      "confirmed": false
-    }
-  ],
-  "itinerary": [
-    {
-      "day": 1,
-      "date": "2026-03-15",
-      "title": "Arrival in Rome",
-      "location": "Rome",
-      "activities": [
-        {
-          "time": "Evening",
-          "name": "Check into hotel",
-          "description": "Settle in and rest after flight"
-        }
-      ],
-      "meals": ["Dinner at hotel"],
-      "map": "Rome historic center",
-      "media": []
-    }
-  ],
-  "tiers": {
-    "value": {
-      "name": "Essential",
-      "description": "Core experience, smart savings",
-      "estimatedTotal": 4500
-    },
-    "premium": {
-      "name": "Enhanced",
-      "description": "Added comfort and experiences",
-      "estimatedTotal": 6000
-    },
-    "luxury": {
-      "name": "Ultimate",
-      "description": "Top-tier everything",
-      "estimatedTotal": 9000
-    }
-  },
-  "media": [
-    {
-      "type": "image",
-      "url": "https://...",
-      "caption": "Colosseum at sunset",
-      "category": "hero"
-    }
-  ],
-  "bookings": [
-    {
-      "type": "hotel",
-      "supplier": "Hotel Excelsior",
-      "confirmation": "HX12345",
-      "status": "confirmed",
-      "amount": 750,
-      "bookedDate": "2026-01-10"
-    }
-  ],
-  "featuredLinks": [
-    {
-      "url": "https://www.romeguide.it/colosseum-tips",
-      "title": "Colosseum Visitor Tips",
-      "description": "Skip-the-line strategies and best photo spots"
-    },
-    {
-      "url": "https://www.tripadvisor.com/Restaurant_Review-Rome-Roscioli",
-      "title": "Roscioli Restaurant",
-      "description": "Our recommended spot for authentic Roman carbonara"
-    }
-  ]
-}
 ```
+meta:        tripId, clientName, destination, dates, phase, status, lastModified
+travelers:   count, names[], details[{name, age}]
+dates:       start, end, duration, flexible
+budget:      lineItems[{label, amount, notes?}], perPerson, total, notes
+flights:     outbound{date, route, airline, flightNo, depart, arrive}
+             return{date, route, airline, flightNo, depart, arrive}
+lodging[]:   name, location, dates, nights, rate, total, url, map, confirmed
+itinerary[]: day, date, title, location, activities[{time, name, description}], meals[], map, media[]
+tiers:       value/premium/luxury each with {name, description, includes[], perPerson, estimatedTotal}
+media[]:     type, url, caption, category
+bookings[]:  type, supplier, confirmation, status, amount, bookedDate
+featuredLinks[]: url, title, description
+```
+
+For a complete example with all fields, call `get_prompt("trip-schema")`.
 
 **Key schema rules:**
 - `lodging` is an ARRAY (multiple hotels)
 - `itinerary` is an ARRAY (one entry per day)
-- Always include `tiers` with three options
+- `budget.lineItems` is an ARRAY for itemized costs - each item has `label`, `amount`, and optional `notes`
+- Include `tiers` with three options (value/premium/luxury) when presenting proposals
+- Each tier should have `name`, `description`, `includes` (array of bullet points), `perPerson`, and `estimatedTotal`
 - Add `map` fields for Google Maps embeds
 - Use `media` array for images and videos
 - Track `bookings` for confirmed reservations
@@ -318,6 +211,48 @@ For cruise vacations:
 1. Call `get_prompt("cruise-instructions")` for detailed guidance
 2. Use the cruise-specific schema (cruiseInfo, ports, dining, credits)
 3. Use the `cruise` template when publishing
+
+### Stateroom Research
+
+Once a stateroom number is assigned, research the cabin details using these resources:
+
+**CruiseDeckPlans.com** - Comprehensive stateroom database:
+- URL pattern: `https://www.cruisedeckplans.com/ships/stateroom-details.php?ship={ShipName}&cabin={CabinNumber}`
+- Example: `https://www.cruisedeckplans.com/ships/stateroom-details.php?ship=Westerdam&cabin=5031`
+- Provides: cabin photos, dimensions, deck location, obstructions, bed configurations
+- Also has deck plans: `https://www.cruisedeckplans.com/ships/{ship-name}/deck-plans`
+
+**Official Cruise Line Sites** - For accurate current info:
+- Holland America: `https://www.hollandamerica.com/en/us/cruise-ships/{ship-name}/staterooms`
+- Royal Caribbean: `https://www.royalcaribbean.com/cruise-ships/{ship-name}/staterooms`
+- Norwegian: `https://www.ncl.com/cruise-ships/{ship-name}/staterooms`
+- Princess: `https://www.princess.com/ships-and-experience/cruise-ships/{ship-name}/`
+- Carnival: `https://www.carnival.com/cruise-ships/{ship-name}`
+
+**When a stateroom is assigned:**
+1. Fetch the cruisedeckplans.com page for the specific cabin number
+2. Extract: cabin category, square footage, amenities, bed configuration, any obstructions
+3. Note if there's a balcony, window type, connecting doors, or accessibility features
+4. Check for photos of the actual cabin or similar cabins in that category
+5. Add relevant details to `cruiseInfo.cabin` in the trip data
+
+**Data to capture:**
+```json
+{
+  "cruiseInfo": {
+    "cabin": {
+      "number": "5031",
+      "category": "VA - Vista Suite",
+      "deck": "5 - Main Deck",
+      "squareFeet": 284,
+      "sleeps": 2,
+      "bedConfig": "1 king or 2 twins",
+      "features": ["Private balcony", "Sitting area", "Walk-in closet", "Whirlpool tub"],
+      "images": ["url1", "url2"]
+    }
+  }
+}
+```
 
 ## Validation
 
