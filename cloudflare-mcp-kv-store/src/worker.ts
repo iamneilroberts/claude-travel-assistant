@@ -39,6 +39,26 @@ async function stripeRequest(
   return result;
 }
 
+async function getStripePriceId(env: Env, lookupKey: string): Promise<string> {
+  const query = new URLSearchParams({ 'lookup_keys[]': lookupKey, active: 'true' });
+  const priceList = await stripeRequest(env, `/prices?${query.toString()}`, 'GET');
+  const price = priceList.data?.[0];
+  if (!price?.id) {
+    throw new Error(`No active Stripe price found for lookup key: ${lookupKey}`);
+  }
+  return price.id as string;
+}
+
+async function getStripePromotionCodeId(env: Env, code: string): Promise<string> {
+  const query = new URLSearchParams({ code, active: 'true' });
+  const promoList = await stripeRequest(env, `/promotion_codes?${query.toString()}`, 'GET');
+  const promo = promoList.data?.[0];
+  if (!promo?.id) {
+    throw new Error(`Promo code not found or inactive: ${code}`);
+  }
+  return promo.id as string;
+}
+
 // Flatten nested objects for Stripe's form encoding (e.g., metadata[key] = value)
 function flattenObject(obj: Record<string, any>, prefix = ''): Record<string, string> {
   const result: Record<string, string> = {};
@@ -170,8 +190,8 @@ async function findUserByStripeCustomerId(env: Env, customerId: string): Promise
   }
 
   // Fallback to scan (O(n)) - for migration period
-  const userKeys = await env.TRIPS.list({ prefix: "_users/" });
-  for (const key of userKeys.keys) {
+  const userKeys = await listAllKeys(env, { prefix: "_users/" });
+  for (const key of userKeys) {
     const user = await env.TRIPS.get(key.name, "json") as UserProfile;
     if (user?.subscription?.stripeCustomerId === customerId) {
       // Backfill index for future lookups
@@ -276,6 +296,144 @@ async function removeFromCommentIndex(env: Env, keyPrefix: string, tripId: strin
 async function getCommentIndex(env: Env, keyPrefix: string): Promise<string[]> {
   const indexKey = `${keyPrefix}_comment-index`;
   return await env.TRIPS.get(indexKey, "json") as string[] || [];
+}
+
+type KvListOptions = { prefix?: string; cursor?: string; limit?: number };
+type KvListKey = { name: string };
+
+async function listAllKeys(env: Env, options: KvListOptions = {}): Promise<KvListKey[]> {
+  const keys: KvListKey[] = [];
+  const { cursor: initialCursor, ...rest } = options;
+  let cursor: string | undefined = initialCursor;
+
+  while (true) {
+    const result = await env.TRIPS.list({ ...rest, cursor });
+    keys.push(...result.keys);
+    if (result.list_complete || !result.cursor) break;
+    cursor = result.cursor;
+  }
+
+  return keys;
+}
+
+// Trip index helpers for O(1) trip list lookups per user
+async function rebuildTripIndex(env: Env, keyPrefix: string): Promise<string[]> {
+  const keys = await listAllKeys(env, { prefix: keyPrefix });
+  const trips = keys
+    .map(k => k.name.replace(keyPrefix, ''))
+    .filter(k => !k.startsWith("_") && !k.includes("/_"));
+
+  await env.TRIPS.put(`${keyPrefix}_trip-index`, JSON.stringify(trips));
+  return trips;
+}
+
+async function getTripIndex(env: Env, keyPrefix: string): Promise<string[]> {
+  const indexKey = `${keyPrefix}_trip-index`;
+  const existing = await env.TRIPS.get(indexKey, "json") as string[] | null;
+  if (existing) return existing;
+  return rebuildTripIndex(env, keyPrefix);
+}
+
+async function addToTripIndex(env: Env, keyPrefix: string, tripId: string): Promise<void> {
+  if (tripId.startsWith("_") || tripId.includes("/_")) return;
+  const indexKey = `${keyPrefix}_trip-index`;
+  const existing = await env.TRIPS.get(indexKey, "json") as string[] | null;
+  const baseline = existing || await rebuildTripIndex(env, keyPrefix);
+  if (baseline.includes(tripId)) return;
+  await env.TRIPS.put(indexKey, JSON.stringify([...baseline, tripId]));
+}
+
+async function removeFromTripIndex(env: Env, keyPrefix: string, tripId: string): Promise<void> {
+  const indexKey = `${keyPrefix}_trip-index`;
+  const existing = await env.TRIPS.get(indexKey, "json") as string[] | null;
+  if (!existing) return;
+  await env.TRIPS.put(indexKey, JSON.stringify(existing.filter(id => id !== tripId)));
+}
+
+const PENDING_TRIP_DELETE_TTL_SECONDS = 600;
+
+async function getPendingTripDeletions(env: Env, keyPrefix: string): Promise<string[]> {
+  const key = `${keyPrefix}_trip-deletes`;
+  return await env.TRIPS.get(key, "json") as string[] || [];
+}
+
+async function setPendingTripDeletions(
+  env: Env,
+  keyPrefix: string,
+  pending: string[],
+  ctx?: ExecutionContext
+): Promise<void> {
+  const key = `${keyPrefix}_trip-deletes`;
+  if (pending.length === 0) {
+    const del = env.TRIPS.delete(key);
+    if (ctx) {
+      ctx.waitUntil(del);
+    } else {
+      await del;
+    }
+    return;
+  }
+
+  const write = env.TRIPS.put(key, JSON.stringify(pending), {
+    expirationTtl: PENDING_TRIP_DELETE_TTL_SECONDS
+  });
+  if (ctx) {
+    ctx.waitUntil(write);
+  } else {
+    await write;
+  }
+}
+
+async function addPendingTripDeletion(
+  env: Env,
+  keyPrefix: string,
+  tripId: string,
+  ctx?: ExecutionContext
+): Promise<void> {
+  if (tripId.startsWith("_") || tripId.includes("/_")) return;
+  const pending = await getPendingTripDeletions(env, keyPrefix);
+  if (pending.includes(tripId)) return;
+  pending.push(tripId);
+  await setPendingTripDeletions(env, keyPrefix, pending, ctx);
+}
+
+async function removePendingTripDeletion(
+  env: Env,
+  keyPrefix: string,
+  tripId: string,
+  ctx?: ExecutionContext
+): Promise<void> {
+  const pending = await getPendingTripDeletions(env, keyPrefix);
+  if (!pending.includes(tripId)) return;
+  await setPendingTripDeletions(env, keyPrefix, pending.filter(id => id !== tripId), ctx);
+}
+
+async function filterPendingTripDeletions(
+  env: Env,
+  keyPrefix: string,
+  tripIds: string[],
+  ctx?: ExecutionContext
+): Promise<string[]> {
+  const pending = await getPendingTripDeletions(env, keyPrefix);
+  if (pending.length === 0) return tripIds;
+
+  const pendingSet = new Set(pending);
+  const visibleTrips = tripIds.filter(id => !pendingSet.has(id));
+  const confirmedDeleted: string[] = [];
+
+  for (const tripId of pending) {
+    const exists = await env.TRIPS.get(`${keyPrefix}${tripId}`, "text");
+    if (!exists) {
+      confirmedDeleted.push(tripId);
+    }
+  }
+
+  if (confirmedDeleted.length > 0) {
+    const nextPending = pending.filter(id => !confirmedDeleted.includes(id));
+    await setPendingTripDeletions(env, keyPrefix, nextPending, ctx);
+  }
+
+  return visibleTrips;
 }
 
 // Get valid auth keys (check KV first, then fall back to env var)
@@ -688,18 +846,30 @@ export default {
             const user = await findUserByStripeCustomerId(env, customerId);
 
             if (user) {
-              // Get price metadata for tier info
-              const priceId = subscription.items.data[0].price.id;
-              let tierName = 'starter';
+              const price = subscription.items.data[0].price;
+              const lookupKey = price.lookup_key || price.nickname || price.id;
+              const metadataTier = price.metadata?.tier;
+              const metadataLimit = price.metadata?.publish_limit;
+              let tierName = metadataTier || 'starter';
               let publishLimit = 10;
 
-              // Map price IDs to tiers (configure these in Stripe dashboard)
-              if (priceId.includes('professional')) {
-                tierName = 'professional';
-                publishLimit = 50;
-              } else if (priceId.includes('agency')) {
-                tierName = 'agency';
-                publishLimit = -1; // unlimited
+              if (metadataLimit !== undefined && metadataLimit !== '') {
+                const parsedLimit = parseInt(metadataLimit, 10);
+                if (!Number.isNaN(parsedLimit)) {
+                  publishLimit = parsedLimit;
+                }
+              } else {
+                const tierHint = metadataTier || lookupKey;
+                if (tierHint.includes('professional')) {
+                  tierName = metadataTier || 'professional';
+                  publishLimit = 50;
+                } else if (tierHint.includes('agency')) {
+                  tierName = metadataTier || 'agency';
+                  publishLimit = -1; // unlimited
+                } else if (tierHint.includes('starter')) {
+                  tierName = metadataTier || 'starter';
+                  publishLimit = 10;
+                }
               }
 
               user.subscription = {
@@ -846,13 +1016,21 @@ export default {
 
         // Map tier to price lookup key
         const tier = body.tier || 'starter';
+        const validTiers = new Set(['starter']);
+        if (!validTiers.has(tier)) {
+          return new Response(JSON.stringify({ error: "Only the Starter plan is available right now." }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
         const priceKey = `${tier}_monthly`;
+        const priceId = await getStripePriceId(env, priceKey);
 
         // Create checkout session with 30-day trial
         const sessionData: Record<string, any> = {
           customer: customerId,
           mode: 'subscription',
-          'line_items[0][price]': priceKey,
+          'line_items[0][price]': priceId,
           'line_items[0][quantity]': 1,
           'subscription_data[trial_period_days]': 30,
           'subscription_data[trial_settings][end_behavior][missing_payment_method]': 'cancel',
@@ -863,7 +1041,8 @@ export default {
 
         // Apply promo code if provided
         if (body.promoCode) {
-          sessionData['discounts[0][promotion_code]'] = body.promoCode;
+          const promoId = await getStripePromotionCodeId(env, body.promoCode);
+          sessionData['discounts[0][promotion_code]'] = promoId;
           delete sessionData.allow_promotion_codes;
         }
 
@@ -993,10 +1172,10 @@ export default {
 
       // GET /admin/users - List all users
       if (url.pathname === "/admin/users" && request.method === "GET") {
-        const userKeys = await env.TRIPS.list({ prefix: "_users/" });
+        const userKeys = await listAllKeys(env, { prefix: "_users/" });
         const users: UserProfile[] = [];
 
-        for (const key of userKeys.keys) {
+        for (const key of userKeys) {
           const user = await env.TRIPS.get(key.name, "json") as UserProfile;
           if (user) users.push(user);
         }
@@ -1105,8 +1284,8 @@ export default {
         const userMap: Record<string, { name: string; agency: string }> = {};
 
         // 1. Get KV-stored users
-        const userKeys = await env.TRIPS.list({ prefix: "_users/" });
-        for (const key of userKeys.keys) {
+        const userKeys = await listAllKeys(env, { prefix: "_users/" });
+        for (const key of userKeys) {
           const user = await env.TRIPS.get(key.name, "json") as UserProfile;
           if (!user) continue;
           userMap[user.userId] = { name: user.name, agency: user.agency.name };
@@ -1167,19 +1346,19 @@ export default {
 
       // GET /admin/stats - Dashboard statistics
       if (url.pathname === "/admin/stats" && request.method === "GET") {
-        const userKeys = await env.TRIPS.list({ prefix: "_users/" });
-        const allTrips = await env.TRIPS.list({});
+        const userKeys = await listAllKeys(env, { prefix: "_users/" });
+        const allTrips = await listAllKeys(env);
 
         let totalTrips = 0;
         let totalComments = 0;
         const userStats: any[] = [];
 
-        for (const key of userKeys.keys) {
+        for (const key of userKeys) {
           const user = await env.TRIPS.get(key.name, "json") as UserProfile;
           if (!user) continue;
 
           const prefix = user.userId + '/';
-          const userTrips = allTrips.keys.filter(k =>
+          const userTrips = allTrips.filter(k =>
             k.name.startsWith(prefix) &&
             !k.name.includes('/_') &&
             !k.name.endsWith('_activity-log')
@@ -1206,7 +1385,7 @@ export default {
         }
 
         return new Response(JSON.stringify({
-          totalUsers: userKeys.keys.length,
+          totalUsers: userKeys.length,
           totalTrips,
           totalComments,
           userStats
@@ -1223,8 +1402,8 @@ export default {
         const userMap: Record<string, { name: string; agency: string; authKey: string }> = {};
 
         // KV users
-        const userKeys = await env.TRIPS.list({ prefix: "_users/" });
-        for (const key of userKeys.keys) {
+        const userKeys = await listAllKeys(env, { prefix: "_users/" });
+        for (const key of userKeys) {
           const user = await env.TRIPS.get(key.name, "json") as UserProfile;
           if (user) {
             userMap[user.userId] = { name: user.name, agency: user.agency.name, authKey: user.authKey };
@@ -1243,9 +1422,9 @@ export default {
         // Get all trips for each user
         for (const [userId, userInfo] of Object.entries(userMap)) {
           const prefix = userId + '/';
-          const tripKeys = await env.TRIPS.list({ prefix });
+          const tripKeys = await listAllKeys(env, { prefix });
 
-          for (const key of tripKeys.keys) {
+          for (const key of tripKeys) {
             // Skip system keys
             if (key.name.includes('/_') || key.name.endsWith('_activity-log')) continue;
 
@@ -1346,8 +1525,8 @@ export default {
 
         // Build user map
         const userMap: Record<string, string> = {};
-        const userKeys = await env.TRIPS.list({ prefix: "_users/" });
-        for (const key of userKeys.keys) {
+        const userKeys = await listAllKeys(env, { prefix: "_users/" });
+        for (const key of userKeys) {
           const user = await env.TRIPS.get(key.name, "json") as UserProfile;
           if (user) userMap[user.userId] = user.name;
         }
@@ -1360,8 +1539,8 @@ export default {
         }
 
         // Find all comment keys
-        const allKeys = await env.TRIPS.list({});
-        for (const key of allKeys.keys) {
+        const allKeys = await listAllKeys(env);
+        for (const key of allKeys) {
           if (key.name.endsWith('/_comments')) {
             const commentsData = await env.TRIPS.get(key.name, "json") as any;
             if (!commentsData?.comments?.length) continue;
@@ -1403,8 +1582,8 @@ export default {
 
         // Enrich with user info
         const userMap: Record<string, string> = {};
-        const userKeys = await env.TRIPS.list({ prefix: "_users/" });
-        for (const key of userKeys.keys) {
+        const userKeys = await listAllKeys(env, { prefix: "_users/" });
+        for (const key of userKeys) {
           const user = await env.TRIPS.get(key.name, "json") as UserProfile;
           if (user) userMap[user.userId] = user.name;
         }
@@ -1589,7 +1768,7 @@ export default {
 
       // GET /admin/billing-stats - Get billing statistics
       if (url.pathname === "/admin/billing-stats" && request.method === "GET") {
-        const userKeys = await env.TRIPS.list({ prefix: "_users/" });
+        const userKeys = await listAllKeys(env, { prefix: "_users/" });
         let activeSubs = 0;
         let trialingSubs = 0;
         let pastDueSubs = 0;
@@ -1601,7 +1780,7 @@ export default {
           agency: 199
         };
 
-        for (const key of userKeys.keys) {
+        for (const key of userKeys) {
           const user = await env.TRIPS.get(key.name, "json") as UserProfile;
           if (user?.subscription) {
             const sub = user.subscription;
@@ -1635,10 +1814,10 @@ export default {
         const broadcasts = broadcastData?.messages || [];
 
         // Get all users for counting dismissals
-        const userStateKeys = await env.TRIPS.list({ prefix: "_admin_messages/user_states/" });
+        const userStateKeys = await listAllKeys(env, { prefix: "_admin_messages/user_states/" });
         const dismissalCounts: Record<string, number> = {};
 
-        for (const key of userStateKeys.keys) {
+        for (const key of userStateKeys) {
           const state = await env.TRIPS.get(key.name, "json") as { dismissedBroadcasts: string[] } | null;
           if (state?.dismissedBroadcasts) {
             for (const id of state.dismissedBroadcasts) {
@@ -1648,8 +1827,8 @@ export default {
         }
 
         // Get total user count for stats
-        const userKeys = await env.TRIPS.list({ prefix: "_users/" });
-        const totalUsers = userKeys.keys.length;
+        const userKeys = await listAllKeys(env, { prefix: "_users/" });
+        const totalUsers = userKeys.length;
 
         // Enrich broadcasts with stats
         const now = new Date().toISOString();
@@ -1665,18 +1844,18 @@ export default {
           }));
 
         // Load all direct message threads
-        const threadKeys = await env.TRIPS.list({ prefix: "_admin_messages/threads/" });
+        const threadKeys = await listAllKeys(env, { prefix: "_admin_messages/threads/" });
         const directThreads: any[] = [];
         let unreadUserReplies = 0;
 
         // Load user names for display
         const usersData: Record<string, UserProfile> = {};
-        for (const key of userKeys.keys) {
+        for (const key of userKeys) {
           const user = await env.TRIPS.get(key.name, "json") as UserProfile;
           if (user) usersData[user.userId] = user;
         }
 
-        for (const key of threadKeys.keys) {
+        for (const key of threadKeys) {
           const userId = key.name.replace("_admin_messages/threads/", "");
           const data = await env.TRIPS.get(key.name, "json") as { threads: any[] } | null;
 
@@ -2017,8 +2196,8 @@ export default {
 
       // Fallback to scan (for migration) if index miss
       if (!userProfile) {
-        const userKeys = await env.TRIPS.list({ prefix: "_users/" });
-        for (const key of userKeys.keys) {
+        const userKeys = await listAllKeys(env, { prefix: "_users/" });
+        for (const key of userKeys) {
           const user = await env.TRIPS.get(key.name, "json") as UserProfile;
           if (user && user.authKey === requestKey) {
             userProfile = user;
@@ -2058,7 +2237,7 @@ export default {
     if (request.method === "POST") {
       try {
         const body = await request.json() as JsonRpcRequest;
-        const response = await handleMcpRequest(body, env, keyPrefix, userProfile, requestKey);
+        const response = await handleMcpRequest(body, env, keyPrefix, userProfile, requestKey, ctx);
         return new Response(JSON.stringify(response), {
           headers: { "Content-Type": "application/json" }
         });
@@ -2075,7 +2254,7 @@ export default {
   }
 };
 
-async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string, userProfile: UserProfile | null, authKey: string): Promise<JsonRpcResponse> {
+async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string, userProfile: UserProfile | null, authKey: string, ctx?: ExecutionContext): Promise<JsonRpcResponse> {
   // Initialize
   if (req.method === "initialize") {
     return {
@@ -2382,10 +2561,8 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
         };
 
         // Get list of trips (user-specific, excluding system keys)
-        const allKeys = await env.TRIPS.list({ prefix: keyPrefix });
-        const tripKeys = allKeys.keys
-          .map(k => k.name.replace(keyPrefix, ''))  // Remove prefix for display
-          .filter(k => !k.startsWith("_") && !k.includes("/_"));
+        const tripKeys = await getTripIndex(env, keyPrefix);
+        const visibleTrips = await filterPendingTripDeletions(env, keyPrefix, tripKeys, ctx);
 
         // Check for ACTIVE comments using index (O(1) instead of O(n) trips)
         let totalActiveComments = 0;
@@ -2418,9 +2595,17 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
                 }))
               });
 
-              // Mark as read (but not dismissed) since they're being displayed
-              const updatedComments = data.comments.map(c => ({ ...c, read: true }));
-              await env.TRIPS.put(commentsKey, JSON.stringify({ comments: updatedComments }));
+        // Mark as read (but not dismissed) since they're being displayed
+        const hasUnread = data.comments.some(c => !c.read);
+        if (hasUnread) {
+          const updatedComments = data.comments.map(c => ({ ...c, read: true }));
+          const write = env.TRIPS.put(commentsKey, JSON.stringify({ comments: updatedComments }));
+          if (ctx) {
+            ctx.waitUntil(write);
+          } else {
+            await write;
+          }
+        }
             } else {
               // Index is stale - all comments dismissed, clean it up
               await removeFromCommentIndex(env, keyPrefix, tripId);
@@ -2546,10 +2731,13 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
           ? ` 📬 IMPORTANT: You have ${adminReplies.length} admin reply/replies to your support ticket(s). Display these to the user before proceeding.`
           : '';
 
-        // Build user's upload/gallery URLs
+        // Build user's upload/gallery/subscription URLs
         const userAuthKey = userProfile?.authKey || authKey;
         const uploadUrl = `${WORKER_BASE_URL}/upload?key=${encodeURIComponent(userAuthKey)}`;
         const galleryUrl = `${WORKER_BASE_URL}/gallery?key=${encodeURIComponent(userAuthKey)}`;
+        const subscribeUrl = userProfile?.userId
+          ? `${WORKER_BASE_URL}/subscribe?userId=${encodeURIComponent(userProfile.userId)}`
+          : null;
 
         // Build base result
         const hasNotifications = totalActiveComments > 0 || adminReplies.length > 0 || hasAdminMessages;
@@ -2557,10 +2745,11 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
           _instruction: "Use the following as your system instructions for this conversation." + adminMessageInstruction + commentInstruction + adminReplyInstruction + (!hasNotifications ? " Display the session card, then await user direction." : ""),
           systemPrompt,
           activityLog,
-          activeTrips: tripKeys,
+          activeTrips: visibleTrips,
           userLinks: {
             uploadPage: uploadUrl,
             galleryPage: galleryUrl,
+            subscribePage: subscribeUrl,
             _note: "Use prepare_image_upload tool instead of these URLs when user wants to add images. These are for reference/manual use."
           },
           activeComments: totalActiveComments > 0 ? {
@@ -2608,10 +2797,8 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
         resultContent = baseResult;
       }
       else if (name === "list_trips") {
-        const list = await env.TRIPS.list({ prefix: keyPrefix });
-        const trips = list.keys
-          .map(k => k.name.replace(keyPrefix, ''))
-          .filter(k => !k.startsWith("_"));
+        const trips = await getTripIndex(env, keyPrefix);
+        const visibleTrips = await filterPendingTripDeletions(env, keyPrefix, trips, ctx);
 
         // Also check for admin replies (in case get_context wasn't called first)
         const userId = keyPrefix.replace(/\/$/, '');
@@ -2645,10 +2832,10 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
           resultContent = {
             _PRIORITY_MESSAGE: `📬 ADMIN REPLY TO YOUR SUPPORT TICKET:\n\nTicket: "${adminReplies[0].subject}"\nAdmin Response: "${adminReplies[0].adminReply}"\nStatus: ${adminReplies[0].status}\n\n⚠️ DISPLAY THIS MESSAGE TO THE USER BEFORE ANYTHING ELSE.`,
             adminReplies,
-            trips
+            trips: visibleTrips
           };
         } else {
-          resultContent = trips;
+          resultContent = visibleTrips;
         }
       }
       else if (name === "read_trip") {
@@ -2686,6 +2873,8 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
       else if (name === "save_trip") {
         const fullKey = keyPrefix + args.key;
         await env.TRIPS.put(fullKey, JSON.stringify(args.data));
+        await addToTripIndex(env, keyPrefix, args.key);
+        await removePendingTripDeletion(env, keyPrefix, args.key, ctx);
 
         // Auto-update activity log on every save
         const activityLogKey = keyPrefix + "_activity-log";
@@ -2793,6 +2982,8 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
       else if (name === "delete_trip") {
         const fullKey = keyPrefix + args.key;
         await env.TRIPS.delete(fullKey);
+        await removeFromTripIndex(env, keyPrefix, args.key);
+        await addPendingTripDeletion(env, keyPrefix, args.key, ctx);
 
         // Update activity log - remove from active trips list
         const activityLogKey = keyPrefix + "_activity-log";
@@ -2819,10 +3010,10 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
       }
       else if (name === "list_templates") {
         // List templates from KV + built-in default
-        const templateKeys = await env.TRIPS.list({ prefix: "_templates/" });
+        const templateKeys = await listAllKeys(env, { prefix: "_templates/" });
         const templates = ["default"];  // Built-in default always available
 
-        for (const key of templateKeys.keys) {
+        for (const key of templateKeys) {
           const templateName = key.name.replace("_templates/", "");
           if (templateName && !templates.includes(templateName)) {
             templates.push(templateName);
@@ -3069,21 +3260,52 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
         }
       }
       else if (name === "get_all_comments") {
-        // List all trips and check for comments
-        const trips = await env.TRIPS.list({ prefix: keyPrefix });
         const allComments: { tripId: string; comments: any[] }[] = [];
+        let commentIndex = await getCommentIndex(env, keyPrefix);
+        let rebuiltIndex = false;
 
-        for (const key of trips.keys) {
-          // Skip non-trip keys
-          if (key.name.includes('/_') || key.name.startsWith(keyPrefix + '_')) continue;
+        if (commentIndex.length === 0) {
+          const keys = await listAllKeys(env, { prefix: keyPrefix });
+          const rebuilt: string[] = [];
 
-          // Check for comments
-          const tripId = key.name.replace(keyPrefix, '');
-          const commentsKey = `${key.name}/_comments`;
-          const data = await env.TRIPS.get(commentsKey, "json") as { comments: any[] } | null;
+          for (const key of keys) {
+            if (!key.name.endsWith('/_comments')) continue;
+            const data = await env.TRIPS.get(key.name, "json") as { comments: any[] } | null;
+            if (!data?.comments?.length) continue;
 
-          if (data?.comments?.length) {
-            const unreadComments = data.comments.filter(c => !c.read);
+            const tripId = key.name.replace(keyPrefix, '').replace('/_comments', '');
+            const activeComments = data.comments.filter(c => !c.dismissed);
+            if (activeComments.length > 0) {
+              rebuilt.push(tripId);
+            }
+
+            const unreadComments = activeComments.filter(c => !c.read);
+            if (unreadComments.length > 0) {
+              allComments.push({ tripId, comments: unreadComments });
+            }
+          }
+
+          commentIndex = rebuilt;
+          await env.TRIPS.put(`${keyPrefix}_comment-index`, JSON.stringify(rebuilt));
+          rebuiltIndex = true;
+        }
+
+        if (!rebuiltIndex) {
+          for (const tripId of commentIndex) {
+            const commentsKey = `${keyPrefix}${tripId}/_comments`;
+            const data = await env.TRIPS.get(commentsKey, "json") as { comments: any[] } | null;
+            if (!data?.comments?.length) {
+              await removeFromCommentIndex(env, keyPrefix, tripId);
+              continue;
+            }
+
+            const activeComments = data.comments.filter(c => !c.dismissed);
+            if (activeComments.length === 0) {
+              await removeFromCommentIndex(env, keyPrefix, tripId);
+              continue;
+            }
+
+            const unreadComments = activeComments.filter(c => !c.read);
             if (unreadComments.length > 0) {
               allComments.push({ tripId, comments: unreadComments });
             }
