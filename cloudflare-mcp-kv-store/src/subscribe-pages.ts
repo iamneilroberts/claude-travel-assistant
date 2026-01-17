@@ -38,6 +38,8 @@ export function getSubscribePageHtml(
     .btn-secondary { background: #eee; color: #333; }
     .trial-badge { background: #d4edda; color: #155724; padding: 8px 16px; border-radius: 20px; font-size: 13px; margin-bottom: 20px; display: inline-block; }
     .alert { background: #fff3cd; border: 1px solid #ffc107; color: #856404; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
+    .manage { background: white; border-radius: 16px; padding: 24px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.2); margin-bottom: 20px; }
+    .status-message { color: #1a5f7a; font-weight: 600; margin-bottom: 12px; }
     .footer { text-align: center; color: rgba(255,255,255,0.7); margin-top: 40px; font-size: 14px; }
     .footer a { color: white; }
   </style>
@@ -49,8 +51,12 @@ export function getSubscribePageHtml(
       <p>Start with a 30-day free trial. No credit card required.</p>
     </div>
     ${canceled ? '<div class="alert">Checkout was canceled. Feel free to try again when you are ready.</div>' : ''}
+    <div id="manageSection" class="manage" style="display:none;">
+      <p id="statusMessage" class="status-message"></p>
+      <button class="btn btn-primary" onclick="openPortal()">Manage Subscription</button>
+    </div>
     <div class="plans">
-      <div class="plan">
+      <div class="plan featured">
         <h2>Starter</h2>
         <div class="trial-badge">30-day free trial</div>
         <div class="price">$29<span>/month</span></div>
@@ -61,33 +67,7 @@ export function getSubscribePageHtml(
           <li>Client feedback system</li>
           <li>Email support</li>
         </ul>
-        <button class="btn btn-secondary" onclick="subscribe('starter')">Start Free Trial</button>
-      </div>
-      <div class="plan featured">
-        <h2>Professional</h2>
-        <div class="trial-badge">30-day free trial</div>
-        <div class="price">$79<span>/month</span></div>
-        <div class="limit">50 proposals per month</div>
-        <ul>
-          <li>Everything in Starter</li>
-          <li>Custom branding</li>
-          <li>Priority support</li>
-          <li>Advanced analytics</li>
-        </ul>
-        <button class="btn btn-primary" onclick="subscribe('professional')">Start Free Trial</button>
-      </div>
-      <div class="plan">
-        <h2>Agency</h2>
-        <div class="trial-badge">30-day free trial</div>
-        <div class="price">$199<span>/month</span></div>
-        <div class="limit">Unlimited proposals</div>
-        <ul>
-          <li>Everything in Professional</li>
-          <li>Unlimited publishing</li>
-          <li>White-label options</li>
-          <li>Dedicated support</li>
-        </ul>
-        <button class="btn btn-secondary" onclick="subscribe('agency')">Start Free Trial</button>
+        <button class="btn btn-primary" onclick="subscribe('starter')">Start Free Trial</button>
       </div>
     </div>
     <div class="footer">
@@ -97,6 +77,54 @@ export function getSubscribePageHtml(
   <script>
     const userId = '${userId || ''}';
     const promoCode = '${promo || ''}';
+    const plansEl = document.querySelector('.plans');
+    const manageSection = document.getElementById('manageSection');
+    const statusMessage = document.getElementById('statusMessage');
+
+    function formatTier(tier) {
+      if (!tier) return 'your plan';
+      return tier.charAt(0).toUpperCase() + tier.slice(1);
+    }
+
+    async function openPortal() {
+      if (!userId) {
+        alert('User ID is required. Please use the link from your welcome email.');
+        return;
+      }
+      try {
+        const response = await fetch('/api/portal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId })
+        });
+        const data = await response.json();
+        if (data.portalUrl) {
+          window.location.href = data.portalUrl;
+        } else {
+          alert(data.error || 'Failed to open billing portal');
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function loadSubscriptionStatus() {
+      if (!userId) return;
+      try {
+        const response = await fetch('/api/subscription?userId=' + encodeURIComponent(userId));
+        if (!response.ok) return;
+        const data = await response.json();
+        const activeStatuses = ['active', 'trialing', 'past_due'];
+        if (activeStatuses.includes(data.status)) {
+          manageSection.style.display = 'block';
+          plansEl.style.display = 'none';
+          statusMessage.textContent = 'You are currently on the ' + formatTier(data.tier) + ' plan (' + data.status + ').';
+        }
+      } catch (err) {
+        console.warn('Failed to load subscription status:', err);
+      }
+    }
+
     async function subscribe(tier) {
       if (!userId) {
         alert('User ID is required. Please use the link from your welcome email.');
@@ -118,6 +146,7 @@ export function getSubscribePageHtml(
         alert('Error: ' + err.message);
       }
     }
+    loadSubscriptionStatus();
   </script>
 </body>
 </html>`;

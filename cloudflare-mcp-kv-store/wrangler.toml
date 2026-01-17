@@ -1,6 +1,7 @@
 name = "voygent"
 main = "src/worker.ts"
 compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
 
 # KV Namespace binding
 # Run 'npx wrangler kv:namespace create TRIPS' to get these IDs

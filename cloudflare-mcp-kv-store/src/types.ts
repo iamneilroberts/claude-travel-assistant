@@ -101,3 +101,26 @@ export interface TemplateConfig {
   reserveUrl: string;
   agent: AgentInfo;
 }
+
+/**
+ * Route handler signature for HTTP endpoints
+ */
+export type RouteHandler = (
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+  url: URL,
+  corsHeaders: Record<string, string>
+) => Promise<Response | null>;
+
+/**
+ * MCP tool handler signature
+ */
+export type McpToolHandler = (
+  args: Record<string, any>,
+  env: Env,
+  keyPrefix: string,
+  userProfile: UserProfile | null,
+  authKey: string,
+  ctx?: ExecutionContext
+) => Promise<{ content: Array<{ type: string; text: string }> }>;

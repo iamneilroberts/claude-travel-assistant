@@ -33,30 +33,69 @@ export function buildAgentInfo(userProfile: UserProfile | null): AgentInfo {
 }
 
 /**
- * Get template HTML by name
- * Loads from KV first, falls back to DEFAULT_TEMPLATE only if KV entry not found or on error
+ * Template resolution order:
+ * 1. User-specific template: {keyPrefix}_templates/{name}
+ * 2. System template: _templates/{name}
+ * 3. Built-in DEFAULT_TEMPLATE (only for "default")
  */
-export async function getTemplateHtml(env: Env, templateName: string): Promise<string> {
-  try {
-    // Try to load from KV first
-    const kvTemplate = await env.TRIPS.get(`_templates/${templateName}`, "text");
-    if (kvTemplate) {
-      return kvTemplate;
+export async function getTemplateHtml(
+  env: Env,
+  templateName: string,
+  keyPrefix?: string
+): Promise<string> {
+  // 1. Try user-specific template first (if keyPrefix provided)
+  if (keyPrefix) {
+    try {
+      const userTemplate = await env.TRIPS.get(`${keyPrefix}_templates/${templateName}`, "text");
+      if (userTemplate) {
+        return userTemplate;
+      }
+    } catch (err) {
+      // User template not found or error - continue to system templates
     }
-  } catch (err) {
-    // KV read failed - fall back to built-in for "default", rethrow for others
-    if (templateName !== "default") {
-      throw new Error(`Template '${templateName}' failed to load: ${err}`);
-    }
-    // For "default", continue to built-in fallback below
   }
 
-  // Fall back to built-in default template only for "default"
+  // 2. Try system template
+  try {
+    const systemTemplate = await env.TRIPS.get(`_templates/${templateName}`, "text");
+    if (systemTemplate) {
+      return systemTemplate;
+    }
+  } catch (err) {
+    // System template not found or error - continue to fallback
+    if (templateName !== "default") {
+      throw new Error(`Template '${templateName}' not found in user or system templates.`);
+    }
+  }
+
+  // 3. Fall back to built-in DEFAULT_TEMPLATE only for "default"
   if (templateName === "default") {
     return DEFAULT_TEMPLATE;
   }
 
   throw new Error(`Template '${templateName}' not found.`);
+}
+
+/**
+ * Resolve which template to use based on user profile and explicit request
+ * If no template specified, uses user's default template from profile
+ */
+export function resolveTemplateName(
+  requestedTemplate: string | undefined,
+  userProfile: UserProfile | null
+): string {
+  // If explicitly requested, use that
+  if (requestedTemplate && requestedTemplate !== "default") {
+    return requestedTemplate;
+  }
+
+  // If user has a default template set, use it
+  if (userProfile?.template && userProfile.template !== "default") {
+    return userProfile.template;
+  }
+
+  // Fall back to "default"
+  return "default";
 }
 
 /**
@@ -88,15 +127,57 @@ export function buildTemplateData(
 /**
  * Render trip data to HTML using the specified template
  * This is the main function used by preview_publish and publish_trip
+ *
+ * Template resolution:
+ * 1. If templateName provided, look for it in: user templates → system templates → built-in
+ * 2. If no templateName (or "default"), use userProfile.template as default first
  */
 export async function renderTripHtml(
   env: Env,
   tripData: any,
-  templateName: string,
+  templateName: string | undefined,
   userProfile: UserProfile | null,
-  tripKey: string
+  tripKey: string,
+  keyPrefix?: string
 ): Promise<string> {
-  const templateHtml = await getTemplateHtml(env, templateName);
+  // Resolve which template to use (considers user's default from profile)
+  const resolvedTemplate = resolveTemplateName(templateName, userProfile);
+
+  // Get template HTML (checks user templates first, then system, then built-in)
+  const templateHtml = await getTemplateHtml(env, resolvedTemplate, keyPrefix);
   const templateData = buildTemplateData(tripData, userProfile, env, tripKey);
   return renderTemplate(templateHtml, templateData);
+}
+
+/**
+ * List available templates for a user
+ * Returns both user-specific and system templates
+ */
+export async function listAvailableTemplates(
+  env: Env,
+  keyPrefix: string,
+  listAllKeys: (env: Env, options: { prefix: string }) => Promise<{ name: string }[]>
+): Promise<{ userTemplates: string[]; systemTemplates: string[]; defaultTemplate: string }> {
+  // Get user's templates
+  const userTemplateKeys = await listAllKeys(env, { prefix: `${keyPrefix}_templates/` });
+  const userTemplates = userTemplateKeys
+    .map(k => k.name.replace(`${keyPrefix}_templates/`, ""))
+    .filter(name => name && !name.startsWith("_"));
+
+  // Get system templates
+  const systemTemplateKeys = await listAllKeys(env, { prefix: "_templates/" });
+  const systemTemplates = systemTemplateKeys
+    .map(k => k.name.replace("_templates/", ""))
+    .filter(name => name && !name.startsWith("_"));
+
+  // "default" is always available (built-in fallback)
+  if (!systemTemplates.includes("default")) {
+    systemTemplates.push("default");
+  }
+
+  return {
+    userTemplates,
+    systemTemplates,
+    defaultTemplate: "default" // Built-in is always available
+  };
 }
