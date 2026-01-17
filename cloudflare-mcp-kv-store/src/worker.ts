@@ -6,7 +6,7 @@
 import type { Env, UserProfile, JsonRpcRequest, JsonRpcResponse } from './types';
 
 // Core utilities (only what's needed for auth flow)
-import { listAllKeys, getKeyPrefix } from './lib/kv';
+import { listAllKeys, getKeyPrefix, getLegacyKeyPrefix } from './lib/kv';
 import { getValidAuthKeys, setAuthKeyIndex, getAuthKeyIndex } from './lib/auth';
 
 // Route handlers
@@ -36,12 +36,13 @@ const SITE_BASE_URL = 'https://somotravel.us';
 // CORS helper - restricts to known domains
 function getCorsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("Origin") || "";
+  // SECURITY: Only allow production origins in CORS
+  // Removed localhost:3000 to prevent potential development leakage
   const allowedOrigins = [
     SITE_BASE_URL,
     "https://www.somotravel.us",
     "https://claude.ai",
     WORKER_BASE_URL,
-    "http://localhost:3000",  // Local development
   ];
 
   // Use the request origin if it's in our allowed list, otherwise use default
@@ -104,7 +105,9 @@ export default {
 
     if (validKeys.includes(requestKey)) {
       // Legacy auth via KV or env var
-      keyPrefix = getKeyPrefix(requestKey);
+      // SECURITY NOTE: Use getLegacyKeyPrefix for backward compatibility with existing data
+      // New users should use the _users/ system which doesn't have collision risk
+      keyPrefix = getLegacyKeyPrefix(requestKey);
 
       // Also try to load user profile for legacy keys (needed for subdomain, subscription)
       const userId = keyPrefix.replace(/\/$/, '');

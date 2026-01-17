@@ -4,6 +4,7 @@
  */
 
 import type { Env, UserProfile, McpToolHandler } from '../../types';
+import { stripEmpty } from '../../lib/utils';
 
 export const handleValidateTrip: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
   const { tripId } = args;
@@ -26,7 +27,7 @@ export const handleValidateTrip: McpToolHandler = async (args, env, keyPrefix, u
   };
 
   return {
-    content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
+    content: [{ type: "text", text: JSON.stringify(stripEmpty(result), null, 2) }]
   };
 };
 
@@ -56,7 +57,7 @@ export const handleImportQuote: McpToolHandler = async (args, env, keyPrefix, us
   };
 
   return {
-    content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
+    content: [{ type: "text", text: JSON.stringify(stripEmpty(result), null, 2) }]
   };
 };
 
@@ -87,7 +88,7 @@ export const handleAnalyzeProfitability: McpToolHandler = async (args, env, keyP
   };
 
   return {
-    content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
+    content: [{ type: "text", text: JSON.stringify(stripEmpty(result), null, 2) }]
   };
 };
 
@@ -109,6 +110,6 @@ export const handleGetPrompt: McpToolHandler = async (args, env, keyPrefix, user
   };
 
   return {
-    content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
+    content: [{ type: "text", text: JSON.stringify(stripEmpty(result), null, 2) }]
   };
 };

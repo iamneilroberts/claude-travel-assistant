@@ -32,11 +32,46 @@ export const handleStripeWebhook: RouteHandler = async (request, env, ctx, url, 
 
   const event = JSON.parse(payload);
 
-  // Log event for audit
+  // SECURITY: Idempotency check - prevent double-processing of events
+  // Check if this event was already processed before doing anything
+  //
+  // KNOWN LIMITATION (TOCTOU Race Condition):
+  // There's a time-of-check-to-time-of-use race between reading the event status
+  // and writing the "processing" marker. Two concurrent webhook deliveries could
+  // both pass this check before either writes the marker.
+  //
+  // In practice, Stripe typically spaces out webhook retries, making collision unlikely.
+  // The operations are also idempotent (updating subscription status to same value).
+  //
+  // PROPER FIX: Use Cloudflare Durable Objects for atomic compare-and-swap, or
+  // use a database with conditional writes (e.g., D1 with WHERE processed = false).
+  // This would require architectural changes beyond the scope of the current fix.
+  //
+  const existingEvent = await env.TRIPS.get(`_stripe_events/${event.id}`, "json") as {
+    type: string;
+    timestamp: string;
+    processed: boolean;
+    processedAt?: string;
+  } | null;
+
+  if (existingEvent?.processed) {
+    // Event already processed - return success but don't reprocess
+    console.log(`Stripe webhook: Event ${event.id} already processed at ${existingEvent.processedAt}, skipping`);
+    return new Response(JSON.stringify({
+      received: true,
+      skipped: true,
+      reason: "Event already processed"
+    }), {
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+
+  // Log event for audit (mark as being processed)
   await env.TRIPS.put(`_stripe_events/${event.id}`, JSON.stringify({
     type: event.type,
     timestamp: new Date().toISOString(),
     processed: false,
+    processing: true,  // Mark as currently being processed
     data: event.data.object
   }));
 
@@ -158,10 +193,12 @@ export const handleStripeWebhook: RouteHandler = async (request, env, ctx, url, 
       }
     }
 
-    // Mark event as processed
+    // Mark event as processed with timestamp
     const eventLog = await env.TRIPS.get(`_stripe_events/${event.id}`, "json") as any;
     if (eventLog) {
       eventLog.processed = true;
+      eventLog.processing = false;
+      eventLog.processedAt = new Date().toISOString();
       await env.TRIPS.put(`_stripe_events/${event.id}`, JSON.stringify(eventLog));
     }
 

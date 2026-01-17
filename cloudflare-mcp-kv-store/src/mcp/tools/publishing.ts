@@ -9,6 +9,7 @@ import { publishToGitHub, publishDraftToGitHub } from '../../lib/github';
 import { getMonthlyUsage, incrementPublishCount } from '../../lib/usage';
 import { renderTripHtml, listAvailableTemplates, resolveTemplateName } from '../../template-renderer';
 import { savePublishedTrip } from '../../lib/published';
+import { validateTripId, validateFilename } from '../../lib/validation';
 
 export const handleListTemplates: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
   // List both user-specific and system templates
@@ -42,6 +43,9 @@ export const handleListTemplates: McpToolHandler = async (args, env, keyPrefix, 
 export const handlePreviewPublish: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
   const { tripId, template } = args;
 
+  // Security: Validate trip ID to prevent path traversal
+  validateTripId(tripId);
+
   // Check GitHub config
   if (!env.GITHUB_TOKEN) throw new Error("GitHub token not configured. Run: wrangler secret put GITHUB_TOKEN");
   if (!env.GITHUB_REPO) throw new Error("GitHub repo not configured in wrangler.toml");
@@ -74,6 +78,15 @@ export const handlePreviewPublish: McpToolHandler = async (args, env, keyPrefix,
 
 export const handlePublishTrip: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
   const { tripId, template, filename, category = "testing" } = args;
+
+  // Security: Validate trip ID to prevent path traversal
+  validateTripId(tripId);
+
+  // Security: Validate filename if provided (prevents writing to arbitrary paths)
+  if (filename) {
+    validateFilename(filename);
+  }
+
   const outputFilename = (filename || tripId).replace(/\.html$/, "") + ".html";
 
   // Check subscription status and limits

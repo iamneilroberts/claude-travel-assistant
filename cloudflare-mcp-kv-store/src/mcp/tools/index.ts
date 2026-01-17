@@ -10,6 +10,7 @@ import { handleGetContext } from './get-context';
 import {
   handleListTrips,
   handleReadTrip,
+  handleReadTripSection,
   handleSaveTrip,
   handlePatchTrip,
   handleDeleteTrip
@@ -46,6 +47,7 @@ export const toolHandlers: Record<string, McpToolHandler> = {
   get_context: handleGetContext,
   list_trips: handleListTrips,
   read_trip: handleReadTrip,
+  read_trip_section: handleReadTripSection,
   save_trip: handleSaveTrip,
   patch_trip: handlePatchTrip,
   delete_trip: handleDeleteTrip,
@@ -72,6 +74,7 @@ export {
   handleGetContext,
   handleListTrips,
   handleReadTrip,
+  handleReadTripSection,
   handleSaveTrip,
   handlePatchTrip,
   handleDeleteTrip,

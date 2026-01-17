@@ -23,7 +23,8 @@ bucket_name = "travel-media"
 [vars]
 # Security: Comma-separated list of valid keys
 # Each key isolates that user's data via key prefix in KV
-AUTH_KEYS = "Kim.d63b7658,Matt.7110274c,Neil.38ecccf5,Susie.65439631,Test.Alpha1,Test.Beta2,Test.Gamma3"
+# NOTE: Test keys removed from version control - add via 'wrangler secret put AUTH_KEYS' if needed
+AUTH_KEYS = "Kim.d63b7658,Matt.7110274c,Neil.38ecccf5,Susie.65439631"
 # GitHub repo for publishing (token set via wrangler secret)
 GITHUB_REPO = "iamneilroberts/SoMoTravel.us"
 # Google Maps API key - set via: wrangler secret put GOOGLE_MAPS_API_KEY

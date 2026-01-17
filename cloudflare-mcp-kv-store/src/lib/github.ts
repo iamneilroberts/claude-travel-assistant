@@ -115,7 +115,34 @@ export async function publishToGitHub(
 
   if (!tripsUpdateResponse.ok) {
     const error = await tripsUpdateResponse.text();
-    throw new Error(`Failed to update trips.json (sha: ${tripsSha || 'none'}): ${error}`);
+
+    // RELIABILITY: Rollback - delete the uploaded HTML file if trips.json update failed
+    // This prevents orphaned HTML files in the repo
+    try {
+      // Get the SHA of the file we just uploaded
+      const getHtmlResponse = await fetch(`${baseUrl}/${filename}?ref=main`, { headers });
+      if (getHtmlResponse.ok) {
+        const htmlFile = await getHtmlResponse.json() as any;
+        if (htmlFile.sha) {
+          const deletePayload = {
+            message: `Rollback: delete ${filename} due to trips.json update failure`,
+            sha: htmlFile.sha,
+            branch: 'main'
+          };
+          await fetch(`${baseUrl}/${filename}`, {
+            method: 'DELETE',
+            headers,
+            body: JSON.stringify(deletePayload)
+          });
+          console.log(`Rolled back HTML file ${filename} after trips.json failure`);
+        }
+      }
+    } catch (rollbackErr) {
+      console.error('Failed to rollback HTML file:', rollbackErr);
+      // Still throw the original error
+    }
+
+    throw new Error(`Failed to update trips.json (sha: ${tripsSha || 'none'}): ${error}. HTML file was rolled back.`);
   }
 
   // Return public URL

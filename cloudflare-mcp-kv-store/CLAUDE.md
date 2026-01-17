@@ -50,3 +50,18 @@ Available helpers: `formatCurrency`, `formatDate`, `capitalize`, `default`, `enc
 - Production: `voygent-themed` (ID: 62077781-9458-4206-a5c6-f38dc419e599)
 - Test: `voygent-test` (ID: 7d0f2214-43a5-4e89-b504-569eda801786)
 - KV namespace: `aa119fcdabfe40858f1ce46a5fbf4563`
+
+## Code Review Process
+
+**For any major changes** (security fixes, new features, architectural changes), run an external code review:
+
+```bash
+/codex-review
+```
+
+This invokes OpenAI Codex to perform a second-opinion security and code quality audit. After the review:
+1. Present the findings to the user
+2. Discuss any critical/high issues before proceeding
+3. Address concerns or document accepted risks
+
+Review prompt template is at `CODEX_REVIEW_PROMPT.md` for reference.

@@ -79,17 +79,32 @@ export const handleGetAllComments: McpToolHandler = async (args, env, keyPrefix,
   }
 
   if (!rebuiltIndex) {
-    for (const tripId of commentIndex) {
-      const commentsKey = `${keyPrefix}${tripId}/_comments`;
-      const data = await env.TRIPS.get(commentsKey, "json") as { comments: any[] } | null;
+    // PERFORMANCE: Fetch all comments in parallel instead of sequential (N+1 fix)
+    // Use Promise.allSettled so one failed read doesn't break entire operation
+    const settledResults = await Promise.allSettled(
+      commentIndex.map(async (tripId) => {
+        const commentsKey = `${keyPrefix}${tripId}/_comments`;
+        const data = await env.TRIPS.get(commentsKey, "json") as { comments: any[] } | null;
+        return { tripId, data };
+      })
+    );
+
+    // Extract successful results, skip failed ones
+    const commentResults = settledResults
+      .filter((r): r is PromiseFulfilledResult<{ tripId: string; data: { comments: any[] } | null }> => r.status === 'fulfilled')
+      .map(r => r.value);
+
+    // Process results and clean up stale index entries in parallel
+    const staleTrips: string[] = [];
+    for (const { tripId, data } of commentResults) {
       if (!data?.comments?.length) {
-        await removeFromCommentIndex(env, keyPrefix, tripId);
+        staleTrips.push(tripId);
         continue;
       }
 
       const activeComments = data.comments.filter(c => !c.dismissed);
       if (activeComments.length === 0) {
-        await removeFromCommentIndex(env, keyPrefix, tripId);
+        staleTrips.push(tripId);
         continue;
       }
 
@@ -97,6 +112,11 @@ export const handleGetAllComments: McpToolHandler = async (args, env, keyPrefix,
       if (unreadComments.length > 0) {
         allComments.push({ tripId, comments: unreadComments });
       }
+    }
+
+    // Clean up stale index entries in parallel
+    if (staleTrips.length > 0) {
+      await Promise.all(staleTrips.map(tripId => removeFromCommentIndex(env, keyPrefix, tripId)));
     }
   }
 

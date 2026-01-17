@@ -19,6 +19,8 @@ import {
   deleteTripSummary,
   getTripSummaries
 } from '../../lib/trip-summary';
+import { stripEmpty } from '../../lib/utils';
+import { validateTripId, validateSections } from '../../lib/validation';
 
 export const handleListTrips: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
   const trips = await getTripIndex(env, keyPrefix);
@@ -74,13 +76,19 @@ export const handleListTrips: McpToolHandler = async (args, env, keyPrefix, user
   }
 
   return {
-    content: [{ type: "text", text: typeof result === 'string' ? result : JSON.stringify(result, null, 2) }]
+    content: [{ type: "text", text: typeof result === 'string' ? result : JSON.stringify(stripEmpty(result), null, 2) }]
   };
 };
 
 export const handleReadTrip: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
   const tripId = args.key;
-  const fullKey = tripId.startsWith("_") ? keyPrefix + tripId : keyPrefix + tripId;
+
+  // Security: Validate trip ID to prevent path traversal
+  // Allow underscore prefix for system keys but still validate the rest
+  const idToValidate = tripId.startsWith("_") ? tripId.substring(1) : tripId;
+  if (idToValidate) validateTripId(idToValidate);
+
+  const fullKey = keyPrefix + tripId;
   const data = await env.TRIPS.get(fullKey, "json");
   if (!data) throw new Error(`Trip '${tripId}' not found.`);
 
@@ -122,11 +130,50 @@ export const handleReadTrip: McpToolHandler = async (args, env, keyPrefix, userP
   }
 
   return {
-    content: [{ type: "text", text: typeof result === 'string' ? result : JSON.stringify(result, null, 2) }]
+    content: [{ type: "text", text: typeof result === 'string' ? result : JSON.stringify(stripEmpty(result), null, 2) }]
+  };
+};
+
+export const handleReadTripSection: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
+  const { tripId, sections, itineraryDay } = args;
+
+  // Security: Validate trip ID to prevent path traversal
+  validateTripId(tripId);
+
+  // Validate sections array
+  validateSections(sections);
+
+  const fullKey = keyPrefix + tripId;
+  const tripData = await env.TRIPS.get(fullKey, "json") as any;
+
+  if (!tripData) {
+    throw new Error(`Trip '${tripId}' not found.`);
+  }
+
+  // Build partial response with only requested sections
+  const result: any = { tripId };
+
+  for (const section of sections) {
+    if (tripData[section] !== undefined) {
+      if (section === 'itinerary' && itineraryDay !== undefined) {
+        // Return only the specific day
+        const day = tripData.itinerary?.find((d: any) => d.day === itineraryDay);
+        result.itinerary = day ? [day] : [];
+      } else {
+        result[section] = tripData[section];
+      }
+    }
+  }
+
+  return {
+    content: [{ type: "text", text: JSON.stringify(stripEmpty(result), null, 2) }]
   };
 };
 
 export const handleSaveTrip: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
+  // Security: Validate trip ID to prevent path traversal
+  validateTripId(args.key);
+
   const fullKey = keyPrefix + args.key;
   await env.TRIPS.put(fullKey, JSON.stringify(args.data));
   const summary = await computeTripSummary(args.key, args.data);
@@ -134,42 +181,50 @@ export const handleSaveTrip: McpToolHandler = async (args, env, keyPrefix, userP
   await addToTripIndex(env, keyPrefix, args.key);
   await removePendingTripDeletion(env, keyPrefix, args.key, ctx);
 
-  // Auto-update activity log on every save
-  const activityLogKey = keyPrefix + "_activity-log";
-  const activityLog = await env.TRIPS.get(activityLogKey, "json") as any || {
-    lastSession: null,
-    recentChanges: [],
-    openItems: [],
-    tripsActive: []
-  };
+  // PERFORMANCE: Move activity logging to background (don't block response)
+  const activityUpdate = (async () => {
+    const activityLogKey = keyPrefix + "_activity-log";
+    const activityLog = await env.TRIPS.get(activityLogKey, "json") as any || {
+      lastSession: null,
+      recentChanges: [],
+      openItems: [],
+      tripsActive: []
+    };
 
-  // Extract change description from trip meta if available
-  const tripData = args.data as any;
-  const changeDescription = tripData?.meta?.status || "Updated";
-  const tripName = tripData?.meta?.clientName || tripData?.meta?.destination || args.key;
+    // Extract change description from trip meta if available
+    const tripData = args.data as any;
+    const changeDescription = tripData?.meta?.status || "Updated";
+    const tripName = tripData?.meta?.clientName || tripData?.meta?.destination || args.key;
 
-  // Add to recent changes (prepend, newest first)
-  activityLog.recentChanges.unshift({
-    tripId: args.key,
-    tripName,
-    change: changeDescription,
-    timestamp: new Date().toISOString()
-  });
+    // Add to recent changes (prepend, newest first)
+    activityLog.recentChanges.unshift({
+      tripId: args.key,
+      tripName,
+      change: changeDescription,
+      timestamp: new Date().toISOString()
+    });
 
-  // Keep only last 20 changes to prevent unbounded growth
-  if (activityLog.recentChanges.length > 20) {
-    activityLog.recentChanges = activityLog.recentChanges.slice(0, 20);
+    // Keep only last 20 changes to prevent unbounded growth
+    if (activityLog.recentChanges.length > 20) {
+      activityLog.recentChanges = activityLog.recentChanges.slice(0, 20);
+    }
+
+    // Update last session timestamp
+    activityLog.lastSession = new Date().toISOString();
+
+    // Add trip to active list if not already present (O(1) vs O(n) list scan)
+    if (!activityLog.tripsActive.includes(args.key)) {
+      activityLog.tripsActive.push(args.key);
+    }
+
+    await env.TRIPS.put(activityLogKey, JSON.stringify(activityLog));
+  })();
+
+  if (ctx) {
+    ctx.waitUntil(activityUpdate);
+  } else {
+    await activityUpdate;
   }
-
-  // Update last session timestamp
-  activityLog.lastSession = new Date().toISOString();
-
-  // Add trip to active list if not already present (O(1) vs O(n) list scan)
-  if (!activityLog.tripsActive.includes(args.key)) {
-    activityLog.tripsActive.push(args.key);
-  }
-
-  await env.TRIPS.put(activityLogKey, JSON.stringify(activityLog));
 
   return {
     content: [{ type: "text", text: `Successfully saved ${args.key}` }]
@@ -177,6 +232,9 @@ export const handleSaveTrip: McpToolHandler = async (args, env, keyPrefix, userP
 };
 
 export const handlePatchTrip: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
+  // Security: Validate trip ID to prevent path traversal
+  validateTripId(args.key);
+
   // Read existing trip
   const fullKey = keyPrefix + args.key;
   const existingData = await env.TRIPS.get(fullKey, "json") as any;
@@ -214,31 +272,39 @@ export const handlePatchTrip: McpToolHandler = async (args, env, keyPrefix, user
   const summary = await computeTripSummary(args.key, existingData);
   await writeTripSummary(env, keyPrefix, args.key, summary, ctx);
 
-  // Update activity log
-  const activityLogKey = keyPrefix + "_activity-log";
-  const activityLog = await env.TRIPS.get(activityLogKey, "json") as any || {
-    lastSession: null,
-    recentChanges: [],
-    openItems: [],
-    tripsActive: []
-  };
+  // PERFORMANCE: Move activity logging to background (don't block response)
+  const activityUpdate = (async () => {
+    const activityLogKey = keyPrefix + "_activity-log";
+    const activityLog = await env.TRIPS.get(activityLogKey, "json") as any || {
+      lastSession: null,
+      recentChanges: [],
+      openItems: [],
+      tripsActive: []
+    };
 
-  const changeDescription = existingData?.meta?.status || `Updated: ${updatedFields.join(', ')}`;
-  const tripName = existingData?.meta?.clientName || existingData?.meta?.destination || args.key;
+    const changeDescription = existingData?.meta?.status || `Updated: ${updatedFields.join(', ')}`;
+    const tripName = existingData?.meta?.clientName || existingData?.meta?.destination || args.key;
 
-  activityLog.recentChanges.unshift({
-    tripId: args.key,
-    tripName,
-    change: changeDescription,
-    timestamp: new Date().toISOString()
-  });
+    activityLog.recentChanges.unshift({
+      tripId: args.key,
+      tripName,
+      change: changeDescription,
+      timestamp: new Date().toISOString()
+    });
 
-  if (activityLog.recentChanges.length > 20) {
-    activityLog.recentChanges = activityLog.recentChanges.slice(0, 20);
+    if (activityLog.recentChanges.length > 20) {
+      activityLog.recentChanges = activityLog.recentChanges.slice(0, 20);
+    }
+
+    activityLog.lastSession = new Date().toISOString();
+    await env.TRIPS.put(activityLogKey, JSON.stringify(activityLog));
+  })();
+
+  if (ctx) {
+    ctx.waitUntil(activityUpdate);
+  } else {
+    await activityUpdate;
   }
-
-  activityLog.lastSession = new Date().toISOString();
-  await env.TRIPS.put(activityLogKey, JSON.stringify(activityLog));
 
   return {
     content: [{ type: "text", text: `Patched ${args.key}: updated ${updatedFields.join(', ')}` }]
@@ -246,32 +312,44 @@ export const handlePatchTrip: McpToolHandler = async (args, env, keyPrefix, user
 };
 
 export const handleDeleteTrip: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
+  // Security: Validate trip ID to prevent path traversal
+  validateTripId(args.key);
+
   const fullKey = keyPrefix + args.key;
   await env.TRIPS.delete(fullKey);
   await deleteTripSummary(env, keyPrefix, args.key, ctx);
   await removeFromTripIndex(env, keyPrefix, args.key);
   await addPendingTripDeletion(env, keyPrefix, args.key, ctx);
 
-  // Update activity log - remove from active trips list
-  const activityLogKey = keyPrefix + "_activity-log";
-  const activityLog = await env.TRIPS.get(activityLogKey, "json") as any;
-  if (activityLog?.tripsActive) {
-    activityLog.tripsActive = activityLog.tripsActive.filter((t: string) => t !== args.key);
-    activityLog.recentChanges.unshift({
-      tripId: args.key,
-      tripName: args.key,
-      change: "Deleted",
-      timestamp: new Date().toISOString()
-    });
-    if (activityLog.recentChanges.length > 20) {
-      activityLog.recentChanges = activityLog.recentChanges.slice(0, 20);
+  // PERFORMANCE: Move activity logging to background (don't block response)
+  const activityUpdate = (async () => {
+    const activityLogKey = keyPrefix + "_activity-log";
+    const activityLog = await env.TRIPS.get(activityLogKey, "json") as any;
+    if (activityLog?.tripsActive) {
+      activityLog.tripsActive = activityLog.tripsActive.filter((t: string) => t !== args.key);
+      activityLog.recentChanges.unshift({
+        tripId: args.key,
+        tripName: args.key,
+        change: "Deleted",
+        timestamp: new Date().toISOString()
+      });
+      if (activityLog.recentChanges.length > 20) {
+        activityLog.recentChanges = activityLog.recentChanges.slice(0, 20);
+      }
+      activityLog.lastSession = new Date().toISOString();
+      await env.TRIPS.put(activityLogKey, JSON.stringify(activityLog));
     }
-    activityLog.lastSession = new Date().toISOString();
-    await env.TRIPS.put(activityLogKey, JSON.stringify(activityLog));
-  }
+  })();
 
-  // Also remove from comment index if present
-  await removeFromCommentIndex(env, keyPrefix, args.key);
+  // Also remove from comment index if present (can run in parallel with activity update)
+  const commentCleanup = removeFromCommentIndex(env, keyPrefix, args.key);
+
+  if (ctx) {
+    ctx.waitUntil(activityUpdate);
+    ctx.waitUntil(commentCleanup);
+  } else {
+    await Promise.all([activityUpdate, commentCleanup]);
+  }
 
   return {
     content: [{ type: "text", text: `Deleted ${args.key}` }]

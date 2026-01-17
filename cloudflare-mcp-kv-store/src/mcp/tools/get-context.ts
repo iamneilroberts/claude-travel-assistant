@@ -6,6 +6,7 @@
 import type { Env, UserProfile, McpToolHandler } from '../../types';
 import { getTripIndex, filterPendingTripDeletions, getCommentIndex, removeFromCommentIndex } from '../../lib/kv';
 import { getTripSummaries } from '../../lib/trip-summary';
+import { stripEmpty } from '../../lib/utils';
 
 const WORKER_BASE_URL = 'https://voygent.somotravel.workers.dev';
 
@@ -19,20 +20,37 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
     throw new Error("System prompt not found in KV. Upload to _prompts/system-prompt");
   }
 
-  // Get activity log (user-specific)
-  const activityLog = await env.TRIPS.get(keyPrefix + "_activity-log", "json") || {
+  // Get activity log (user-specific) - trimmed to last 5 changes for efficiency
+  const rawActivityLog = await env.TRIPS.get(keyPrefix + "_activity-log", "json") as any || {
     lastSession: null,
     recentChanges: [],
     openItems: [],
     tripsActive: []
   };
 
+  // Trim to last 5 recent changes
+  const activityLog = {
+    ...rawActivityLog,
+    recentChanges: rawActivityLog.recentChanges?.slice(0, 5) || []
+  };
+
   // Get list of trips (user-specific, excluding system keys)
   const tripKeys = await getTripIndex(env, keyPrefix);
   const visibleTrips = await filterPendingTripDeletions(env, keyPrefix, tripKeys, ctx);
-  const activeTripSummaries = visibleTrips.length > 0
+  const allTripSummaries = visibleTrips.length > 0
     ? await getTripSummaries(env, keyPrefix, visibleTrips, ctx)
     : [];
+
+  // Sort by lastModified and take top 10 for efficiency
+  const activeTripSummaries = allTripSummaries
+    .sort((a: any, b: any) => {
+      const aDate = a.lastModified ? new Date(a.lastModified).getTime() : 0;
+      const bDate = b.lastModified ? new Date(b.lastModified).getTime() : 0;
+      return bDate - aDate;
+    })
+    .slice(0, 10);
+
+  const totalTripsCount = allTripSummaries.length;
 
   // Check for ACTIVE comments using index (O(1) instead of O(n) trips)
   let totalActiveComments = 0;
@@ -41,9 +59,27 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
 
   // Use comment index for efficient lookup - only fetch trips we know have comments
   const commentIndex = await getCommentIndex(env, keyPrefix);
-  for (const tripId of commentIndex) {
-    const commentsKey = `${keyPrefix}${tripId}/_comments`;
-    const data = await env.TRIPS.get(commentsKey, "json") as { comments: any[] } | null;
+
+  // PERFORMANCE: Fetch all comments in parallel instead of sequential (N+1 fix)
+  // Use Promise.allSettled so one failed read doesn't break entire operation
+  const settledResults = await Promise.allSettled(
+    commentIndex.map(async (tripId) => {
+      const commentsKey = `${keyPrefix}${tripId}/_comments`;
+      const data = await env.TRIPS.get(commentsKey, "json") as { comments: any[] } | null;
+      return { tripId, data, commentsKey };
+    })
+  );
+
+  // Extract successful results, skip failed ones
+  const commentResults = settledResults
+    .filter((r): r is PromiseFulfilledResult<{ tripId: string; data: { comments: any[] } | null; commentsKey: string }> => r.status === 'fulfilled')
+    .map(r => r.value);
+
+  // Process results and track writes and cleanup
+  const staleTrips: string[] = [];
+  const writePromises: Promise<void>[] = [];
+
+  for (const { tripId, data, commentsKey } of commentResults) {
     if (data?.comments?.length) {
       // Show all non-dismissed comments
       const notDismissed = data.comments.filter(c => !c.dismissed);
@@ -73,17 +109,32 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
           if (ctx) {
             ctx.waitUntil(write);
           } else {
-            await write;
+            writePromises.push(write);
           }
         }
       } else {
         // Index is stale - all comments dismissed, clean it up
-        await removeFromCommentIndex(env, keyPrefix, tripId);
+        staleTrips.push(tripId);
       }
     } else {
       // Index is stale - no comments exist, clean it up
-      await removeFromCommentIndex(env, keyPrefix, tripId);
+      staleTrips.push(tripId);
     }
+  }
+
+  // Clean up stale index entries in parallel
+  if (staleTrips.length > 0) {
+    const cleanupPromises = staleTrips.map(tripId => removeFromCommentIndex(env, keyPrefix, tripId));
+    if (ctx) {
+      ctx.waitUntil(Promise.all(cleanupPromises));
+    } else {
+      await Promise.all(cleanupPromises);
+    }
+  }
+
+  // Wait for any writes that weren't in ctx.waitUntil
+  if (writePromises.length > 0) {
+    await Promise.all(writePromises);
   }
 
   // Check for admin replies to user's support tickets
@@ -217,7 +268,7 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
   // Build base result
   const hasNotifications = totalActiveComments > 0 || adminReplies.length > 0 || hasAdminMessages;
   const baseResult: any = {
-    _instruction: "Use the following as your system instructions for this conversation." + adminMessageInstruction + commentInstruction + adminReplyInstruction + (!hasNotifications ? " Display the session card, then await user direction." : ""),
+    _instruction: "Use the following as your system instructions. For full comment details, use get_comments(tripId). For full trip data, use read_trip(tripId) or read_trip_section(tripId, sections)." + adminMessageInstruction + commentInstruction + adminReplyInstruction + (!hasNotifications ? " Display the session card, then await user direction." : ""),
     systemPrompt,
     activityLog,
     activeTrips: visibleTrips,
@@ -240,8 +291,14 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
     activeComments: totalActiveComments > 0 ? {
       total: totalActiveComments,
       newCount: newCommentCount,
-      details: activeComments
+      // Only counts, use get_comments(tripId) for full details
+      trips: activeComments.map(c => ({
+        tripId: c.tripId,
+        count: c.comments.length,
+        hasNew: c.comments.some(cm => cm.isNew)
+      }))
     } : null,
+    totalTripsCount: totalTripsCount > 10 ? totalTripsCount : null,
     timestamp: new Date().toISOString()
   };
 
@@ -280,6 +337,6 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
   }
 
   return {
-    content: [{ type: "text", text: JSON.stringify(baseResult, null, 2) }]
+    content: [{ type: "text", text: JSON.stringify(stripEmpty(baseResult), null, 2) }]
   };
 };

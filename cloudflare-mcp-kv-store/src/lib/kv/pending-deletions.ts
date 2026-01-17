@@ -90,14 +90,24 @@ export async function filterPendingTripDeletions(
 
   const pendingSet = new Set(pending);
   const visibleTrips = tripIds.filter(id => !pendingSet.has(id));
-  const confirmedDeleted: string[] = [];
 
-  for (const tripId of pending) {
-    const exists = await env.TRIPS.get(`${keyPrefix}${tripId}`, "text");
-    if (!exists) {
-      confirmedDeleted.push(tripId);
-    }
-  }
+  // PERFORMANCE: Check all pending deletions in parallel instead of sequential (N+1 fix)
+  // Use Promise.allSettled so one failed check doesn't break cleanup
+  const settledResults = await Promise.allSettled(
+    pending.map(async (tripId) => {
+      const exists = await env.TRIPS.get(`${keyPrefix}${tripId}`, "text");
+      return { tripId, exists: !!exists };
+    })
+  );
+
+  // Extract successful results, skip failed ones (failed = keep in pending list for safety)
+  const existenceChecks = settledResults
+    .filter((r): r is PromiseFulfilledResult<{ tripId: string; exists: boolean }> => r.status === 'fulfilled')
+    .map(r => r.value);
+
+  const confirmedDeleted = existenceChecks
+    .filter(result => !result.exists)
+    .map(result => result.tripId);
 
   if (confirmedDeleted.length > 0) {
     const nextPending = pending.filter(id => !confirmedDeleted.includes(id));

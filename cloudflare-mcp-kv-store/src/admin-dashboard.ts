@@ -467,6 +467,74 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     if (ADMIN_KEY) localStorage.setItem('voygent_admin_key', ADMIN_KEY);
 
     const API_BASE = window.location.origin;
+
+    // SECURITY: HTML escaping function to prevent XSS in HTML contexts
+    function escapeHtml(unsafe) {
+      if (unsafe === null || unsafe === undefined) return '';
+      return String(unsafe)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // SECURITY: JS string escaping for use in data-* attributes read by JS
+    // This ensures values are safe when used in JavaScript contexts
+    function escapeJsString(unsafe) {
+      if (unsafe === null || unsafe === undefined) return '';
+      return String(unsafe)
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '\\r')
+        .replace(/</g, '\\x3c')
+        .replace(/>/g, '\\x3e');
+    }
+
+    // SECURITY: Validate URL scheme to prevent javascript: XSS
+    function safeUrl(url) {
+      if (!url) return null;
+      try {
+        const parsed = new URL(url);
+        if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+          return url;
+        }
+        return null; // Block javascript:, data:, etc.
+      } catch {
+        return null;
+      }
+    }
+
+    // SECURITY: Event delegation for safe click handling
+    // Instead of inline onclick with user data, we use data-* attributes
+    document.addEventListener('click', function(e) {
+      const target = e.target.closest('[data-action]');
+      if (!target) return;
+
+      const action = target.dataset.action;
+      const userId = target.dataset.userId;
+      const tripId = target.dataset.tripId;
+      const ticketId = target.dataset.ticketId;
+
+      switch (action) {
+        case 'edit-user':
+          if (userId) editUser(userId);
+          break;
+        case 'view-trip':
+          if (userId && tripId) viewTripDetail(userId, tripId);
+          break;
+        case 'view-support':
+          if (ticketId) viewSupportDetail(ticketId);
+          break;
+        case 'view-screenshot':
+          const url = target.dataset.url;
+          if (url && safeUrl(url)) viewScreenshot(url);
+          break;
+      }
+    });
+
     let currentEmail = '';
     let usersCache = [];
     let tripsCache = [];
@@ -513,13 +581,13 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <tbody>
               \${data.users.map(u => \`
                 <tr>
-                  <td>\${u.name}<span class="user-id">\${u.userId}</span></td>
-                  <td>\${u.agency.name}\${u.agency.franchise ? '<br><small style="color:#666">' + u.agency.franchise + '</small>' : ''}</td>
-                  <td>\${u.email}\${u.phone ? '<br><small style="color:#666">' + u.phone + '</small>' : ''}</td>
-                  <td><span class="status-badge status-\${u.status}">\${u.status}</span></td>
-                  <td><code style="font-size:11px">\${u.authKey}</code></td>
+                  <td>\${escapeHtml(u.name)}<span class="user-id">\${escapeHtml(u.userId)}</span></td>
+                  <td>\${escapeHtml(u.agency.name)}\${u.agency.franchise ? '<br><small style="color:#666">' + escapeHtml(u.agency.franchise) + '</small>' : ''}</td>
+                  <td>\${escapeHtml(u.email)}\${u.phone ? '<br><small style="color:#666">' + escapeHtml(u.phone) + '</small>' : ''}</td>
+                  <td><span class="status-badge status-\${escapeHtml(u.status)}">\${escapeHtml(u.status)}</span></td>
+                  <td><code style="font-size:11px">\${escapeHtml(u.authKey)}</code></td>
                   <td class="actions">
-                    <button class="btn btn-secondary btn-small" onclick="editUser('\${u.userId}')">Edit</button>
+                    <button class="btn btn-secondary btn-small" data-action="edit-user" data-user-id="\${escapeHtml(u.userId)}">Edit</button>
                   </td>
                 </tr>
               \`).join('')}
@@ -614,9 +682,9 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             \${filtered.slice(0, 100).map(a => \`
               <tr>
                 <td style="font-size:12px;color:#666;">\${formatTime(a.timestamp)}</td>
-                <td>\${a.userName || a.userId}<br><small style="color:#999;">\${a.agency || ''}</small></td>
-                <td><code style="font-size:11px;">\${a.tripId || '-'}</code>\${a.tripName ? '<br><small style="color:#666;">' + a.tripName + '</small>' : ''}</td>
-                <td>\${a.change || '-'}</td>
+                <td>\${escapeHtml(a.userName || a.userId)}<br><small style="color:#999;">\${escapeHtml(a.agency || '')}</small></td>
+                <td><code style="font-size:11px;">\${escapeHtml(a.tripId || '-')}</code>\${a.tripName ? '<br><small style="color:#666;">' + escapeHtml(a.tripName) + '</small>' : ''}</td>
+                <td>\${escapeHtml(a.change || '-')}</td>
               </tr>
             \`).join('')}
           </tbody>
@@ -784,17 +852,21 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
       const html = \`<table>
         <thead><tr><th>Trip</th><th>Client</th><th>Agent</th><th>Phase</th><th>Comments</th><th>Published</th><th>Actions</th></tr></thead>
-        <tbody>\${filtered.map(t => \`
-          <tr class="clickable" onclick="viewTripDetail('\${t.userId}', '\${t.tripId}')">
-            <td><code style="font-size:11px;">\${t.tripId}</code><br><small style="color:#666;">\${t.meta.destination || ''}</small></td>
-            <td>\${t.meta.clientName || '-'}<br><small style="color:#666;">\${t.meta.dates || ''}</small></td>
-            <td>\${t.userName}<br><small style="color:#999;">\${t.agency}</small></td>
-            <td><span class="badge badge-\${t.meta.phase === 'confirmed' ? 'green' : t.meta.phase === 'proposal' ? 'blue' : 'gray'}">\${t.meta.phase || '-'}</span></td>
+        <tbody>\${filtered.map(t => {
+          const phase = t.meta.phase || '';
+          const badgeColor = phase === 'confirmed' ? 'green' : phase === 'proposal' ? 'blue' : 'gray';
+          const validUrl = safeUrl(t.publishedUrl);
+          return \`
+          <tr class="clickable" data-action="view-trip" data-user-id="\${escapeHtml(t.userId)}" data-trip-id="\${escapeHtml(t.tripId)}">
+            <td><code style="font-size:11px;">\${escapeHtml(t.tripId)}</code><br><small style="color:#666;">\${escapeHtml(t.meta.destination || '')}</small></td>
+            <td>\${escapeHtml(t.meta.clientName || '-')}<br><small style="color:#666;">\${escapeHtml(t.meta.dates || '')}</small></td>
+            <td>\${escapeHtml(t.userName)}<br><small style="color:#999;">\${escapeHtml(t.agency)}</small></td>
+            <td><span class="badge badge-\${badgeColor}">\${escapeHtml(phase || '-')}</span></td>
             <td>\${t.commentCount > 0 ? \`<span class="badge \${t.unreadComments > 0 ? 'badge-red' : 'badge-gray'}">\${t.commentCount}\${t.unreadComments > 0 ? ' (' + t.unreadComments + ' new)' : ''}</span>\` : '-'}</td>
-            <td>\${t.publishedUrl ? \`<a href="\${t.publishedUrl}" target="_blank" class="link-external" onclick="event.stopPropagation()">View</a>\` : '-'}</td>
-            <td><button class="btn btn-small btn-secondary" onclick="event.stopPropagation(); viewTripDetail('\${t.userId}', '\${t.tripId}')">Details</button></td>
+            <td>\${validUrl ? \`<a href="\${escapeHtml(validUrl)}" target="_blank" class="link-external" onclick="event.stopPropagation()">View</a>\` : '-'}</td>
+            <td><button class="btn btn-small btn-secondary" data-action="view-trip" data-user-id="\${escapeHtml(t.userId)}" data-trip-id="\${escapeHtml(t.tripId)}" onclick="event.stopPropagation()">Details</button></td>
           </tr>
-        \`).join('')}</tbody>
+        \`}).join('')}</tbody>
       </table>\`;
       document.getElementById('tripsTable').innerHTML = html;
     }
@@ -912,12 +984,12 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
       const html = \`<table>
         <thead><tr><th>Time</th><th>Trip</th><th>Section</th><th>From</th><th>Message</th><th>Status</th></tr></thead>
         <tbody>\${filtered.map(c => \`
-          <tr class="clickable" onclick="viewTripDetail('\${c.userId}', '\${c.tripId}')">
+          <tr class="clickable" data-action="view-trip" data-user-id="\${escapeHtml(c.userId)}" data-trip-id="\${escapeHtml(c.tripId)}">
             <td style="font-size:11px;color:#666;">\${formatTime(c.timestamp)}</td>
-            <td><code style="font-size:10px;">\${c.tripId}</code><br><small style="color:#999;">\${c.userName}</small></td>
-            <td>\${c.section || 'General'}</td>
-            <td>\${c.name || 'Anonymous'}\${c.email ? '<br><small style="color:#666;">' + c.email + '</small>' : ''}</td>
-            <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">\${c.message}</td>
+            <td><code style="font-size:10px;">\${escapeHtml(c.tripId)}</code><br><small style="color:#999;">\${escapeHtml(c.userName)}</small></td>
+            <td>\${escapeHtml(c.section || 'General')}</td>
+            <td>\${escapeHtml(c.name || 'Anonymous')}\${c.email ? '<br><small style="color:#666;">' + escapeHtml(c.email) + '</small>' : ''}</td>
+            <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">\${escapeHtml(c.message)}</td>
             <td>\${c.read ? '<span class="badge badge-gray">Read</span>' : '<span class="badge badge-red">Unread</span>'}</td>
           </tr>
         \`).join('')}</tbody>
@@ -932,12 +1004,12 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         return;
       }
       const html = recent.map(c => \`
-        <div class="comment-box" onclick="viewTripDetail('\${c.userId}', '\${c.tripId}')" style="cursor:pointer;">
+        <div class="comment-box" data-action="view-trip" data-user-id="\${escapeHtml(c.userId)}" data-trip-id="\${escapeHtml(c.tripId)}" style="cursor:pointer;">
           <div class="comment-meta">
-            <strong>\${c.section || 'General'}</strong> on <code>\${c.tripId}</code> · \${c.name || 'Anonymous'} · \${formatTime(c.timestamp)}
+            <strong>\${escapeHtml(c.section || 'General')}</strong> on <code>\${escapeHtml(c.tripId)}</code> · \${escapeHtml(c.name || 'Anonymous')} · \${formatTime(c.timestamp)}
             \${c.read ? '' : '<span class="badge badge-red">New</span>'}
           </div>
-          <div>\${c.message}</div>
+          <div>\${escapeHtml(c.message)}</div>
         </div>
       \`).join('');
       document.getElementById('recentComments').innerHTML = html;
@@ -954,9 +1026,9 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         <tbody>\${recent.map(a => \`
           <tr>
             <td style="width:120px;color:#666;">\${formatTime(a.timestamp)}</td>
-            <td>\${a.userName}</td>
-            <td><code style="font-size:10px;">\${a.tripId || '-'}</code></td>
-            <td>\${a.change || '-'}</td>
+            <td>\${escapeHtml(a.userName)}</td>
+            <td><code style="font-size:10px;">\${escapeHtml(a.tripId || '-')}</code></td>
+            <td>\${escapeHtml(a.change || '-')}</td>
           </tr>
         \`).join('')}</tbody>
       </table>\`;
@@ -996,26 +1068,28 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
       const html = \`<table>
         <thead><tr><th>Time</th><th>User</th><th>Subject</th><th>Priority</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>\${filtered.map(r => \`
-          <tr class="clickable" onclick="viewSupportDetail('\${r.id}')" style="cursor:pointer;">
+        <tbody>\${filtered.map(r => {
+          const validScreenshotUrl = safeUrl(r.screenshotUrl);
+          return \`
+          <tr class="clickable" data-action="view-support" data-ticket-id="\${escapeHtml(r.id)}" style="cursor:pointer;">
             <td style="font-size:11px;color:#666;">\${formatTime(r.timestamp)}</td>
-            <td>\${r.userName || r.userId}\${r.tripId ? '<br><small style="color:#666;">Trip: ' + r.tripId + '</small>' : ''}\${r.adminNotes ? '<br><span class="badge badge-blue" style="font-size:10px;">Has Reply</span>' : ''}</td>
+            <td>\${escapeHtml(r.userName || r.userId)}\${r.tripId ? '<br><small style="color:#666;">Trip: ' + escapeHtml(r.tripId) + '</small>' : ''}\${r.adminNotes ? '<br><span class="badge badge-blue" style="font-size:10px;">Has Reply</span>' : ''}</td>
             <td>
-              <strong>\${r.subject}</strong>
-              \${r.screenshotUrl ? '<button class="btn btn-small btn-secondary" onclick="event.stopPropagation();viewScreenshot(\\'' + r.screenshotUrl + '\\')">View Screenshot</button>' : ''}
-              <br><small style="color:#666;max-width:300px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">\${r.message}</small>
+              <strong>\${escapeHtml(r.subject)}</strong>
+              \${validScreenshotUrl ? '<button class="btn btn-small btn-secondary" data-action="view-screenshot" data-url="' + escapeHtml(validScreenshotUrl) + '" onclick="event.stopPropagation()">View Screenshot</button>' : ''}
+              <br><small style="color:#666;max-width:300px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">\${escapeHtml(r.message)}</small>
             </td>
-            <td><span class="badge \${priorityColors[r.priority] || 'badge-gray'}">\${r.priority}</span></td>
-            <td><span class="badge \${statusColors[r.status] || 'badge-gray'}">\${r.status}</span></td>
+            <td><span class="badge \${priorityColors[r.priority] || 'badge-gray'}">\${escapeHtml(r.priority)}</span></td>
+            <td><span class="badge \${statusColors[r.status] || 'badge-gray'}">\${escapeHtml(r.status)}</span></td>
             <td>
-              <select onclick="event.stopPropagation()" onchange="updateSupportStatus('\${r.id}', this.value)" style="padding:4px;font-size:11px;">
+              <select onclick="event.stopPropagation()" data-ticket-id="\${escapeHtml(r.id)}" onchange="updateSupportStatus(this.dataset.ticketId, this.value)" style="padding:4px;font-size:11px;">
                 <option value="open" \${r.status === 'open' ? 'selected' : ''}>Open</option>
                 <option value="in_progress" \${r.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
                 <option value="resolved" \${r.status === 'resolved' ? 'selected' : ''}>Resolved</option>
               </select>
             </td>
           </tr>
-        \`).join('')}</tbody>
+        \`}).join('')}</tbody>
       </table>\`;
       document.getElementById('supportTable').innerHTML = html;
     }
