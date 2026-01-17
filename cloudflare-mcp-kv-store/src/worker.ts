@@ -18,6 +18,9 @@ import {
   handleAdminRoutes
 } from './routes';
 
+// Subdomain routing
+import { handleSubdomainRoutes } from './routes/subdomain';
+
 // MCP protocol handlers
 import {
   TOOL_DEFINITIONS,
@@ -64,6 +67,10 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
+    // Try subdomain routing first (*.voygent.ai)
+    const subdomainResponse = await handleSubdomainRoutes(request, env, ctx, url, corsHeaders);
+    if (subdomainResponse) return subdomainResponse;
+
     // Try public routes first (no auth required)
     const publicResponse = await handlePublicRoutes(request, env, ctx, url, corsHeaders);
     if (publicResponse) return publicResponse;
@@ -98,6 +105,13 @@ export default {
     if (validKeys.includes(requestKey)) {
       // Legacy auth via KV or env var
       keyPrefix = getKeyPrefix(requestKey);
+
+      // Also try to load user profile for legacy keys (needed for subdomain, subscription)
+      const userId = keyPrefix.replace(/\/$/, '');
+      const user = await env.TRIPS.get(`_users/${userId}`, "json") as UserProfile | null;
+      if (user) {
+        userProfile = user;
+      }
     } else {
       // Try auth key index first (O(1))
       const userId = await getAuthKeyIndex(env, requestKey);

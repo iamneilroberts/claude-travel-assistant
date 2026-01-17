@@ -146,7 +146,55 @@ export async function renderTripHtml(
   // Get template HTML (checks user templates first, then system, then built-in)
   const templateHtml = await getTemplateHtml(env, resolvedTemplate, keyPrefix);
   const templateData = buildTemplateData(tripData, userProfile, env, tripKey);
-  return renderTemplate(templateHtml, templateData);
+  let html = renderTemplate(templateHtml, templateData);
+
+  // Add trial watermark if user is on trial tier
+  if (userProfile?.subscription?.tier === 'trial') {
+    html = injectTrialWatermark(html);
+  }
+
+  return html;
+}
+
+/**
+ * Inject trial watermark into rendered HTML
+ */
+function injectTrialWatermark(html: string): string {
+  const watermarkHtml = `
+<style>
+  .voygent-trial-watermark {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-align: center;
+    padding: 10px 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    z-index: 99999;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  }
+  .voygent-trial-watermark a {
+    color: white;
+    text-decoration: underline;
+    font-weight: 600;
+  }
+</style>
+<div class="voygent-trial-watermark">
+  Created with Voygent (Trial) &middot; <a href="https://voygent.ai" target="_blank">Start your free trial at voygent.ai</a>
+</div>
+`;
+
+  // Insert before </body>
+  const bodyCloseIndex = html.toLowerCase().lastIndexOf('</body>');
+  if (bodyCloseIndex !== -1) {
+    return html.slice(0, bodyCloseIndex) + watermarkHtml + html.slice(bodyCloseIndex);
+  }
+
+  // If no </body> found, append at the end
+  return html + watermarkHtml;
 }
 
 /**

@@ -209,6 +209,11 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
     ? `${WORKER_BASE_URL}/subscribe?userId=${encodeURIComponent(userProfile.userId)}`
     : null;
 
+  // Build dashboard URL from subdomain
+  const dashboardUrl = userProfile?.subdomain
+    ? `https://${userProfile.subdomain}.voygent.ai/admin`
+    : null;
+
   // Build base result
   const hasNotifications = totalActiveComments > 0 || adminReplies.length > 0 || hasAdminMessages;
   const baseResult: any = {
@@ -221,8 +226,17 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
       uploadPage: uploadUrl,
       galleryPage: galleryUrl,
       subscribePage: subscribeUrl,
+      dashboard: dashboardUrl,
       _note: "Use prepare_image_upload tool instead of these URLs when user wants to add images. These are for reference/manual use."
     },
+    subscription: userProfile?.subscription ? {
+      tier: userProfile.subscription.tier,
+      status: userProfile.subscription.status,
+      currentPeriodEnd: userProfile.subscription.currentPeriodEnd,
+      trialEnd: userProfile.subscription.trialEnd || null,
+      cancelAtPeriodEnd: userProfile.subscription.cancelAtPeriodEnd,
+      publishLimit: userProfile.subscription.publishLimit
+    } : null,
     activeComments: totalActiveComments > 0 ? {
       total: totalActiveComments,
       newCount: newCommentCount,

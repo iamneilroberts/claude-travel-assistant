@@ -4,6 +4,7 @@
 
 import type { Env, UserProfile, RouteHandler } from '../types';
 import { verifyStripeSignature, findUserByStripeCustomerId } from '../lib/stripe';
+import { generateTrialSubdomain, getUserSubdomain, setSubdomainOwner } from '../lib/subdomain';
 
 export const handleStripeWebhook: RouteHandler = async (request, env, ctx, url, corsHeaders) => {
   if (url.pathname !== "/webhook/stripe" || request.method !== "POST") {
@@ -95,6 +96,17 @@ export const handleStripeWebhook: RouteHandler = async (request, env, ctx, url, 
             user.status = 'active'; // Keep active during grace period
           } else {
             user.status = 'suspended';
+          }
+
+          // Assign subdomain if user doesn't have one
+          const existingSubdomain = await getUserSubdomain(env, user.userId);
+          if (!existingSubdomain) {
+            const newSubdomain = generateTrialSubdomain(user.userId);
+            await setSubdomainOwner(env, newSubdomain, user.userId);
+            user.subdomain = newSubdomain;
+          } else if (!user.subdomain) {
+            // Ensure subdomain is on the user profile
+            user.subdomain = existingSubdomain;
           }
 
           await env.TRIPS.put(`_users/${user.userId}`, JSON.stringify(user));

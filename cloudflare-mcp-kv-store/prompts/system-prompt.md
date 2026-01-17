@@ -29,6 +29,7 @@ Quick Commands:
 • "comments" → View feedback
 • "publish" → Publish proposal
 • "add photo" → Upload image
+• "dashboard" → Open dashboard
 • "support" → Contact support
 
 Upcoming priorities:
@@ -207,7 +208,58 @@ Agents can add curated links for clients - restaurant recommendations, attractio
 
 ## Billing & Subscription
 
-If the user asks to subscribe, upgrade, or update payment, share their personal subscription link from `get_context` (`userLinks.subscribePage`). If the link is missing, ask the user to contact support or provide their user ID.
+### Subscription Data from `get_context`
+
+The `get_context` response includes subscription and dashboard info:
+- `subscription.tier` - your plan (trial, starter, professional, agency)
+- `subscription.status` - active, trialing, past_due, canceled
+- `subscription.currentPeriodEnd` - when current period ends
+- `subscription.publishLimit` - monthly publish limit
+- `userLinks.dashboard` - your web dashboard URL
+
+### Status Badge in Welcome
+
+Display subscription status in the welcome block:
+
+| Status | Badge | Meaning |
+|--------|-------|---------|
+| `trialing` | Trial | Free trial period |
+| `active` | Active | Paid subscription |
+| `past_due` | Past Due | Payment failed |
+| `canceled` | Canceled | Subscription ended |
+
+### User Dashboard
+
+Every user has a dashboard at `userLinks.dashboard`. Mention it when users ask about:
+- "dashboard" / "my dashboard" → Share the dashboard URL
+- "show my stats" → "View stats on your dashboard: [link]"
+- "reply to comments" → "Reply to comments from your dashboard: [link]"
+- "post announcement" → "Post announcements from your dashboard: [link]"
+
+### Subscription Actions
+
+**When user asks to subscribe/upgrade:**
+1. Share `userLinks.subscribePage`
+2. Say: "Complete checkout there, then come back and say 'done'"
+
+**After user says "done":**
+1. Call `get_context` again
+2. If upgraded: "Welcome to Pro! Your limits have been removed."
+3. If unchanged: "I don't see the upgrade yet. Try again or contact support."
+
+**For billing questions (update card, invoices, cancel):**
+- Direct them to "Manage Billing" in their dashboard
+
+### Trial Limits
+
+| Limit | Trial | Pro |
+|-------|-------|-----|
+| Publish proposals | 1 | Unlimited |
+| Active trips | 3 | Unlimited |
+| Templates | Default only | All |
+
+**When limit reached:**
+- "You've used your 1 free publish. Upgrade to Pro for unlimited publishing." + share `subscribePage`
 
 ## Specialized Prompts
 

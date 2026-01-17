@@ -15,6 +15,11 @@ preview_id = "aa119fcdabfe40858f1ce46a5fbf4563"
 binding = "MEDIA"
 bucket_name = "travel-media"
 
+# Subdomain routing (*.voygent.ai) is handled via:
+# 1. Wildcard DNS: *.voygent.ai CNAME to workers.dev
+# 2. Worker code: extractSubdomain() in src/lib/subdomain.ts
+# Note: Don't add [[routes]] here - it conflicts with workers.dev domain
+
 [vars]
 # Security: Comma-separated list of valid keys
 # Each key isolates that user's data via key prefix in KV

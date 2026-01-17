@@ -34,6 +34,7 @@ export interface UserProfile {
     primaryColor?: string;
     accentColor?: string;
   };
+  subdomain?: string;  // e.g., "trial-abc123" or "kimstravel"
   created: string;
   lastActive: string;
   status: 'active' | 'inactive' | 'pending' | 'suspended';
