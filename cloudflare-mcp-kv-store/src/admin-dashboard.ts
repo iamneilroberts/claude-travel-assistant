@@ -15,9 +15,11 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     .header { background: linear-gradient(135deg, #1a5f7a 0%, #0d3d4d 100%); color: white; padding: 20px 30px; }
     .header h1 { font-size: 24px; font-weight: 600; }
     .header p { opacity: 0.8; margin-top: 5px; }
-    .nav-tabs { display: flex; gap: 5px; margin-top: 15px; }
+    .nav-tabs { display: flex; gap: 5px; margin-top: 15px; flex-wrap: wrap; }
     .nav-tab { padding: 8px 16px; background: rgba(255,255,255,0.1); border: none; color: white; border-radius: 6px 6px 0 0; cursor: pointer; font-size: 14px; }
     .nav-tab.active { background: #f5f5f5; color: #1a5f7a; }
+    .nav-tab.mission-control { background: rgba(34, 197, 94, 0.3); }
+    .nav-tab.mission-control.active { background: #22c55e; color: white; }
     .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
@@ -69,6 +71,76 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     .detail-row .label { color: #666; }
     .icon { font-size: 14px; margin-right: 5px; }
     @media (max-width: 768px) { .detail-grid { grid-template-columns: 1fr; } }
+
+    /* Mission Control - Arrivals Board Styling */
+    .mission-control-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+    .mode-tabs { display: flex; gap: 5px; }
+    .mode-tab { padding: 8px 16px; background: #e5e7eb; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; }
+    .mode-tab.active { background: #1a5f7a; color: white; }
+    .mode-tab:hover:not(.active) { background: #d1d5db; }
+    .auto-controls { display: flex; align-items: center; gap: 10px; }
+    .toggle-label { font-size: 13px; color: #666; }
+    .toggle { position: relative; width: 44px; height: 24px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #ccc; border-radius: 24px; transition: .3s; }
+    .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .3s; }
+    .toggle input:checked + .toggle-slider { background: #22c55e; }
+    .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+    /* Arrivals Board */
+    .arrivals-board { background: #1a1a1a; border-radius: 8px; padding: 20px; font-family: 'Roboto Mono', 'Courier New', monospace; box-shadow: inset 0 0 30px rgba(0,0,0,0.5); }
+    .board-header { display: flex; color: #fbbf24; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; border-bottom: 2px solid #333; padding-bottom: 12px; margin-bottom: 8px; }
+    .board-rows { max-height: 500px; overflow-y: auto; }
+    .board-row { display: flex; padding: 10px 0; border-bottom: 1px solid #333; color: #fff; font-size: 14px; align-items: center; }
+    .board-row.new { animation: flipIn 0.5s ease-out; }
+    .col-time { width: 70px; color: #fbbf24; font-weight: 500; }
+    .col-user { width: 140px; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .col-action { flex: 1; color: #e5e7eb; }
+    .col-trip { width: 120px; color: #9ca3af; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .col-status { width: 70px; text-align: right; font-weight: 600; }
+    .status-ok { color: #22c55e; }
+    .status-err { color: #ef4444; }
+
+    /* Age-based row styling */
+    .board-row.fresh { background: rgba(34, 197, 94, 0.15); }
+    .board-row.fresh .col-time { animation: pulse 2s infinite; }
+    .board-row.recent { background: rgba(59, 130, 246, 0.1); }
+    .board-row.stale { opacity: 0.7; }
+    .board-row.old { opacity: 0.5; }
+
+    @keyframes flipIn {
+      0% { transform: rotateX(-90deg); opacity: 0; }
+      100% { transform: rotateX(0); opacity: 1; }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* Stats Panel */
+    .stats-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
+    .stats-panel .stat-card { background: white; border-radius: 8px; padding: 15px; }
+    .stats-panel .stat-card .label { color: #666; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+    .stats-panel .stat-card .value { font-size: 24px; font-weight: 700; color: #1a5f7a; margin-top: 5px; }
+    .stats-panel .stat-card .change { font-size: 12px; margin-top: 5px; }
+    .stats-panel .stat-card .change.up { color: #22c55e; }
+    .stats-panel .stat-card .change.down { color: #ef4444; }
+
+    /* Insights Panel */
+    .insights-panel { background: white; border-radius: 12px; padding: 20px; }
+    .health-score { display: flex; align-items: center; gap: 20px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+    .health-score .score { font-size: 48px; font-weight: 700; }
+    .health-score .score.good { color: #22c55e; }
+    .health-score .score.warning { color: #f59e0b; }
+    .health-score .score.bad { color: #ef4444; }
+    .health-score .label { color: #666; font-size: 14px; }
+    .recommendation { padding: 12px; border-radius: 8px; margin-bottom: 10px; }
+    .recommendation.warning { background: #fef3c7; border-left: 4px solid #f59e0b; }
+    .recommendation.info { background: #dbeafe; border-left: 4px solid #3b82f6; }
+    .recommendation.success { background: #dcfce7; border-left: 4px solid #22c55e; }
+    .recommendation .title { font-weight: 600; margin-bottom: 4px; }
+    .recommendation .message { font-size: 13px; color: #555; }
+    .recommendation .action { font-size: 12px; color: #666; margin-top: 4px; font-style: italic; }
   </style>
 </head>
 <body>
@@ -76,6 +148,7 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     <h1>Voygent Admin Dashboard</h1>
     <p>Manage users, trips, and support</p>
     <div class="nav-tabs">
+      <button class="nav-tab mission-control" onclick="showTab('missioncontrol')">Mission Control</button>
       <button class="nav-tab active" onclick="showTab('overview')">Overview</button>
       <button class="nav-tab" onclick="showTab('trips')">All Trips</button>
       <button class="nav-tab" onclick="showTab('comments')">Comments</button>
@@ -89,6 +162,68 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
   <div class="container">
     <div id="error" class="error" style="display: none;"></div>
+
+    <!-- MISSION CONTROL TAB -->
+    <div id="tab-missioncontrol" class="tab-content">
+      <div class="mission-control-header">
+        <div class="mode-tabs">
+          <button class="mode-tab active" data-mode="live">Live</button>
+          <button class="mode-tab" data-mode="stats">Stats</button>
+          <button class="mode-tab" data-mode="insights">Insights</button>
+        </div>
+        <div class="auto-controls">
+          <span class="toggle-label">Auto-refresh</span>
+          <label class="toggle">
+            <input type="checkbox" id="autoRefreshToggle" checked>
+            <span class="toggle-slider"></span>
+          </label>
+          <span id="refreshStatus" style="font-size:11px;color:#666;">Polling every 3s</span>
+        </div>
+      </div>
+
+      <!-- Live Mode Panel -->
+      <div id="panel-live" class="mode-panel">
+        <div class="arrivals-board">
+          <div class="board-header">
+            <span class="col-time">TIME</span>
+            <span class="col-user">USER</span>
+            <span class="col-action">ACTION</span>
+            <span class="col-trip">TRIP</span>
+            <span class="col-status">STATUS</span>
+          </div>
+          <div class="board-rows" id="activityRows">
+            <div style="padding:40px;text-align:center;color:#666;">Loading activity stream...</div>
+          </div>
+        </div>
+        <div class="stats-panel" id="liveStats">
+          <div class="stat-card"><div class="label">Calls Today</div><div class="value" id="liveCallsToday">-</div></div>
+          <div class="stat-card"><div class="label">Active Users</div><div class="value" id="liveActiveUsers">-</div></div>
+          <div class="stat-card"><div class="label">Avg Response</div><div class="value" id="liveAvgResponse">-</div></div>
+          <div class="stat-card"><div class="label">Error Rate</div><div class="value" id="liveErrorRate">-</div></div>
+        </div>
+      </div>
+
+      <!-- Stats Mode Panel -->
+      <div id="panel-stats" class="mode-panel" style="display:none;">
+        <div class="section">
+          <div class="filter-row">
+            <select id="statsPeriod" onchange="loadStatsPanel()">
+              <option value="day">Today</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+            </select>
+          </div>
+          <div id="statsContent"><div class="loading">Loading stats...</div></div>
+        </div>
+      </div>
+
+      <!-- Insights Mode Panel -->
+      <div id="panel-insights" class="mode-panel" style="display:none;">
+        <div class="insights-panel" id="insightsContent">
+          <div class="loading">Loading insights...</div>
+        </div>
+      </div>
+    </div>
 
     <!-- OVERVIEW TAB -->
     <div id="tab-overview" class="tab-content active">
@@ -1543,11 +1678,238 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
       }
     }
 
+    // ========== MISSION CONTROL ==========
+    let missionControlMode = 'live';
+    let autoRefreshEnabled = true;
+    let pollInterval = null;
+    let lastActivityId = null;
+    let activityCache_mc = [];
+
+    // Mode tab switching
+    document.querySelectorAll('.mode-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const mode = tab.dataset.mode;
+        if (!mode) return;
+
+        document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+
+        document.querySelectorAll('.mode-panel').forEach(p => p.style.display = 'none');
+        document.getElementById('panel-' + mode).style.display = 'block';
+
+        missionControlMode = mode;
+
+        if (mode === 'stats') loadStatsPanel();
+        else if (mode === 'insights') loadInsightsPanel();
+      });
+    });
+
+    // Auto-refresh toggle
+    document.getElementById('autoRefreshToggle').addEventListener('change', function() {
+      autoRefreshEnabled = this.checked;
+      document.getElementById('refreshStatus').textContent = autoRefreshEnabled ? 'Polling every 3s' : 'Paused';
+      if (autoRefreshEnabled) {
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    });
+
+    function startPolling() {
+      if (pollInterval) return;
+      pollInterval = setInterval(() => {
+        if (missionControlMode === 'live' && autoRefreshEnabled) {
+          loadActivityStream();
+        }
+      }, 3000);
+    }
+
+    function stopPolling() {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+    }
+
+    async function loadActivityStream() {
+      try {
+        const params = new URLSearchParams();
+        params.set('limit', '30');
+        if (lastActivityId) params.set('since', activityCache_mc[0]?.timestamp || '');
+
+        const data = await api('/admin/activity-stream?' + params.toString());
+
+        // Check for new activities
+        const newActivities = data.activities.filter(a =>
+          !activityCache_mc.some(c => c.id === a.id)
+        );
+
+        if (newActivities.length > 0) {
+          // Add new activities at the top
+          activityCache_mc = [...newActivities, ...activityCache_mc].slice(0, 50);
+          renderActivityBoard(newActivities.map(a => a.id));
+        }
+
+        // Update live stats
+        updateLiveStats(data);
+      } catch (e) {
+        console.error('Activity stream error:', e);
+      }
+    }
+
+    function renderActivityBoard(newIds = []) {
+      const rows = activityCache_mc.slice(0, 15).map(a => {
+        const isNew = newIds.includes(a.id);
+        return \`
+          <div class="board-row \${a.ageClass}\${isNew ? ' new' : ''}">
+            <span class="col-time">\${escapeHtml(a.time)}</span>
+            <span class="col-user">\${escapeHtml(a.user).substring(0, 12)}</span>
+            <span class="col-action">\${escapeHtml(a.action)}</span>
+            <span class="col-trip">\${a.tripId ? escapeHtml(a.tripId) : '-'}</span>
+            <span class="col-status \${a.success ? 'status-ok' : 'status-err'}">\${a.success ? '✓ OK' : '✗ ERR'}</span>
+          </div>
+        \`;
+      }).join('');
+
+      document.getElementById('activityRows').innerHTML = rows || '<div style="padding:40px;text-align:center;color:#666;">No activity yet</div>';
+    }
+
+    function updateLiveStats(data) {
+      // Calculate stats from activity cache
+      const now = Date.now();
+      const todayStart = new Date().setHours(0, 0, 0, 0);
+      const todayCalls = activityCache_mc.filter(a => new Date(a.timestamp).getTime() > todayStart).length;
+      const activeUsers = new Set(activityCache_mc.filter(a => now - new Date(a.timestamp).getTime() < 3600000).map(a => a.userId)).size;
+      const avgResponse = activityCache_mc.length > 0
+        ? Math.round(activityCache_mc.slice(0, 20).reduce((sum, a) => sum + (a.durationMs || 0), 0) / Math.min(activityCache_mc.length, 20))
+        : 0;
+      const errors = activityCache_mc.filter(a => !a.success).length;
+      const errorRate = activityCache_mc.length > 0 ? ((errors / activityCache_mc.length) * 100).toFixed(1) : '0';
+
+      document.getElementById('liveCallsToday').textContent = todayCalls;
+      document.getElementById('liveActiveUsers').textContent = activeUsers;
+      document.getElementById('liveAvgResponse').textContent = avgResponse + 'ms';
+      document.getElementById('liveErrorRate').textContent = errorRate + '%';
+    }
+
+    async function loadStatsPanel() {
+      const period = document.getElementById('statsPeriod').value;
+      try {
+        const data = await api('/admin/metrics-summary?period=' + period);
+
+        let toolsHtml = data.tools.map(t => \`
+          <tr>
+            <td>\${escapeHtml(t.displayName)}</td>
+            <td>\${t.count}</td>
+            <td>\${t.successRate}%</td>
+            <td>\${t.avgDurationMs}ms</td>
+            <td>\${t.p95DurationMs}ms</td>
+          </tr>
+        \`).join('');
+
+        let topUsersHtml = data.topUsers.map(u => \`
+          <tr>
+            <td>\${escapeHtml(u.displayName)}</td>
+            <td>\${u.count} calls</td>
+          </tr>
+        \`).join('');
+
+        document.getElementById('statsContent').innerHTML = \`
+          <div class="stats-grid">
+            <div class="stat-card"><div class="label">Total Calls</div><div class="value">\${data.overview.totalCalls}</div></div>
+            <div class="stat-card"><div class="label">Unique Users</div><div class="value">\${data.overview.uniqueUsers}</div></div>
+            <div class="stat-card"><div class="label">Error Rate</div><div class="value">\${data.overview.errorRate}%</div></div>
+            <div class="stat-card"><div class="label">Avg Response</div><div class="value">\${data.overview.avgDurationMs}ms</div></div>
+            <div class="stat-card"><div class="label">Peak Hour</div><div class="value">\${escapeHtml(data.overview.peakHour)}</div></div>
+          </div>
+
+          <h3 style="margin:20px 0 10px;">Tool Usage</h3>
+          <table>
+            <thead><tr><th>Tool</th><th>Calls</th><th>Success</th><th>Avg Time</th><th>P95</th></tr></thead>
+            <tbody>\${toolsHtml}</tbody>
+          </table>
+
+          <h3 style="margin:20px 0 10px;">Top Users</h3>
+          <table>
+            <thead><tr><th>User</th><th>Activity</th></tr></thead>
+            <tbody>\${topUsersHtml}</tbody>
+          </table>
+        \`;
+      } catch (e) {
+        document.getElementById('statsContent').innerHTML = '<p class="error">' + e.message + '</p>';
+      }
+    }
+
+    async function loadInsightsPanel() {
+      try {
+        const data = await api('/admin/insights');
+
+        const scoreClass = data.healthScore >= 80 ? 'good' : data.healthScore >= 50 ? 'warning' : 'bad';
+
+        const recommendationsHtml = data.recommendations.map(r => \`
+          <div class="recommendation \${r.type}">
+            <div class="title">\${escapeHtml(r.title)}</div>
+            <div class="message">\${escapeHtml(r.message)}</div>
+            \${r.action ? '<div class="action">' + escapeHtml(r.action) + '</div>' : ''}
+          </div>
+        \`).join('') || '<p style="color:#666;">No recommendations at this time.</p>';
+
+        const atRiskHtml = data.atRiskUsers.map(u => \`
+          <tr>
+            <td>\${escapeHtml(u.displayName)}</td>
+            <td>\${escapeHtml(u.lastSeenFormatted)}</td>
+            <td>\${u.daysSinceActive} days</td>
+          </tr>
+        \`).join('') || '<tr><td colspan="3" style="color:#666;text-align:center;">No at-risk users</td></tr>';
+
+        const segmentsHtml = Object.entries(data.userSegments).map(([key, seg]) => \`
+          <div class="stat-card">
+            <div class="label">\${escapeHtml(seg.label)}</div>
+            <div class="value">\${seg.count}</div>
+            <div style="font-size:11px;color:#666;">\${escapeHtml(seg.description)}</div>
+          </div>
+        \`).join('');
+
+        document.getElementById('insightsContent').innerHTML = \`
+          <div class="health-score">
+            <div class="score \${scoreClass}">\${data.healthScore}</div>
+            <div>
+              <div class="label">System Health Score</div>
+              <div style="font-size:12px;color:#666;margin-top:4px;">
+                Trend: <span style="color:\${data.trends.direction === 'up' ? '#22c55e' : data.trends.direction === 'down' ? '#ef4444' : '#666'}">\${data.trends.changeFormatted}</span> vs yesterday
+              </div>
+            </div>
+          </div>
+
+          <h3 style="margin-bottom:15px;">Recommendations</h3>
+          \${recommendationsHtml}
+
+          <h3 style="margin:20px 0 10px;">User Segments</h3>
+          <div class="stats-grid">\${segmentsHtml}</div>
+
+          <h3 style="margin:20px 0 10px;">At-Risk Users</h3>
+          <table>
+            <thead><tr><th>User</th><th>Last Active</th><th>Inactive</th></tr></thead>
+            <tbody>\${atRiskHtml}</tbody>
+          </table>
+        \`;
+      } catch (e) {
+        document.getElementById('insightsContent').innerHTML = '<p class="error">' + e.message + '</p>';
+      }
+    }
+
+    // Start Mission Control when tab is shown
+    function initMissionControl() {
+      loadActivityStream();
+      startPolling();
+    }
+
     // ========== INIT ==========
     async function init() {
       await Promise.all([loadStats(), loadUsers(), loadActivity(), loadTrips(), loadComments(), loadSupport(), loadBillingStats(), loadPromoCodes(), loadMessages()]);
       renderRecentActivity();
       renderSubscriptions();
+      initMissionControl();
     }
     init();
   </script>

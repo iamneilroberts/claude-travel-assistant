@@ -21,9 +21,19 @@ import {
   handleUpdateThread,
   handleMarkThreadRead
 } from './messages';
+import { handleActivityStream } from './activity-stream';
+import { handleMetricsSummary } from './metrics-summary';
+import { handleInsights } from './insights';
+import { handleAdminMcp } from './mcp';
 
 // All admin route handlers
 const adminHandlers: RouteHandler[] = [
+  // Admin MCP endpoint (authenticated separately)
+  handleAdminMcp,
+  // Metrics & Activity Stream (new)
+  handleActivityStream,
+  handleMetricsSummary,
+  handleInsights,
   // Users
   handleListUsers,
   handleCreateUser,
