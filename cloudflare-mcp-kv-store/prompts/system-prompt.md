@@ -331,24 +331,33 @@ Once a stateroom number is assigned, research the cabin details using these reso
 3. Note if there's a balcony, window type, connecting doors, or accessibility features
 4. Check for photos of the actual cabin or similar cabins in that category
 5. Add relevant details to `cruiseInfo.cabin` in the trip data
+6. **Include links** for ship info page, deck plan, and stateroom details (template will display these as clickable links)
 
 **Data to capture:**
 ```json
 {
   "cruiseInfo": {
+    "shipName": "Celestyal Journey",
+    "cruiseLine": "Celestyal Cruises",
+    "shipUrl": "https://www.celestyal.com/cruise-ships/celestyal-journey/",
+    "deckPlanUrl": "https://www.cruisedeckplans.com/ships/celestyal-journey/deck-plans",
     "cabin": {
       "number": "5031",
       "category": "VA - Vista Suite",
-      "deck": "5 - Main Deck",
+      "deck": "Deck 6",
       "squareFeet": 284,
       "sleeps": 2,
       "bedConfig": "1 king or 2 twins",
       "features": ["Private balcony", "Sitting area", "Walk-in closet", "Whirlpool tub"],
-      "images": ["url1", "url2"]
+      "images": ["url1", "url2"],
+      "stateroomUrl": "https://www.cruisedeckplans.com/ships/stateroom-details.php?ship=celestyal-journey&cabin=5031"
     }
   }
 }
 ```
+
+**Prompt the agent for links:**
+- When building a cruise trip, ask: "Do you have links to the ship's page, deck plan, or stateroom details? These will appear as clickable links in the proposal."
 
 ## Validation
 

@@ -232,16 +232,31 @@ export function buildTemplateData(
       });
   }
 
-  // Filter out empty or emoji-only activities from itinerary
+  // Filter out empty or emoji-only content from itinerary
   if (Array.isArray(tripData?.itinerary)) {
     const hasAlphanumeric = (str: string) => /[a-zA-Z0-9]/.test(str);
     tripData.itinerary = tripData.itinerary.map((day: any) => {
+      // Filter activities
       if (Array.isArray(day?.activities)) {
         day.activities = day.activities.filter((act: any) => {
           const name = typeof act?.name === 'string' ? act.name.trim() : '';
           // Keep activity if it has alphanumeric content or meaningful description
           return hasAlphanumeric(name) ||
                  (act?.description && hasAlphanumeric(String(act.description)));
+        });
+      }
+      // Filter lodging - remove if name is empty or emoji-only
+      if (day?.lodging) {
+        const lodgingName = typeof day.lodging?.name === 'string' ? day.lodging.name.trim() : '';
+        if (!hasAlphanumeric(lodgingName)) {
+          delete day.lodging;
+        }
+      }
+      // Filter schedule items
+      if (Array.isArray(day?.schedule)) {
+        day.schedule = day.schedule.filter((item: any) => {
+          const activity = typeof item?.activity === 'string' ? item.activity.trim() : '';
+          return hasAlphanumeric(activity);
         });
       }
       return day;
@@ -287,14 +302,25 @@ export function buildTemplateData(
     }
   }
 
-  // Deduplicate flightOptions.selfBookNote and flightOptions.notes
-  if (tripData?.flightOptions?.selfBookNote && tripData?.flightOptions?.notes) {
-    const selfBookNote = String(tripData.flightOptions.selfBookNote).toLowerCase().trim();
-    const notes = String(tripData.flightOptions.notes).toLowerCase().trim();
-    // If notes contains selfBookNote or they're very similar, clear notes
-    if (notes.includes(selfBookNote) || selfBookNote.includes(notes) ||
-        (selfBookNote.length > 20 && notes.length > 20 &&
-         selfBookNote.substring(0, 50) === notes.substring(0, 50))) {
+  // Deduplicate flightOptions fields that may contain redundant self-booking info
+  if (tripData?.flightOptions) {
+    const selfBookNote = String(tripData.flightOptions.selfBookNote || '').toLowerCase().trim();
+    const disclaimer = String(tripData.flightOptions.disclaimer || '').toLowerCase().trim();
+    const notes = String(tripData.flightOptions.notes || '').toLowerCase().trim();
+
+    // Check for self-booking related keywords
+    const selfBookKeywords = ['book flights on your own', 'book directly', 'book flights directly', 'self-book', 'book your own'];
+    const hasSelfBookInfo = (text: string) => selfBookKeywords.some(kw => text.includes(kw));
+
+    // If selfBookNote exists and disclaimer also mentions self-booking, clear the redundant one
+    if (selfBookNote && disclaimer && hasSelfBookInfo(selfBookNote) && hasSelfBookInfo(disclaimer)) {
+      // Keep selfBookNote (more specific), clear the self-booking part from disclaimer context
+      // Actually, keep disclaimer (more formal) and clear selfBookNote since disclaimer is more comprehensive
+      tripData.flightOptions.selfBookNote = '';
+    }
+
+    // Also check notes
+    if (selfBookNote && notes && hasSelfBookInfo(notes)) {
       tripData.flightOptions.notes = '';
     }
   }

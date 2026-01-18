@@ -372,6 +372,20 @@
             margin-bottom: 5px;
         }
 
+        .ship-name-link {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 5px;
+            display: block;
+            text-decoration: none;
+        }
+
+        .ship-name-link:hover {
+            color: var(--primary-dark);
+            text-decoration: underline;
+        }
+
         .cruise-line {
             font-size: 1.1em;
             color: var(--text-light);
@@ -1849,7 +1863,11 @@
                 <button class="comment-trigger" data-comment-section="Your Cruise">Ask a question</button>
             </div>
             <div class="content-box ship-card">
+                {{#if cruiseInfo.shipUrl}}
+                <a href="{{cruiseInfo.shipUrl}}" target="_blank" rel="noopener noreferrer" class="ship-name-link">{{cruiseInfo.shipName}} <span style="font-size: 0.6em;">↗</span></a>
+                {{else}}
                 <div class="ship-name">{{cruiseInfo.shipName}}</div>
+                {{/if}}
                 <div class="cruise-line">{{cruiseInfo.cruiseLine}}</div>
 
                 <div class="overview-section" style="margin-bottom: 0; margin-top: 20px;">
@@ -1877,10 +1895,25 @@
                     {{#if cruiseInfo.cabin.deck}}
                     <div class="overview-card">
                         <div class="label">Deck</div>
-                        <div class="value">Deck {{cruiseInfo.cabin.deck}}</div>
+                        <div class="value">{{cruiseInfo.cabin.deck}}</div>
                     </div>
                     {{/if}}
                 </div>
+
+                {{#if cruiseInfo.deckPlanUrl}}
+                <div style="margin-top: 15px; margin-bottom: 15px;">
+                    <a href="{{cruiseInfo.deckPlanUrl}}" target="_blank" rel="noopener noreferrer" class="card-link">📋 View Deck Plan →</a>
+                    {{#if cruiseInfo.cabin.stateroomUrl}}
+                    <a href="{{cruiseInfo.cabin.stateroomUrl}}" target="_blank" rel="noopener noreferrer" class="card-link" style="margin-left: 20px;">🚪 Stateroom Details →</a>
+                    {{/if}}
+                </div>
+                {{else}}
+                {{#if cruiseInfo.cabin.stateroomUrl}}
+                <div style="margin-top: 15px; margin-bottom: 15px;">
+                    <a href="{{cruiseInfo.cabin.stateroomUrl}}" target="_blank" rel="noopener noreferrer" class="card-link">🚪 Stateroom Details →</a>
+                </div>
+                {{/if}}
+                {{/if}}
 
                 {{#if cruiseInfo.cabin.number}}
                 <div class="highlight-box" style="margin-bottom: 20px;">
@@ -1914,14 +1947,21 @@
                     {{#each cruiseInfo.cabin.images}}
                     {{#if urls.original}}
                     <a href="{{urls.original}}" target="_blank" rel="noopener noreferrer">
-                        <img src="{{urls.original}}" alt='{{default caption "Stateroom"}}' title='{{default caption "Stateroom"}}' loading="lazy" decoding="async" width="300" height="200" onerror="this.style.display='none'">
+                        <img src="{{urls.thumbnail}}" alt='{{default caption "Stateroom"}}' title='{{default caption "Stateroom"}}' loading="lazy" decoding="async" onerror="this.style.display='none'">
+                    </a>
+                    {{else}}
+                    {{#if url}}
+                    <a href="{{url}}" target="_blank" rel="noopener noreferrer">
+                        <img src="{{url}}" alt='{{default caption "Stateroom"}}' title='{{default caption "Stateroom"}}' loading="lazy" decoding="async" onerror="this.style.display='none'">
+                    </a>
+                    {{else}}
+                    {{#if this}}
+                    <a href="{{this}}" target="_blank" rel="noopener noreferrer">
+                        <img src="{{this}}" alt="Stateroom" loading="lazy" decoding="async" onerror="this.style.display='none'">
                     </a>
                     {{/if}}
-                    {{#unless urls}}
-                    <a href="{{this}}" target="_blank" rel="noopener noreferrer">
-                        <img src="{{this}}" alt="Stateroom" loading="lazy" decoding="async" width="300" height="200" onerror="this.style.display='none'">
-                    </a>
-                    {{/unless}}
+                    {{/if}}
+                    {{/if}}
                     {{/each}}
                 </div>
                 <div class="image-caption">Click a thumbnail to view full size.</div>
