@@ -10,9 +10,11 @@ import { handleGallery } from './gallery';
 import { handleStripeWebhook } from './stripe-webhook';
 import { handleStripeCheckout, handleStripePortal, handleStripeSubscription } from './stripe-api';
 import { handleSubscribePage, handleSubscribeSuccess } from './subscribe';
+import { handleHealth } from './health';
 
 // List of public route handlers (no auth required)
 export const publicRouteHandlers: RouteHandler[] = [
+  handleHealth, // Health check first for fastest response
   handleComment,
   handleMedia,
 ];
@@ -107,6 +109,7 @@ export async function handleSubscribeRoutes(
 }
 
 // Re-export individual handlers
+export { handleHealth } from './health';
 export { handleComment } from './comment';
 export { handleMedia } from './media';
 export { handleUpload } from './upload';

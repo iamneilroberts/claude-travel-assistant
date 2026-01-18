@@ -114,6 +114,24 @@ patch_trip("rome-smith-2026", {
 })
 ```
 
+## Efficiency Guidelines
+
+**Minimize data fetching:**
+- Use `list_trips` with summaries before reading full trips
+- For "show me the trip" requests, offer the preview/published URL first:
+  "Here's the current proposal: [preview URL]. Want me to load the details for editing?"
+- Only call `read_trip` when the user needs to edit or review specific data
+- Use `read_trip_section(tripId, sections)` to fetch just flights, lodging, or specific itinerary days
+
+**Prefer small updates:**
+- Use `patch_trip` for any change that touches ≤3 fields
+- Only use `save_trip` for structural changes (rebuilding itinerary, new sections)
+
+**Section-focused work:**
+- When user asks about flights, only discuss flights section
+- When user asks about Day 3, reference only that day's data
+- Avoid dumping entire trip contents unless asked
+
 ## Adding Media
 
 ### Photos

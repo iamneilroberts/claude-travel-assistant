@@ -5,6 +5,7 @@
 
 import type { Env, RouteHandler } from '../../types';
 import { stripeRequest } from '../../lib/stripe';
+import { logAdminAction } from '../../lib/audit';
 
 export const handleListPromoCodes: RouteHandler = async (request, env, ctx, url, corsHeaders) => {
   if (url.pathname !== "/admin/promo-codes" || request.method !== "GET") return null;
@@ -82,6 +83,14 @@ export const handleCreatePromoCode: RouteHandler = async (request, env, ctx, url
     });
     await env.TRIPS.put("_promo_codes", JSON.stringify({ codes }));
 
+    // Log the action
+    const adminKey = request.headers.get('X-Admin-Key') || '';
+    await logAdminAction(env, 'create_promo', promoCode.code, {
+      percentOff: body.percentOff,
+      amountOff: body.amountOff,
+      duration: body.duration
+    }, adminKey, ctx);
+
     return new Response(JSON.stringify({
       promoCode: promoCode.code,
       stripePromoId: promoCode.id,
@@ -130,6 +139,10 @@ export const handleDeletePromoCode: RouteHandler = async (request, env, ctx, url
     // Remove from local cache
     data.codes = data.codes.filter(c => c.code !== codeToDelete);
     await env.TRIPS.put("_promo_codes", JSON.stringify(data));
+
+    // Log the action
+    const adminKey = request.headers.get('X-Admin-Key') || '';
+    await logAdminAction(env, 'delete_promo', codeToDelete!, { deactivated: true }, adminKey, ctx);
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" }

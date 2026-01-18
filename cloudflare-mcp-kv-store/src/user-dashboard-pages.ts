@@ -2,7 +2,7 @@
  * Server-rendered HTML templates for user dashboard
  */
 
-import type { UserProfile } from './types';
+import type { UserProfile, MonthlyUsage } from './types';
 
 /**
  * Common HTML head with styles
@@ -343,10 +343,18 @@ export function getDashboardHomeHtml(
   userProfile: UserProfile,
   subdomain: string,
   stats: { totalTrips: number; publishedTrips: number; totalViews: number; viewsLast30Days: number; unreadComments: number; topTrips: any[] },
-  recentTrips: any[]
+  recentTrips: any[],
+  usage?: MonthlyUsage
 ): string {
   const primaryColor = userProfile.branding?.primaryColor || '#667eea';
   const displayName = userProfile.agency?.name || userProfile.name || 'Travel Advisor';
+
+  // Usage and limits
+  const publishLimit = userProfile.subscription?.publishLimit ?? 10;
+  const publishCount = usage?.publishCount ?? 0;
+  const isUnlimited = publishLimit === -1;
+  const isNearLimit = !isUnlimited && publishCount >= publishLimit * 0.8;
+  const periodEnd = userProfile.subscription?.currentPeriodEnd;
 
   // Subscription badge
   const subStatus = userProfile.subscription?.status || 'unknown';
@@ -422,6 +430,24 @@ export function getDashboardHomeHtml(
         <div class="stat-value">${stats.unreadComments}</div>
         <div class="stat-label">Comments</div>
       </div>
+    </div>
+
+    <!-- Publishing Usage Card -->
+    <div class="card">
+      <div class="card-title">Monthly Publishing</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+        <div>
+          <div style="font-size:2rem;font-weight:700;color:var(--primary);">
+            ${publishCount} / ${isUnlimited ? '&#8734;' : publishLimit}
+          </div>
+          <div style="font-size:0.85rem;color:var(--text-muted);">proposals published this month</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:0.75rem;color:var(--text-muted);">Resets</div>
+          <div style="font-size:0.9rem;">${periodEnd ? formatDate(periodEnd) : 'N/A'}</div>
+        </div>
+      </div>
+      ${isNearLimit ? '<div class="alert alert-warning" style="margin-top:1rem;">Approaching limit. <a href="https://voygent.somotravel.workers.dev/subscribe?userId=' + escapeHtml(userProfile.userId) + '">Upgrade your plan</a></div>' : ''}
     </div>
 
     <!-- Recent Trips -->

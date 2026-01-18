@@ -6,6 +6,7 @@
 import type { Env, UserProfile, RouteHandler } from '../../types';
 import { listAllKeys, getKeyPrefix } from '../../lib/kv';
 import { setAuthKeyIndex } from '../../lib/auth';
+import { logAdminAction } from '../../lib/audit';
 
 // Generate setup email for new user
 function generateSetupEmail(user: UserProfile): { subject: string; body: string } {
@@ -114,6 +115,10 @@ export const handleCreateUser: RouteHandler = async (request, env, ctx, url, cor
   // Generate setup email content
   const setupEmail = generateSetupEmail(user);
 
+  // Log the action
+  const adminKey = request.headers.get('X-Admin-Key') || '';
+  await logAdminAction(env, 'create_user', userId, { name: user.name, email: user.email }, adminKey, ctx);
+
   return new Response(JSON.stringify({ user, setupEmail }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" }
   });
@@ -160,6 +165,12 @@ export const handleUpdateUser: RouteHandler = async (request, env, ctx, url, cor
   };
 
   await env.TRIPS.put(`_users/${userId}`, JSON.stringify(updated));
+
+  // Log the action with changed fields
+  const adminKey = request.headers.get('X-Admin-Key') || '';
+  const changedFields = Object.keys(updates).filter(k => k !== 'agency');
+  if (updates.agency) changedFields.push(...Object.keys(updates.agency).map(k => `agency.${k}`));
+  await logAdminAction(env, 'update_user', userId!, { changedFields }, adminKey, ctx);
 
   return new Response(JSON.stringify({ user: updated }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" }

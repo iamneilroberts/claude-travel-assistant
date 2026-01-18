@@ -1,0 +1,183 @@
+{
+  "capturedAt": "2026-01-17T22:31:14.953580+00:00",
+  "baseUrl": "https://voygent.somotravel.workers.dev",
+  "tokenEstimation": "chars_div4",
+  "userSelection": {
+    "userIdPresent": true,
+    "tripIdPresent": true
+  },
+  "endpoints": {
+    "get_context": {
+      "runs": [
+        {
+          "latency_ms": 234.2325749923475,
+          "content_bytes": 31191,
+          "content_chars": 31097,
+          "token_estimate": 7775
+        },
+        {
+          "latency_ms": 240.83598604192957,
+          "content_bytes": 31191,
+          "content_chars": 31097,
+          "token_estimate": 7775
+        },
+        {
+          "latency_ms": 174.3035349645652,
+          "content_bytes": 31191,
+          "content_chars": 31097,
+          "token_estimate": 7775
+        },
+        {
+          "latency_ms": 169.32099999394268,
+          "content_bytes": 31191,
+          "content_chars": 31097,
+          "token_estimate": 7775
+        },
+        {
+          "latency_ms": 855.4211349692196,
+          "content_bytes": 31191,
+          "content_chars": 31097,
+          "token_estimate": 7775
+        }
+      ],
+      "stats": {
+        "latency_ms": {
+          "min": 169.32099999394268,
+          "max": 855.4211349692196,
+          "mean": 334.8228461924009,
+          "median": 234.2325749923475
+        },
+        "content_bytes": {
+          "min": 31191,
+          "max": 31191,
+          "mean": 31191,
+          "median": 31191
+        },
+        "content_chars": {
+          "min": 31097,
+          "max": 31097,
+          "mean": 31097,
+          "median": 31097
+        },
+        "token_estimate": {
+          "min": 7775,
+          "max": 7775,
+          "mean": 7775,
+          "median": 7775
+        }
+      }
+    },
+    "list_trips_include_summaries": {
+      "runs": [
+        {
+          "latency_ms": 131.80428999476135,
+          "content_bytes": 10315,
+          "content_chars": 10315,
+          "token_estimate": 2579
+        },
+        {
+          "latency_ms": 158.5617569508031,
+          "content_bytes": 10315,
+          "content_chars": 10315,
+          "token_estimate": 2579
+        },
+        {
+          "latency_ms": 364.02898596134037,
+          "content_bytes": 10315,
+          "content_chars": 10315,
+          "token_estimate": 2579
+        },
+        {
+          "latency_ms": 231.9564539939165,
+          "content_bytes": 10315,
+          "content_chars": 10315,
+          "token_estimate": 2579
+        },
+        {
+          "latency_ms": 1198.1743350042962,
+          "content_bytes": 10315,
+          "content_chars": 10315,
+          "token_estimate": 2579
+        }
+      ],
+      "stats": {
+        "latency_ms": {
+          "min": 131.80428999476135,
+          "max": 1198.1743350042962,
+          "mean": 416.9051643810235,
+          "median": 231.9564539939165
+        },
+        "content_bytes": {
+          "min": 10315,
+          "max": 10315,
+          "mean": 10315,
+          "median": 10315
+        },
+        "content_chars": {
+          "min": 10315,
+          "max": 10315,
+          "mean": 10315,
+          "median": 10315
+        },
+        "token_estimate": {
+          "min": 2579,
+          "max": 2579,
+          "mean": 2579,
+          "median": 2579
+        }
+      },
+      "payloadMeta": {
+        "tripCount": 10,
+        "summaryCount": 10
+      }
+    },
+    "read_trip": {
+      "runs": [
+        {
+          "latency_ms": 130.17302099615335,
+          "content_bytes": 18265,
+          "content_chars": 18236,
+          "token_estimate": 4559
+        },
+        {
+          "latency_ms": 174.59451803006232,
+          "content_bytes": 18265,
+          "content_chars": 18236,
+          "token_estimate": 4559
+        },
+        {
+          "latency_ms": 165.83943297155201,
+          "content_bytes": 18265,
+          "content_chars": 18236,
+          "token_estimate": 4559
+        }
+      ],
+      "stats": {
+        "latency_ms": {
+          "min": 130.17302099615335,
+          "max": 174.59451803006232,
+          "mean": 156.86899066592255,
+          "median": 165.83943297155201
+        },
+        "content_bytes": {
+          "min": 18265,
+          "max": 18265,
+          "mean": 18265,
+          "median": 18265
+        },
+        "content_chars": {
+          "min": 18236,
+          "max": 18236,
+          "mean": 18236,
+          "median": 18236
+        },
+        "token_estimate": {
+          "min": 4559,
+          "max": 4559,
+          "mean": 4559,
+          "median": 4559
+        }
+      }
+    }
+  }
+}

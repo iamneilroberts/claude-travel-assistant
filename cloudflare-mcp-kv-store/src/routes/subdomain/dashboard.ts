@@ -29,6 +29,7 @@ import {
   getSettingsPageHtml,
   getMagicLinkSentHtml
 } from '../../user-dashboard-pages';
+import { getMonthlyUsage } from '../../lib/usage';
 
 /**
  * Handle all dashboard routes for a user subdomain
@@ -274,7 +275,10 @@ async function handleDashboardHome(
     }
   }
 
-  const html = getDashboardHomeHtml(userProfile, subdomain, stats, publishedTrips.slice(0, 5));
+  // Get monthly usage for publish limits
+  const usage = await getMonthlyUsage(env, userProfile.userId);
+
+  const html = getDashboardHomeHtml(userProfile, subdomain, stats, publishedTrips.slice(0, 5), usage);
 
   return new Response(html, {
     headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders }

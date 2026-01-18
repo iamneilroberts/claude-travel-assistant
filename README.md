@@ -29,7 +29,7 @@ Claude and ChatGPT are already excellent at trip planning. They just couldn't re
 
 ---
 
-## Setup Instructions
+## Setup Instructions (Web Only)
 
 ### Claude Web (claude.ai)
 
@@ -39,25 +39,46 @@ Claude and ChatGPT are already excellent at trip planning. They just couldn't re
 4. Click **Add Custom Connector**
 5. Enter:
    - **Name:** `Travel Assistant`
-   - **URL:** `https://voygent.somotravel.workers.dev/mcp?key=YOUR_KEY`
+   - **URL:** `https://voygent.somotravel.workers.dev/sse?key=YOUR_KEY`
 6. Click **Save**, then refresh the page
 
-### Claude iOS / Android
+### ChatGPT Web (chatgpt.com)
 
-1. Open the Claude app
-2. Tap **Settings** (gear icon)
-3. Tap **Connectors**
-4. Tap **Add Connector**
-5. Enter:
+1. Go to [chatgpt.com](https://chatgpt.com) and sign in
+2. Open **Settings** → **Apps**
+3. Click **Create app** (or **Add app**)
+4. Enter:
    - **Name:** `Travel Assistant`
-   - **URL:** `https://voygent.somotravel.workers.dev/mcp?key=YOUR_KEY`
-6. Tap **Save**
+   - **MCP Server URL:** `https://voygent.somotravel.workers.dev/sse?key=YOUR_KEY`
+   - **Authentication:** `No Auth`
+5. Save the app and start a new chat
 
-### Test It
+## Test It
 
 Start a new conversation and say: **"my trips"**
 
-If it lists trips (or says none found), you're connected!
+If it lists trips (or says none found), you're connected.
+
+---
+
+## Troubleshooting (Web)
+
+### Connector not showing
+- Refresh the page
+- Remove and re-add the connector
+
+### Connection failed
+- Re-check the URL and key
+- Try again after a minute (temporary server issue)
+
+---
+
+## Quick Reference
+
+**Your URL:**
+```
+https://voygent.somotravel.workers.dev/sse?key=YOUR_KEY
+```
 
 ---
 

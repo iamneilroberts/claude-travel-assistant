@@ -6,6 +6,7 @@
 import type { Env, UserProfile, RouteHandler } from '../../types';
 import { listAllKeys, getKeyPrefix } from '../../lib/kv';
 import { getValidAuthKeys } from '../../lib/auth';
+import { getAuditLog } from '../../lib/audit';
 
 export const handleGetActivity: RouteHandler = async (request, env, ctx, url, corsHeaders) => {
   if (url.pathname !== "/admin/activity" || request.method !== "GET") return null;
@@ -66,10 +67,14 @@ export const handleGetActivity: RouteHandler = async (request, env, ctx, url, co
   const users = Object.entries(userMap).map(([id, info]) => ({ userId: id, ...info }));
   const trips = [...new Set(allActivities.map(a => a.tripId).filter(Boolean))];
 
+  // Get admin audit log
+  const auditLog = await getAuditLog(env, 50);
+
   return new Response(JSON.stringify({
     activities: allActivities,
     filters: { users, trips },
-    total: allActivities.length
+    total: allActivities.length,
+    auditLog
   }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" }
   });

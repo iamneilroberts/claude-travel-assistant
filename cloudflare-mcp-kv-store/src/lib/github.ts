@@ -8,6 +8,62 @@ import type { Env } from '../types';
 const SITE_BASE_URL = 'https://somotravel.us';
 
 /**
+ * Retry configuration for transient failures
+ */
+interface RetryOptions {
+  maxAttempts?: number;
+  baseDelayMs?: number;
+  retryOn?: number[];
+}
+
+/**
+ * Fetch with exponential backoff retry for transient failures
+ */
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  retryOptions: RetryOptions = {}
+): Promise<Response> {
+  const {
+    maxAttempts = 3,
+    baseDelayMs = 1000,
+    retryOn = [429, 500, 502, 503, 504]
+  } = retryOptions;
+
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await fetch(url, options);
+
+      // Check if we should retry based on status code
+      if (retryOn.includes(response.status) && attempt < maxAttempts) {
+        // Check for Retry-After header (GitHub rate limiting)
+        const retryAfter = response.headers.get('Retry-After');
+        const delayMs = retryAfter
+          ? parseInt(retryAfter) * 1000
+          : baseDelayMs * Math.pow(2, attempt - 1);
+
+        console.log(`GitHub API returned ${response.status}, retrying in ${delayMs}ms (attempt ${attempt}/${maxAttempts})`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        continue;
+      }
+
+      return response;
+    } catch (err) {
+      lastError = err as Error;
+      if (attempt < maxAttempts) {
+        const delayMs = baseDelayMs * Math.pow(2, attempt - 1);
+        console.log(`GitHub API request failed, retrying in ${delayMs}ms (attempt ${attempt}/${maxAttempts}): ${lastError.message}`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+
+  throw lastError || new Error('Request failed after retries');
+}
+
+/**
  * Helper to base64 encode strings for GitHub API
  */
 export function toBase64(str: string): string {
@@ -34,7 +90,7 @@ export async function publishToGitHub(
   // 1. Check if HTML file exists (to get SHA for update)
   let htmlSha: string | null = null;
   const checkUrl = `${baseUrl}/${filename}?ref=main`;
-  const checkResponse = await fetch(checkUrl, { headers });
+  const checkResponse = await fetchWithRetry(checkUrl, { headers });
   if (checkResponse.ok) {
     const existing = await checkResponse.json() as any;
     htmlSha = existing.sha;
@@ -53,7 +109,7 @@ export async function publishToGitHub(
     ...(htmlSha ? { sha: htmlSha } : {})
   };
 
-  const htmlResponse = await fetch(`${baseUrl}/${filename}`, {
+  const htmlResponse = await fetchWithRetry(`${baseUrl}/${filename}`, {
     method: 'PUT',
     headers,
     body: JSON.stringify(htmlPayload)
@@ -68,7 +124,7 @@ export async function publishToGitHub(
   let tripsJson: any = { version: 1, trips: [] };
   let tripsSha: string | null = null;
 
-  const tripsResponse = await fetch(`${baseUrl}/trips.json?ref=main`, { headers });
+  const tripsResponse = await fetchWithRetry(`${baseUrl}/trips.json?ref=main`, { headers });
   if (tripsResponse.ok) {
     const tripsData = await tripsResponse.json() as any;
     tripsSha = tripsData.sha;
@@ -107,7 +163,7 @@ export async function publishToGitHub(
     ...(tripsSha ? { sha: tripsSha } : {})
   };
 
-  const tripsUpdateResponse = await fetch(`${baseUrl}/trips.json`, {
+  const tripsUpdateResponse = await fetchWithRetry(`${baseUrl}/trips.json`, {
     method: 'PUT',
     headers,
     body: JSON.stringify(tripsPayload)
@@ -120,7 +176,7 @@ export async function publishToGitHub(
     // This prevents orphaned HTML files in the repo
     try {
       // Get the SHA of the file we just uploaded
-      const getHtmlResponse = await fetch(`${baseUrl}/${filename}?ref=main`, { headers });
+      const getHtmlResponse = await fetchWithRetry(`${baseUrl}/${filename}?ref=main`, { headers });
       if (getHtmlResponse.ok) {
         const htmlFile = await getHtmlResponse.json() as any;
         if (htmlFile.sha) {
@@ -129,7 +185,7 @@ export async function publishToGitHub(
             sha: htmlFile.sha,
             branch: 'main'
           };
-          await fetch(`${baseUrl}/${filename}`, {
+          await fetchWithRetry(`${baseUrl}/${filename}`, {
             method: 'DELETE',
             headers,
             body: JSON.stringify(deletePayload)
@@ -168,7 +224,7 @@ export async function publishDraftToGitHub(
   // Check if file exists (to get SHA for update)
   let fileSha: string | null = null;
   try {
-    const checkResponse = await fetch(`${baseUrl}/${filename}?ref=main`, { headers });
+    const checkResponse = await fetchWithRetry(`${baseUrl}/${filename}?ref=main`, { headers });
     if (checkResponse.ok) {
       const existing = await checkResponse.json() as any;
       fileSha = existing.sha;
@@ -185,7 +241,7 @@ export async function publishDraftToGitHub(
     ...(fileSha ? { sha: fileSha } : {})
   };
 
-  const response = await fetch(`${baseUrl}/${filename}`, {
+  const response = await fetchWithRetry(`${baseUrl}/${filename}`, {
     method: 'PUT',
     headers,
     body: JSON.stringify(payload)

@@ -1,92 +1,59 @@
-# Travel Assistant MCP Setup Guide
+# Voygent Setup Guide
 
-Connect Claude to your Travel Store for persistent trip planning across all platforms.
+Connect Claude or ChatGPT to Voygent for persistent trip planning.
 
 ---
 
 ## What You'll Need
 
-- Your authorization key (e.g., `Home.Star1`)
-- Claude Pro, Max, Team, or Enterprise plan (required for custom connectors)
+- Your authorization key (provided after signup)
+- Claude Pro/Max/Team/Enterprise **or** ChatGPT Plus/Pro/Team
 
 ---
 
-## Setup by Platform
+## Claude Web (claude.ai)
 
-### Claude Desktop (macOS / Windows / Linux)
+1. Go to [claude.ai](https://claude.ai)
 
-1. **Open Claude Desktop**
+2. Click your **profile picture** → **Settings**
 
-2. **Access settings:**
-   - macOS: `Claude` menu → `Settings` → `Developer`
-   - Windows/Linux: `File` → `Settings` → `Developer`
+3. Go to the **"Integrations"** tab
 
-3. **Click "Edit Config"** to open `claude_desktop_config.json`
+4. Click **"Add Integration"**
 
-4. **Add this configuration:**
+5. Enter:
+   - **Name:** `Voygent`
+   - **URL:** `https://voygent.somotravel.workers.dev/mcp?key=YOUR_KEY_HERE`
 
-```json
-{
-  "mcpServers": {
-    "travel-store": {
-      "url": "https://claude-travel-store.somotravel.workers.dev/mcp?key=YOUR_KEY_HERE",
-      "transport": "sse"
-    }
-  }
-}
-```
+6. Replace `YOUR_KEY_HERE` with your actual key
 
-5. **Replace `YOUR_KEY_HERE`** with your actual key (e.g., `Home.Star1`)
+7. Click **"Save"**
 
-6. **Save the file and restart Claude Desktop**
-
-7. **Test it:** Start a new conversation and say `my trips`
+8. Start a new conversation and say `use voygent`
 
 ---
 
-### Claude iOS (iPhone/iPad)
+## ChatGPT Web (chatgpt.com)
 
-1. **Open the Claude app**
+1. Go to [chatgpt.com](https://chatgpt.com)
 
-2. **Tap the gear icon** (Settings)
+2. Click your **profile picture** → **Settings**
 
-3. **Tap "Connectors"**
+3. Go to **"Connected apps"** or **"Beta features"**
 
-4. **Tap "Add Connector"**
+4. Enable **"MCP Servers"** if prompted
 
-5. **Enter:**
-   - **Name:** `Travel Store`
-   - **URL:** `https://claude-travel-store.somotravel.workers.dev/mcp?key=YOUR_KEY_HERE`
+5. Click **"Add MCP Server"**
 
-6. **Replace `YOUR_KEY_HERE`** with your actual key
+6. Enter:
+   - **Name:** `Voygent`
+   - **URL:** `https://voygent.somotravel.workers.dev/mcp?key=YOUR_KEY_HERE`
 
-7. **Tap "Save"**
+7. Replace `YOUR_KEY_HERE` with your actual key
 
-8. **Test it:** Start a new conversation and say `my trips`
+8. Click **"Connect"**
 
----
-
-### Claude Web (claude.ai)
-
-1. **Go to [claude.ai](https://claude.ai)**
-
-2. **Click your profile picture** → **Settings**
-
-3. **Go to the "Connectors" tab**
-
-4. **Click "Add Custom Connector"**
-
-5. **Enter:**
-   - **Name:** `Travel Store`
-   - **URL:** `https://claude-travel-store.somotravel.workers.dev/mcp?key=YOUR_KEY_HERE`
-
-6. **Replace `YOUR_KEY_HERE`** with your actual key
-
-7. **Click "Save"**
-
-8. **Refresh the page**
-
-9. **Test it:** Start a new conversation and say `my trips`
+9. Start a new conversation and say `use voygent`
 
 ---
 
@@ -96,36 +63,30 @@ Say these commands to test:
 
 | Command | Expected Result |
 |---------|-----------------|
+| `use voygent` | Welcome card with activity log and trip count |
 | `my trips` | Lists all your saved trips |
-| `load [trip name]` | Shows trip details and status |
-| `save` | Confirms save with timestamp |
+| `new trip` | Starts trip discovery questions |
 
 ---
 
 ## Troubleshooting
 
 ### "No trips found"
-This is normal if you haven't created any trips yet. Say "create new trip for [client name]" to start.
+Normal if you haven't created any trips yet. Say "new trip for [client name]" to start.
 
 ### Tool not appearing
-- **Desktop:** Restart Claude Desktop completely
-- **Web:** Refresh the page and try again
-- **iOS:** Force quit and reopen the app
+- Refresh the page
+- Check the integration/connector shows as connected (green status)
+- Try removing and re-adding the integration
 
 ### "Connection failed" or error messages
 1. Check that the URL is exactly right (no extra spaces)
 2. Verify your key is correct
-3. Make sure you have internet connection
-4. Try again in a few minutes (temporary server issue)
+3. Try again in a few minutes (temporary server issue)
 
-### iOS not showing connector
-- Go to Settings → Connectors and verify it shows a green status
-- If red/yellow, delete and re-add the connector
-
-### Changes not syncing between platforms
-- Wait 10-30 seconds (eventual consistency)
-- Force save with `save` command
-- Check you're using the same key on all platforms
+### Changes not syncing
+- Wait 10-30 seconds for sync
+- Check you're using the same key across sessions
 
 ---
 
@@ -133,25 +94,22 @@ This is normal if you haven't created any trips yet. Say "create new trip for [c
 
 **Your URL:**
 ```
-https://claude-travel-store.somotravel.workers.dev/mcp?key=YOUR_KEY_HERE
+https://voygent.somotravel.workers.dev/mcp?key=YOUR_KEY_HERE
 ```
 
 **Commands:**
+- `use voygent` - Initialize session
 - `my trips` - List all trips
-- `[trip name]` - Load a trip
-- `status` - Current state
-- `next` - Priority action
-- `quote check` - What's blocking the quote?
-- `hand-over` - Summary for manual work
-- `save` - Force save
+- `new trip` - Start planning
+- `show [trip-id]` - Load trip details
+- `publish [trip-id]` - Publish proposal
+- `support` - Get help
 
 ---
 
 ## Need Help?
 
-If something isn't working, note:
-1. Which platform (Desktop/iOS/Web)
+Use the `support` command within Voygent to submit a ticket, or note:
+1. Which platform (Claude Web / ChatGPT)
 2. The exact error message
 3. What you were trying to do
-
-Then share these details for troubleshooting.
