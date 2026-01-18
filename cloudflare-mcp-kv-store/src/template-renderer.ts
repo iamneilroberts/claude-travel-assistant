@@ -107,8 +107,203 @@ export function buildTemplateData(
   env: Env,
   tripKey: string
 ): any {
+  if (Array.isArray(tripData?.bookings)) {
+    const typeLabels: Record<string, { label: string; icon: string }> = {
+      cruise: { label: 'Cruise', icon: '🚢' },
+      insurance: { label: 'Insurance', icon: '🛡️' },
+      flight: { label: 'Flight', icon: '✈️' },
+      hotel: { label: 'Hotel', icon: '🏨' }
+    };
+    const statusLabels: Record<string, { label: string; icon: string; className: string }> = {
+      confirmed: { label: 'Confirmed', icon: '✓', className: 'confirmed' },
+      quoted: { label: 'Quoted', icon: '⏳', className: 'quoted' },
+      pending: { label: 'Pending', icon: '⏳', className: 'pending' },
+      cancelled: { label: 'Cancelled', icon: '✗', className: 'cancelled' }
+    };
+
+    tripData.bookings = tripData.bookings.map((booking: any) => {
+      const typeKey = typeof booking?.type === 'string' ? booking.type.toLowerCase() : '';
+      const typeInfo = typeLabels[typeKey] || {
+        label: typeKey ? typeKey.charAt(0).toUpperCase() + typeKey.slice(1) : 'Booking',
+        icon: '📌'
+      };
+      const statusKey = typeof booking?.status === 'string' ? booking.status.toLowerCase() : '';
+      const statusInfo = statusLabels[statusKey] || {
+        label: statusKey ? statusKey.charAt(0).toUpperCase() + statusKey.slice(1) : '',
+        icon: '',
+        className: statusKey || 'pending'
+      };
+      const confirmationText = typeof booking?.confirmation === 'string'
+        && booking.confirmation.toLowerCase() !== 'quote'
+        ? booking.confirmation
+        : '';
+
+      // Handle travelers - can be array of strings, array of objects, or JSON string
+      let travelersText = '';
+      let travelersList = booking?.travelers;
+      if (typeof travelersList === 'string') {
+        // Try to parse JSON string
+        try {
+          travelersList = JSON.parse(travelersList);
+        } catch {
+          travelersText = travelersList; // Use as-is if not JSON
+        }
+      }
+      if (Array.isArray(travelersList)) {
+        travelersText = travelersList
+          .map((t: any) => typeof t === 'string' ? t : (t?.name || ''))
+          .filter(Boolean)
+          .join(', ');
+      }
+
+      // Sanitize details/notes - don't display raw JSON
+      const sanitizeField = (val: any): string => {
+        if (typeof val !== 'string') return val;
+        const trimmed = val.trim();
+        if ((trimmed.startsWith('[') && trimmed.endsWith(']')) ||
+            (trimmed.startsWith('{') && trimmed.endsWith('}'))) {
+          try {
+            JSON.parse(trimmed);
+            return ''; // It's valid JSON, don't display
+          } catch {
+            return val; // Not valid JSON, keep as-is
+          }
+        }
+        return val;
+      };
+      const sanitizedDetails = sanitizeField(booking?.details);
+      const sanitizedNotes = sanitizeField(booking?.notes);
+
+      const balanceValue = booking?.balance;
+      const balanceNumber = typeof balanceValue === 'number'
+        ? balanceValue
+        : (typeof balanceValue === 'string' ? Number(balanceValue) : NaN);
+      const showBalance = Number.isFinite(balanceNumber) ? balanceNumber > 0 : !!balanceValue;
+
+      // Remove travelers from spread to prevent template from rendering raw array
+      const { travelers: _travelers, ...bookingRest } = booking;
+      return {
+        ...bookingRest,
+        typeLabel: typeInfo.label,
+        typeIcon: typeInfo.icon,
+        statusLabel: statusInfo.label,
+        statusClass: statusInfo.className,
+        statusBadge: statusInfo.label ? `${statusInfo.icon} ${statusInfo.label}`.trim() : '',
+        confirmationDisplay: confirmationText,
+        travelersText,
+        showBalance,
+        details: sanitizedDetails,
+        notes: sanitizedNotes
+      };
+    });
+  }
+
+  if (Array.isArray(tripData?.recommendedExtras)) {
+    const priorityOrder: Record<string, number> = {
+      high: 0,
+      recommended: 1,
+      medium: 2,
+      splurge: 3
+    };
+    const badgeLabels: Record<string, string> = {
+      high: 'Popular',
+      recommended: 'Agent Recommended',
+      medium: 'Recommended',
+      splurge: 'Upgrade'
+    };
+
+    tripData.recommendedExtras = tripData.recommendedExtras
+      .map((extra: any) => {
+        const priority = typeof extra?.priority === 'string'
+          ? extra.priority.toLowerCase()
+          : 'medium';
+        const normalizedPriority = priorityOrder[priority] === undefined ? 'medium' : priority;
+        return {
+          ...extra,
+          priority: normalizedPriority,
+          priorityClass: normalizedPriority,
+          badgeLabel: badgeLabels[normalizedPriority] || badgeLabels.medium
+        };
+      })
+      .sort((a: any, b: any) => {
+        const aOrder = priorityOrder[a.priority] ?? priorityOrder.medium;
+        const bOrder = priorityOrder[b.priority] ?? priorityOrder.medium;
+        return aOrder - bOrder;
+      });
+  }
+
+  // Filter out empty or emoji-only activities from itinerary
+  if (Array.isArray(tripData?.itinerary)) {
+    const hasAlphanumeric = (str: string) => /[a-zA-Z0-9]/.test(str);
+    tripData.itinerary = tripData.itinerary.map((day: any) => {
+      if (Array.isArray(day?.activities)) {
+        day.activities = day.activities.filter((act: any) => {
+          const name = typeof act?.name === 'string' ? act.name.trim() : '';
+          // Keep activity if it has alphanumeric content or meaningful description
+          return hasAlphanumeric(name) ||
+                 (act?.description && hasAlphanumeric(String(act.description)));
+        });
+      }
+      return day;
+    });
+  }
+
+  if (tripData?.viatorTours && typeof tripData.viatorTours === 'object') {
+    const tours = tripData.viatorTours;
+    const byPort = Object.entries(tours)
+      .filter(([key, value]) => key !== 'description' && Array.isArray(value))
+      .map(([key, value]) => ({
+        portKey: key,
+        portLabel: key.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
+        tours: value
+      }));
+    tripData.viatorToursByPort = byPort;
+    tripData.viatorToursDescription = tours.description || '';
+  }
+
+  if (tripData?.cruiseInfo?.cabin && tripData?.images?.cabin) {
+    const cabinImages = Array.isArray(tripData.cruiseInfo.cabin.images)
+      ? tripData.cruiseInfo.cabin.images
+      : [];
+    const extraImages = Array.isArray(tripData.images.cabin) ? tripData.images.cabin : [];
+    const seen = new Set(
+      cabinImages.map((img: any) => img?.urls?.original || img?.url || img).filter(Boolean)
+    );
+    extraImages.forEach((img: any) => {
+      const key = img?.urls?.original || img?.url || img;
+      if (key && !seen.has(key)) {
+        cabinImages.push(img);
+        seen.add(key);
+      }
+    });
+    if (cabinImages.length > 0) {
+      tripData.cruiseInfo.cabin.images = cabinImages;
+    }
+  } else if (tripData?.images?.cabin) {
+    if (!tripData.cruiseInfo) tripData.cruiseInfo = {};
+    if (!tripData.cruiseInfo.cabin) tripData.cruiseInfo.cabin = {};
+    if (!tripData.cruiseInfo.cabin.images) {
+      tripData.cruiseInfo.cabin.images = tripData.images.cabin;
+    }
+  }
+
+  // Deduplicate flightOptions.selfBookNote and flightOptions.notes
+  if (tripData?.flightOptions?.selfBookNote && tripData?.flightOptions?.notes) {
+    const selfBookNote = String(tripData.flightOptions.selfBookNote).toLowerCase().trim();
+    const notes = String(tripData.flightOptions.notes).toLowerCase().trim();
+    // If notes contains selfBookNote or they're very similar, clear notes
+    if (notes.includes(selfBookNote) || selfBookNote.includes(notes) ||
+        (selfBookNote.length > 20 && notes.length > 20 &&
+         selfBookNote.substring(0, 50) === notes.substring(0, 50))) {
+      tripData.flightOptions.notes = '';
+    }
+  }
+
   const tripMeta = tripData.meta || {};
   const agentInfo = buildAgentInfo(userProfile);
+  const showTiers = typeof tripMeta.phase === 'string'
+    ? tripMeta.phase.toLowerCase() !== 'confirmed'
+    : true;
 
   return {
     ...tripData,
@@ -116,6 +311,7 @@ export function buildTemplateData(
       googleMapsApiKey: env.GOOGLE_MAPS_API_KEY,
       showMaps: tripMeta.showMaps !== false,
       showVideos: tripMeta.showVideos !== false,
+      showTiers,
       tripKey: tripKey,
       apiEndpoint: 'https://voygent.somotravel.workers.dev',
       reserveUrl: tripMeta.reserveUrl || agentInfo.bookingUrl || '',
@@ -140,8 +336,12 @@ export async function renderTripHtml(
   tripKey: string,
   keyPrefix?: string
 ): Promise<string> {
-  // Resolve which template to use (considers user's default from profile)
-  const resolvedTemplate = resolveTemplateName(templateName, userProfile);
+  // Resolve which template to use (explicit request → trip meta → user default)
+  const tripTemplate = tripData?.meta?.template || tripData?.template;
+  const requestedTemplate = (templateName && templateName !== 'default')
+    ? templateName
+    : (tripTemplate && tripTemplate !== 'default' ? tripTemplate : undefined);
+  const resolvedTemplate = resolveTemplateName(requestedTemplate, userProfile);
 
   // Get template HTML (checks user templates first, then system, then built-in)
   const templateHtml = await getTemplateHtml(env, resolvedTemplate, keyPrefix);

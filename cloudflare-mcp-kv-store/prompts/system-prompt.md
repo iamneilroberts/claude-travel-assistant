@@ -78,7 +78,7 @@ lodging[]:   name, location, dates, nights, rate, total, url, map, confirmed
 itinerary[]: day, date, title, location, activities[{time, name, description}], meals[], map, media[]
 tiers:       value/premium/luxury each with {name, description, includes[], perPerson, estimatedTotal}
 media[]:     type, url, caption, category
-bookings[]:  type, supplier, confirmation, status, amount, bookedDate
+bookings[]:  type, supplier, confirmation, status, amount, travelers[], bookedDate
 featuredLinks[]: url, title, description
 ```
 
@@ -94,6 +94,13 @@ For a complete example with all fields, call `get_prompt("trip-schema")`.
 - Use `media` array for images and videos
 - Track `bookings` for confirmed reservations
 - Use `featuredLinks` for agent-curated resources
+
+**Data formatting rules (important!):**
+- `bookings[].travelers` must be an array of **name strings only**: `["Jane Doe", "John Doe"]` - NOT objects with roles
+- `bookings[].details` and `bookings[].notes` must be **readable text**, never JSON strings
+- `itinerary[].activities[].name` must contain **readable text with alphanumeric characters** - do not use emoji-only names
+- `media[].videoId` for YouTube must be a valid, embeddable video ID - verify the video exists and allows embedding before adding
+- Numeric values like `amount`, `estimatedValue`, `perPerson` should be **numbers**, not strings with currency symbols
 
 ## Saving Trips
 

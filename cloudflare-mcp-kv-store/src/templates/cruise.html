@@ -293,6 +293,29 @@
             margin-top: 5px;
         }
 
+        .cabin-media {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-top: 20px;
+            margin-bottom: 8px;
+        }
+
+        .cabin-media a {
+            display: block;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-light);
+            padding: 6px;
+        }
+
+        .cabin-media img {
+            width: 100%;
+            height: 140px;
+            object-fit: contain;
+            border-radius: 6px;
+        }
+
         /* Hero Gallery */
         .hero-gallery {
             display: flex;
@@ -890,6 +913,852 @@
         .text-primary { color: var(--primary); }
         .font-bold { font-weight: 600; }
         .small-link { margin-top: 8px; padding: 6px 12px; font-size: 0.85em; }
+
+        /* Hide broken/empty images */
+        img[src=""], img:not([src]), img[src="undefined"], img[src="null"] { display: none !important; }
+        img.hidden { display: none !important; }
+        .card-gallery:empty, .card-gallery:has(img.hidden):not(:has(img:not(.hidden))) { display: none !important; }
+        /* Fallback for browsers without :has() */
+        .card-gallery.all-hidden { display: none !important; }
+
+        /* Map containers */
+        .map-item { margin-bottom: 20px; }
+        .map-item:last-child { margin-bottom: 0; }
+        .map-label { margin: 0 0 10px 0; font-size: 1em; color: var(--primary); font-weight: 600; }
+        .map-container { border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+        .map-container iframe { width: 100%; height: 300px; border: none; }
+
+        /* Inline maps and videos (contextual) */
+        .lodging-item { margin-bottom: 25px; }
+        .lodging-item:last-child { margin-bottom: 0; }
+        .inline-map { margin-top: 15px; }
+        .inline-map .map-container iframe { height: 250px; }
+        .inline-videos { margin-top: 15px; }
+        .inline-videos .video-grid { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+
+        /* Day Description & Enhanced Day Sections */
+        .day-description {
+            font-size: 1.05em;
+            color: var(--text);
+            line-height: 1.7;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: var(--white);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .cruise-info-box {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            background: var(--bg-section);
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .cruise-info-item {
+            text-align: center;
+        }
+
+        .cruise-info-item .label {
+            font-size: 0.75em;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .cruise-info-item .value {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 0.95em;
+        }
+
+        /* Day Dining Section */
+        .day-dining-section {
+            background: linear-gradient(135deg, #fff8f0 0%, #fff 100%);
+            border: 1px solid #f0d9c0;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 15px;
+        }
+
+        .day-dining-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: #c7880a;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+
+        .day-dining-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0d9c0;
+            font-size: 0.95em;
+        }
+
+        .day-dining-item:last-child { border-bottom: none; }
+
+        .day-dining-item .meal-type {
+            font-weight: 600;
+            color: var(--text);
+            margin-right: 8px;
+        }
+
+        .day-dining-item .meal-desc {
+            color: var(--text-light);
+        }
+
+        .dining-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .dining-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Day Highlights */
+        .day-highlights {
+            background: var(--secondary-light);
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 15px;
+        }
+
+        .day-highlights h5 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-size: 0.95em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .day-highlights ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .day-highlights li {
+            margin-bottom: 5px;
+            font-size: 0.95em;
+            color: var(--text);
+        }
+
+        /* Day Tips */
+        .day-tips {
+            background: #fff8e6;
+            border-left: 4px solid #f5a623;
+            border-radius: 0 8px 8px 0;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+        }
+
+        .day-tips h5 {
+            color: #c7880a;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .day-tips ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .day-tips li {
+            margin-bottom: 4px;
+            font-size: 0.9em;
+            color: var(--text);
+        }
+
+        /* Day Shopping */
+        .day-shopping {
+            background: var(--bg-light);
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+        }
+
+        .day-shopping h5 {
+            color: var(--text);
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .shopping-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .shopping-tag {
+            background: var(--white);
+            border: 1px solid var(--border);
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            color: var(--text);
+        }
+
+        /* Day Videos */
+        .day-videos {
+            background: var(--bg-light);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .day-videos h5 {
+            color: var(--text);
+            margin-bottom: 12px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Activity Time */
+        .activity-time {
+            font-size: 0.85em;
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        /* Tiered Pricing */
+        .tiers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .tier-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            position: relative;
+        }
+
+        .tier-card.recommended {
+            border: 2px solid var(--accent);
+            transform: scale(1.02);
+        }
+
+        .tier-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--accent);
+            color: var(--white);
+            padding: 4px 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            border-radius: 0 0 0 8px;
+        }
+
+        .tier-header {
+            padding: 20px;
+            background: var(--bg-section);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tier-header.value { border-top: 4px solid var(--secondary); }
+        .tier-header.premium { border-top: 4px solid var(--accent); }
+        .tier-header.luxury { border-top: 4px solid #c7880a; background: linear-gradient(135deg, #fff8f0 0%, var(--bg-section) 100%); }
+
+        .tier-name {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        .tier-desc {
+            font-size: 0.9em;
+            color: var(--text-light);
+        }
+
+        .tier-details {
+            padding: 20px;
+        }
+
+        .tier-details ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .tier-details li {
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .tier-price {
+            padding: 20px;
+            background: var(--bg-light);
+            text-align: center;
+            border-top: 1px solid var(--border);
+        }
+
+        .tier-price .total {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .tier-price .per-person {
+            font-size: 0.9em;
+            color: var(--text-light);
+            margin-top: 5px;
+        }
+
+        /* Flight Options Comparison */
+        .flight-options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .flight-option-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .flight-option-card.recommended {
+            border: 2px solid var(--accent);
+        }
+
+        .flight-option-header {
+            background: var(--primary);
+            color: var(--white);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .flight-option-card.recommended .flight-option-header {
+            background: var(--accent);
+        }
+
+        .flight-option-header .option-label {
+            font-weight: 600;
+            font-size: 1em;
+        }
+
+        .flight-option-header .option-price {
+            font-size: 1.2em;
+            font-weight: 700;
+        }
+
+        .flight-option-header .recommended-badge {
+            display: block;
+            width: 100%;
+            font-size: 0.75em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 2px;
+        }
+
+        .flight-segment {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .flight-segment:last-child {
+            border-bottom: none;
+        }
+
+        .flight-segment-header {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .flight-leg {
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--border);
+        }
+
+        .flight-leg:last-child {
+            border-bottom: none;
+        }
+
+        .flight-route-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .flight-cities {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .flight-times {
+            font-size: 0.9em;
+            color: var(--text-light);
+        }
+
+        .flight-details-line {
+            font-size: 0.85em;
+            color: var(--text-light);
+        }
+
+        .layover-info {
+            background: #fff8e6;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            color: #856404;
+            margin: 8px 0;
+        }
+
+        /* Recommended Extras */
+        .extras-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+        }
+
+        .extra-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 18px;
+            position: relative;
+        }
+
+        .extra-card .extra-name {
+            font-weight: 700;
+            font-size: 1.05em;
+            margin-bottom: 6px;
+            color: var(--primary);
+        }
+
+        .extra-price {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: var(--bg-light);
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .extra-desc {
+            color: var(--text-light);
+            font-size: 0.95em;
+            margin-bottom: 12px;
+        }
+
+        .extra-why {
+            background: #f2f8ff;
+            border-left: 3px solid #2b6cb0;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            color: var(--text);
+        }
+
+        .priority-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            font-size: 0.7em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: #edf2f7;
+            color: #4a5568;
+        }
+
+        .extra-card.priority-high {
+            border-color: #2f855a;
+        }
+
+        .extra-card.priority-high .priority-badge {
+            background: #e6f6ea;
+            color: #2f855a;
+        }
+
+        .extra-card.priority-recommended {
+            border-color: #2b6cb0;
+        }
+
+        .extra-card.priority-recommended .priority-badge {
+            background: #e6f0ff;
+            color: #2b6cb0;
+        }
+
+        .extra-card.priority-splurge {
+            border-color: #b7791f;
+        }
+
+        .extra-card.priority-splurge .priority-badge {
+            background: #fff8e1;
+            color: #b7791f;
+        }
+
+        /* Booking Details */
+        .booking-card {
+            border-top: 4px solid var(--primary);
+        }
+
+        .booking-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .booking-title {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 1.05em;
+        }
+
+        .booking-status {
+            font-size: 0.7em;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: var(--bg-light);
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .booking-status.status-confirmed {
+            background: #e6f6ea;
+            color: #2f855a;
+        }
+
+        .booking-status.status-quoted {
+            background: #fff8e1;
+            color: #b7791f;
+        }
+
+        .booking-status.status-pending {
+            background: #e6f0ff;
+            color: #2b6cb0;
+        }
+
+        .booking-status.status-cancelled {
+            background: #fdecea;
+            color: #b83232;
+        }
+
+        .booking-supplier {
+            font-size: 1.05em;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .booking-policy {
+            font-size: 0.9em;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+
+        .booking-amount {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 12px 0;
+        }
+
+        .booking-notes {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: var(--text-light);
+        }
+
+        /* Included Value */
+        .included-value-intro {
+            background: var(--bg-section);
+            border-left: 4px solid var(--accent);
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            font-size: 0.95em;
+            color: var(--text);
+        }
+
+        .included-value-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+        }
+
+        .included-value-table th,
+        .included-value-table td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .included-value-table th {
+            background: var(--bg-light);
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .included-value-table td:last-child {
+            text-align: right;
+            font-weight: 600;
+            color: var(--accent);
+            white-space: nowrap;
+        }
+
+        .included-value-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .included-value-table .total-row {
+            background: var(--bg-section);
+            font-weight: 700;
+        }
+
+        .included-value-table .total-row td {
+            border-top: 2px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .included-value-table .total-row td:last-child {
+            color: var(--accent);
+            font-size: 1.1em;
+        }
+
+        .included-value-notes {
+            font-size: 0.85em;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+
+        .transfer-list {
+            margin-top: 16px;
+        }
+
+        .transfer-item {
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .transfer-item:last-child {
+            border-bottom: none;
+        }
+
+        .transfer-title {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+
+        .transfer-details {
+            font-size: 0.9em;
+            color: var(--text-light);
+        }
+
+        /* TripAdvisor */
+        .tripadvisor-box {
+            margin-top: 12px;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--bg-light);
+        }
+
+        .tripadvisor-metrics {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 0.85em;
+            color: var(--text-light);
+        }
+
+        .tripadvisor-highlights {
+            margin-top: 10px;
+        }
+
+        .tripadvisor-pill {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            font-size: 0.75em;
+            margin-right: 6px;
+            margin-bottom: 6px;
+        }
+
+        .tripadvisor-tips {
+            margin-top: 10px;
+            font-size: 0.85em;
+            color: var(--text-light);
+        }
+
+        /* Viator Tours */
+        .tours-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+        }
+
+        .tour-card {
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            background: var(--white);
+            box-shadow: var(--shadow);
+        }
+
+        .tour-name {
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 6px;
+        }
+
+        .tour-meta {
+            font-size: 0.85em;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+
+        .tour-price {
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+
+        .tour-highlights {
+            margin: 8px 0 0;
+            padding-left: 18px;
+            font-size: 0.9em;
+        }
+
+        /* Comment UI */
+        .comment-trigger {
+            margin-left: auto;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--primary);
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 0.7em;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            cursor: pointer;
+        }
+
+        .comment-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .comment-modal.active {
+            display: flex;
+        }
+
+        .comment-panel {
+            background: var(--white);
+            width: min(520px, 92vw);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+        }
+
+        .comment-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .comment-panel-title {
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .comment-close {
+            background: transparent;
+            border: none;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: var(--text-light);
+        }
+
+        .comment-context {
+            font-size: 0.9em;
+            color: var(--text-light);
+            margin-bottom: 12px;
+        }
+
+        .comment-form label {
+            display: block;
+            font-size: 0.85em;
+            color: var(--text-light);
+            margin-bottom: 6px;
+        }
+
+        .comment-form input,
+        .comment-form textarea {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-family: inherit;
+            font-size: 0.95em;
+            margin-bottom: 12px;
+        }
+
+        .comment-submit {
+            background: var(--primary);
+            color: var(--white);
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .comment-status {
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -977,6 +1846,7 @@
             <div class="section-header">
                 <div class="section-icon">🚢</div>
                 <h2>Your Cruise</h2>
+                <button class="comment-trigger" data-comment-section="Your Cruise">Ask a question</button>
             </div>
             <div class="content-box ship-card">
                 <div class="ship-name">{{cruiseInfo.shipName}}</div>
@@ -1032,13 +1902,29 @@
                 {{/if}}
                 {{/if}}
 
+                {{#if cruiseInfo.cabin.locationNote}}
+                <div class="alert-box" style="margin-bottom: 20px;">
+                    <h4>Location Note</h4>
+                    <p>{{cruiseInfo.cabin.locationNote}}</p>
+                </div>
+                {{/if}}
+
                 {{#if cruiseInfo.cabin.images}}
-                <div class="card-gallery" style="margin-top: 20px; margin-bottom: 20px;">
+                <div class="cabin-media">
                     {{#each cruiseInfo.cabin.images}}
-                    {{#if urls.medium}}<img src="{{urls.medium}}" alt="{{caption}}" title="{{caption}}" loading="lazy" decoding="async" width="300" height="200" onerror="this.style.display='none'">{{/if}}
-                    {{#unless urls}}<img src="{{this}}" alt="Stateroom" loading="lazy" decoding="async" width="300" height="200" onerror="this.style.display='none'">{{/unless}}
+                    {{#if urls.original}}
+                    <a href="{{urls.original}}" target="_blank" rel="noopener noreferrer">
+                        <img src="{{urls.original}}" alt='{{default caption "Stateroom"}}' title='{{default caption "Stateroom"}}' loading="lazy" decoding="async" width="300" height="200" onerror="this.style.display='none'">
+                    </a>
+                    {{/if}}
+                    {{#unless urls}}
+                    <a href="{{this}}" target="_blank" rel="noopener noreferrer">
+                        <img src="{{this}}" alt="Stateroom" loading="lazy" decoding="async" width="300" height="200" onerror="this.style.display='none'">
+                    </a>
+                    {{/unless}}
                     {{/each}}
                 </div>
+                <div class="image-caption">Click a thumbnail to view full size.</div>
                 {{/if}}
 
                 {{#if cruiseInfo.cabin.features}}
@@ -1057,6 +1943,17 @@
                     <h4 style="color: var(--accent); margin-bottom: 12px;">Included Amenities</h4>
                     <ul>
                         {{#each cruiseInfo.cabin.perks}}
+                        <li>{{this}}</li>
+                        {{/each}}
+                    </ul>
+                </div>
+                {{/if}}
+
+                {{#if cruiseInfo.cabin.complimentaryServices}}
+                <div style="margin-top: 20px;">
+                    <h4 style="color: var(--primary); margin-bottom: 12px;">Complimentary Services (On Request)</h4>
+                    <ul>
+                        {{#each cruiseInfo.cabin.complimentaryServices}}
                         <li>{{this}}</li>
                         {{/each}}
                     </ul>
@@ -1095,6 +1992,7 @@
             <div class="section-header">
                 <div class="section-icon">🛳️</div>
                 <h2>About Your Ship: {{shipInfo.name}}</h2>
+                <button class="comment-trigger" data-comment-section="About Your Ship">Ask a question</button>
             </div>
             <div class="content-box">
                 <div class="ship-specs">
@@ -1156,6 +2054,7 @@
             <div class="section-header">
                 <div class="section-icon">🏝️</div>
                 <h2>Ports of Call</h2>
+                <button class="comment-trigger" data-comment-section="Ports of Call">Ask a question</button>
             </div>
             {{#each ports}}
             <div class="card port-card" style="margin-bottom: 20px;">
@@ -1166,6 +2065,17 @@
                 <div class="card-body">
                     {{#if description}}
                     <p style="margin-bottom: 15px; color: var(--text-light);">{{description}}</p>
+                    {{/if}}
+
+                    {{#if highlights}}
+                    <div class="day-highlights" style="margin-bottom: 15px;">
+                        <h5>⭐ Highlights</h5>
+                        <ul>
+                        {{#each highlights}}
+                            <li>{{this}}</li>
+                        {{/each}}
+                        </ul>
+                    </div>
                     {{/if}}
 
                     {{#if excursions}}
@@ -1186,6 +2096,29 @@
                     </div>
                     {{/each}}
                     {{/if}}
+
+                    {{#if tips}}
+                    <div class="day-tips" style="margin-top: 15px;">
+                        <h5>💡 Tips</h5>
+                        <ul>
+                        {{#each tips}}
+                            <li>{{this}}</li>
+                        {{/each}}
+                        </ul>
+                    </div>
+                    {{/if}}
+
+                    {{#if map}}
+                    {{#if _config.showMaps}}
+                    <div class="inline-map" style="margin-top: 15px;">
+                        <div class="map-container">
+                            <iframe loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"
+                                src="https://www.google.com/maps/embed/v1/place?key={{_config.googleMapsApiKey}}&q={{encodeUri map}}">
+                            </iframe>
+                        </div>
+                    </div>
+                    {{/if}}
+                    {{/if}}
                 </div>
             </div>
             {{/each}}
@@ -1198,6 +2131,7 @@
             <div class="section-header">
                 <div class="section-icon">🍽️</div>
                 <h2>Dining Reservations</h2>
+                <button class="comment-trigger" data-comment-section="Dining Reservations">Ask a question</button>
             </div>
             <div class="content-box">
                 {{#each dining}}
@@ -1222,6 +2156,7 @@
             <div class="section-header">
                 <div class="section-icon">🏝️</div>
                 <h2>Shore Excursion Options</h2>
+                <button class="comment-trigger" data-comment-section="Shore Excursions">Ask a question</button>
             </div>
             {{#each excursions}}
             <div class="excursion-port">
@@ -1265,12 +2200,49 @@
         </div>
         {{/if}}
 
+        <!-- Viator Tours Section -->
+        {{#if viatorToursByPort}}
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon">🧭</div>
+                <h2>Viator Tours</h2>
+                <button class="comment-trigger" data-comment-section="Viator Tours">Ask a question</button>
+            </div>
+            {{#if viatorToursDescription}}
+            <div class="content-box" style="margin-bottom: 20px;">
+                <p>{{viatorToursDescription}}</p>
+            </div>
+            {{/if}}
+            {{#each viatorToursByPort}}
+            <div class="content-box" style="margin-bottom: 20px;">
+                <h3 style="color: var(--primary); margin-bottom: 12px;">{{portLabel}}</h3>
+                <div class="tours-grid">
+                    {{#each tours}}
+                    <div class="tour-card">
+                        <div class="tour-name">{{name}}</div>
+                        {{#if duration}}<div class="tour-meta">{{duration}}</div>{{/if}}
+                        {{#if price}}<div class="tour-price">{{formatCurrency price}}</div>{{/if}}
+                        {{#if highlights}}
+                        <ul class="tour-highlights">
+                            {{#each highlights}}<li>{{this}}</li>{{/each}}
+                        </ul>
+                        {{/if}}
+                        {{#if url}}<a href="{{url}}" class="card-link small-link" target="_blank" rel="noopener noreferrer">View tour →</a>{{/if}}
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+            {{/each}}
+        </div>
+        {{/if}}
+
         <!-- Onboard Credits & Packages Section - CRUISE SPECIFIC -->
         {{#if credits}}
         <div class="section">
             <div class="section-header">
                 <div class="section-icon">🎁</div>
                 <h2>Onboard Credits & Packages</h2>
+                <button class="comment-trigger" data-comment-section="Onboard Credits & Packages">Ask a question</button>
             </div>
             <div class="content-box">
                 <div class="credits-grid">
@@ -1319,6 +2291,7 @@
             <div class="section-header">
                 <div class="section-icon">💡</div>
                 <h2>Insider Tips</h2>
+                <button class="comment-trigger" data-comment-section="Insider Tips">Ask a question</button>
             </div>
             {{#each insiderTips}}
             <div class="tip-card">
@@ -1335,6 +2308,7 @@
             <div class="section-header">
                 <div class="section-icon">👥</div>
                 <h2>Your Travel Party</h2>
+                <button class="comment-trigger" data-comment-section="Travel Party">Ask a question</button>
             </div>
             <div class="content-box">
                 <div class="traveler-list">
@@ -1354,6 +2328,7 @@
             <div class="section-header">
                 <div class="section-icon">👥</div>
                 <h2>Your Travel Party</h2>
+                <button class="comment-trigger" data-comment-section="Travel Party">Ask a question</button>
             </div>
             <div class="content-box">
                 <div class="cards-grid">
@@ -1387,45 +2362,44 @@
             <div class="section-header">
                 <div class="section-icon">📋</div>
                 <h2>Booking Details</h2>
+                <button class="comment-trigger" data-comment-section="Booking Details">Ask a question</button>
             </div>
             <div class="cards-grid">
                 {{#each bookings}}
-                <div class="card" style="border-top: 4px solid var(--primary);">
-                    <div class="card-header">Booking {{booking}}</div>
+                <div class="card booking-card">
                     <div class="card-body">
-                        {{#if guests}}
-                        <div style="margin-bottom: 15px;">
-                            <div style="font-weight: 600; color: var(--text); margin-bottom: 5px;">Guests:</div>
-                            {{#each guests}}<span class="traveler-badge" style="margin-right: 8px; margin-bottom: 8px; display: inline-block;">{{this}}</span>{{/each}}
+                        <div class="booking-header">
+                            <div class="booking-title">
+                                {{#if typeIcon}}{{typeIcon}} {{/if}}
+                                {{#if typeLabel}}{{typeLabel}}{{else}}{{capitalize type}}{{/if}}
+                            </div>
+                            {{#if statusBadge}}
+                            <span class="booking-status status-{{statusClass}}">{{statusBadge}}</span>
+                            {{else}}
+                            {{#if status}}<span class="booking-status">{{capitalize status}}</span>{{/if}}
+                            {{/if}}
                         </div>
+                        {{#if supplier}}<div class="booking-supplier">{{supplier}}</div>{{/if}}
+                        {{#if policy}}<div class="booking-policy">{{policy}}</div>{{/if}}
+                        {{#if confirmationDisplay}}<div class="card-detail"><span class="label">Confirmation</span><span class="value">{{confirmationDisplay}}</span></div>{{/if}}
+                        {{#if confirmation}}
+                        {{#unless confirmationDisplay}}
+                        <div class="card-detail"><span class="label">Confirmation</span><span class="value">{{confirmation}}</span></div>
+                        {{/unless}}
                         {{/if}}
-                        {{#if cabin}}
-                        <div class="card-detail"><span class="label">Cabin</span><span class="value">{{cabin.number}} ({{cabin.type}})</span></div>
-                        {{#if cabin.bedRequest}}<div class="card-detail"><span class="label">Bed</span><span class="value">{{cabin.bedRequest}}</span></div>{{/if}}
+                        {{#if amount}}<div class="booking-amount">{{formatCurrency amount}}</div>{{/if}}
+                        {{#if showBalance}}
+                        <div class="card-detail"><span class="label">Balance</span><span class="value">{{formatCurrency balance}}</span></div>
+                        {{#if balanceDue}}<div class="card-detail"><span class="label">Balance Due</span><span class="value">{{formatDate balanceDue}}</span></div>{{/if}}
+                        {{else}}
+                        {{#if balance}}
+                        <div class="card-detail"><span class="label">Balance</span><span class="value">{{formatCurrency balance}}</span></div>
+                        {{#if balanceDue}}<div class="card-detail"><span class="label">Balance Due</span><span class="value">{{formatDate balanceDue}}</span></div>{{/if}}
                         {{/if}}
-                        {{#if pricing}}
-                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border);">
-                            <div class="card-detail"><span class="label">Per Person</span><span class="value">{{formatCurrency pricing.perPerson}}</span></div>
-                            <div class="card-detail"><span class="label">Total</span><span class="value" style="font-weight: 700; color: var(--primary);">{{formatCurrency pricing.total}}</span></div>
-                            {{#if pricing.depositPaid}}<div class="card-detail"><span class="label">Deposit Paid</span><span class="value" style="color: var(--accent);">{{formatCurrency pricing.depositPaid}}</span></div>{{/if}}
-                            {{#if pricing.balanceDue}}<div class="card-detail"><span class="label">Balance Due</span><span class="value">{{formatCurrency pricing.balanceDue}}</span></div>{{/if}}
-                            {{#if pricing.finalPaymentDate}}<div class="card-detail"><span class="label">Final Payment</span><span class="value">{{pricing.finalPaymentDate}}</span></div>{{/if}}
-                        </div>
                         {{/if}}
-                        {{#if obc}}
-                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border);">
-                            <div class="card-detail"><span class="label">Onboard Credit</span><span class="value" style="color: var(--accent); font-weight: 600;">{{formatCurrency obc.total}}</span></div>
-                        </div>
-                        {{/if}}
-                        {{#if inclusions}}
-                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border);">
-                            <div style="font-weight: 600; color: var(--text); margin-bottom: 8px;">Inclusions:</div>
-                            <ul style="margin: 0; padding-left: 20px; font-size: 0.9em;">
-                                {{#each inclusions}}<li style="margin-bottom: 4px;">{{this}}</li>{{/each}}
-                            </ul>
-                        </div>
-                        {{/if}}
-                        {{#if note}}<p style="margin-top: 15px; font-size: 0.9em; color: var(--text-light); font-style: italic;">{{note}}</p>{{/if}}
+                        {{#if travelersText}}<div class="card-detail"><span class="label">Travelers</span><span class="value">{{travelersText}}</span></div>{{/if}}
+                        {{#if details}}<p class="booking-notes">{{details}}</p>{{/if}}
+                        {{#if notes}}<p class="booking-notes">{{notes}}</p>{{/if}}
                     </div>
                 </div>
                 {{/each}}
@@ -1439,6 +2413,7 @@
             <div class="section-header">
                 <div class="section-icon">🎁</div>
                 <h2>Onboard Credits</h2>
+                <button class="comment-trigger" data-comment-section="Onboard Credits">Ask a question</button>
             </div>
             <div class="content-box">
                 <div style="font-size: 2em; font-weight: 700; color: var(--accent); text-align: center; margin-bottom: 15px;">{{formatCurrency onboardCredits.total}}</div>
@@ -1464,6 +2439,7 @@
             <div class="section-header">
                 <div class="section-icon">✅</div>
                 <h2>What's Included</h2>
+                <button class="comment-trigger" data-comment-section="What's Included">Ask a question</button>
             </div>
             <div class="content-box">
                 {{#if inclusions.allGuests}}
@@ -1486,12 +2462,101 @@
         </div>
         {{/if}}
 
+        <!-- Included Value Section -->
+        {{#if celestyalBenefits.includedValue}}
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon">💎</div>
+                <h2>Included Value</h2>
+                <button class="comment-trigger" data-comment-section="Included Value">Ask a question</button>
+            </div>
+            <div class="content-box">
+                <div class="included-value-intro">
+                    ✅ These extras are <strong>included at no additional cost</strong> with your cruise package. Many cruise lines charge separately for these amenities.
+                </div>
+                {{#if celestyalBenefits.includedValue.items}}
+                <table class="included-value-table">
+                    <thead>
+                        <tr>
+                            <th>Included Benefit</th>
+                            <th>Est. Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#each celestyalBenefits.includedValue.items}}
+                        <tr>
+                            <td>
+                                {{name}}
+                                {{#if notes}}<div class="included-value-notes">{{notes}}</div>{{/if}}
+                            </td>
+                            <td>{{#if estimatedValue}}${{estimatedValue}}{{else}}—{{/if}}</td>
+                        </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+                {{/if}}
+                {{#if celestyalBenefits.includedValue.totalEstimatedValue}}
+                <div class="highlight-box" style="background: var(--bg-section); border: 2px solid var(--accent); padding: 15px; text-align: center;">
+                    <span style="color: var(--text); font-weight: 500;">Total Included Value:</span>
+                    <span style="font-size: 1.3em; font-weight: 700; color: var(--accent); margin-left: 10px;">{{formatCurrency celestyalBenefits.includedValue.totalEstimatedValue}}</span>
+                </div>
+                {{/if}}
+                {{#if celestyalBenefits.transfers}}
+                <div class="transfer-list">
+                    <h4 style="color: var(--primary); margin-bottom: 8px;">Transfers Included</h4>
+                    {{#each celestyalBenefits.transfers}}
+                    <div class="transfer-item">
+                        {{#if title}}<div class="transfer-title">{{title}}</div>{{/if}}
+                        {{#if type}}<div class="transfer-title">{{type}}</div>{{/if}}
+                        <div class="transfer-details">
+                            {{#if date}}<div>{{date}}</div>{{/if}}
+                            {{#if time}}<div>{{time}}</div>{{/if}}
+                            {{#if from}}<div>From {{from}}{{#if to}} → {{to}}{{/if}}</div>{{/if}}
+                            {{#if notes}}<div>{{notes}}</div>{{/if}}
+                        </div>
+                    </div>
+                    {{/each}}
+                </div>
+                {{/if}}
+                {{#if celestyalBenefits.meetingInstructions}}
+                <div class="alert-box" style="margin-top: 20px;">
+                    <h4>Meeting Instructions</h4>
+                    <p>{{celestyalBenefits.meetingInstructions}}</p>
+                </div>
+                {{/if}}
+            </div>
+        </div>
+        {{/if}}
+
+        <!-- Recommended Extras Section -->
+        {{#if recommendedExtras}}
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon">✨</div>
+                <h2>Enhance Your Experience</h2>
+                <button class="comment-trigger" data-comment-section="Recommended Extras">Ask a question</button>
+            </div>
+            <div class="extras-grid">
+                {{#each recommendedExtras}}
+                <div class="extra-card priority-{{priorityClass}}">
+                    <span class="priority-badge">{{badgeLabel}}</span>
+                    <div class="extra-name">{{name}}</div>
+                    {{#if pricing}}<div class="extra-price">{{pricing}}</div>{{/if}}
+                    {{#if description}}<div class="extra-desc">{{description}}</div>{{/if}}
+                    {{#if whyBook}}<div class="extra-why">💡 {{whyBook}}</div>{{/if}}
+                </div>
+                {{/each}}
+            </div>
+        </div>
+        {{/if}}
+
         <!-- Packing Guide Section -->
         {{#if packingGuide}}
         <div class="section">
             <div class="section-header">
                 <div class="section-icon">🧳</div>
                 <h2>Packing Guide</h2>
+                <button class="comment-trigger" data-comment-section="Packing Guide">Ask a question</button>
             </div>
             <div class="content-box">
                 {{#if packingGuide.essentials}}
@@ -1513,6 +2578,7 @@
             <div class="section-header">
                 <div class="section-icon">📝</div>
                 <h2>Action Items</h2>
+                <button class="comment-trigger" data-comment-section="Action Items">Ask a question</button>
             </div>
             <div class="alert-box">
                 <ul style="margin: 0; padding-left: 20px;">
@@ -1528,6 +2594,7 @@
             <div class="section-header">
                 <div class="section-icon">✨</div>
                 <h2>Your Travel Style</h2>
+                <button class="comment-trigger" data-comment-section="Travel Style">Ask a question</button>
             </div>
             <div class="content-box">
                 {{#if preferences.vibe}}
@@ -1553,6 +2620,7 @@
             <div class="section-header">
                 <div class="section-icon">✈️</div>
                 <h2>Flight Details</h2>
+                <button class="comment-trigger" data-comment-section="Flight Details">Ask a question</button>
             </div>
 
             {{#if flights.confirmation}}
@@ -1622,20 +2690,119 @@
         </div>
         {{/if}}
 
+        <!-- Flight Options Comparison Section -->
+        {{#if flightOptions}}
+        {{#if flightOptions.options}}
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon">✈️</div>
+                <h2>Flight Options Comparison</h2>
+                <button class="comment-trigger" data-comment-section="Flight Options">Ask a question</button>
+            </div>
+            <div class="flight-options-grid">
+                {{#each flightOptions.options}}
+                <div class="flight-option-card {{#if recommended}}recommended{{/if}}">
+                    <div class="flight-option-header">
+                        <span class="option-label">{{label}}</span>
+                        {{#if pricing.total}}<span class="option-price">{{formatCurrency pricing.total}}</span>{{/if}}
+                    </div>
+
+                    {{#if outbound}}
+                    <div class="flight-segment">
+                        <div class="flight-segment-header">Outbound{{#if outbound.date}} · {{outbound.date}}{{/if}}</div>
+                        {{#if outbound.totalTime}}<div style="font-size: 0.85em; color: var(--text-light); margin-bottom: 10px;">Total: {{outbound.totalTime}}{{#if outbound.layover}} · {{outbound.layover}}{{/if}}</div>{{/if}}
+                        {{#each outbound.segments}}
+                        <div class="flight-leg">
+                            <div class="flight-route-line">
+                                <span class="flight-cities">{{route}}</span>
+                                <span class="flight-times">{{depart}} - {{arrive}}</span>
+                            </div>
+                            <div class="flight-details-line">
+                                {{flight}}{{#if duration}} · {{duration}}{{/if}}{{#if cabin}} · {{cabin}}{{/if}}
+                            </div>
+                        </div>
+                        {{/each}}
+                    </div>
+                    {{/if}}
+
+                    {{#if return}}
+                    <div class="flight-segment">
+                        <div class="flight-segment-header">Return{{#if return.date}} · {{return.date}}{{/if}}</div>
+                        {{#if return.totalTime}}<div style="font-size: 0.85em; color: var(--text-light); margin-bottom: 10px;">Total: {{return.totalTime}}{{#if return.layover}} · {{return.layover}}{{/if}}</div>{{/if}}
+                        {{#if return.note}}<div style="font-size: 0.85em; color: #856404; margin-bottom: 10px;">⚠️ {{return.note}}</div>{{/if}}
+                        {{#each return.segments}}
+                        <div class="flight-leg">
+                            <div class="flight-route-line">
+                                <span class="flight-cities">{{route}}</span>
+                                <span class="flight-times">{{depart}} - {{arrive}}</span>
+                            </div>
+                            <div class="flight-details-line">
+                                {{flight}}{{#if duration}} · {{duration}}{{/if}}{{#if cabin}} · {{cabin}}{{/if}}
+                            </div>
+                        </div>
+                        {{/each}}
+                    </div>
+                    {{/if}}
+
+                    {{#if pricing}}
+                    <div style="padding: 15px 20px; background: var(--bg-light); border-top: 1px solid var(--border);">
+                        {{#if pricing.perPerson}}<div class="card-detail"><span class="label">Per Person</span><span class="value">{{formatCurrency pricing.perPerson}}</span></div>{{/if}}
+                        {{#if pricing.total}}<div class="card-detail"><span class="label">Total</span><span class="value" style="font-weight: 700; color: var(--primary);">{{formatCurrency pricing.total}}</span></div>{{/if}}
+                        {{#if pricing.savings}}<div class="card-detail"><span class="label">Savings</span><span class="value" style="color: var(--accent);">{{pricing.savings}}</span></div>{{/if}}
+                        {{#if pricing.source}}<div style="font-size: 0.8em; color: var(--text-light); margin-top: 5px;">Source: {{pricing.source}}</div>{{/if}}
+                    </div>
+                    {{/if}}
+
+                    {{#if note}}<p style="padding: 10px 20px; font-size: 0.9em; color: #856404; background: #fff8e6;">{{note}}</p>{{/if}}
+                </div>
+                {{/each}}
+            </div>
+            {{#if flightOptions.selfBookNote}}
+            <div class="alert-box" style="margin-top: 20px;">
+                <h4>Self-Booking Note</h4>
+                <p>{{flightOptions.selfBookNote}}</p>
+            </div>
+            {{/if}}
+            {{#if flightOptions.disclaimer}}
+            <div class="alert-box" style="margin-top: 15px;">
+                <h4>Important</h4>
+                <p>{{flightOptions.disclaimer}}</p>
+            </div>
+            {{/if}}
+            {{#if flightOptions.recommendation}}
+            <div class="highlight-box" style="margin-top: 20px;">
+                <h4>Recommendation</h4>
+                <p>{{flightOptions.recommendation}}</p>
+            </div>
+            {{/if}}
+            {{#if flightOptions.notes}}
+            <div class="alert-box" style="margin-top: 20px;">
+                <h4>Flight Notes</h4>
+                <p>{{flightOptions.notes}}</p>
+            </div>
+            {{/if}}
+        </div>
+        {{/if}}
+        {{/if}}
+
         <!-- Lodging Section (Pre/Post Cruise Hotels) -->
         {{#if lodging}}
         <div class="section">
             <div class="section-header">
                 <div class="section-icon">🏨</div>
                 <h2>Pre/Post Cruise Accommodations</h2>
+                <button class="comment-trigger" data-comment-section="Accommodations">Ask a question</button>
             </div>
-            <div class="cards-grid">
-                {{#each lodging}}
+            {{#each lodging}}
+            <div class="lodging-item">
                 <div class="card">
                     {{#if images}}
                     {{#each images}}
                     {{#if urls.medium}}<img src="{{urls.medium}}" alt="{{caption}}" class="card-image" loading="lazy" decoding="async" width="400" height="180" onerror="this.style.display='none'">{{/if}}
+                    {{#if url}}<img src="{{url}}" alt="{{caption}}" class="card-image" loading="lazy" decoding="async" width="400" height="180" onerror="this.style.display='none'">{{/if}}
                     {{/each}}
+                    {{else}}
+                    {{#if image}}<img src="{{image}}" alt="{{name}}" class="card-image" loading="lazy" decoding="async" width="400" height="180" onerror="this.style.display='none'">{{/if}}
                     {{/if}}
                     <div class="card-header">{{name}}</div>
                     <div class="card-body">
@@ -1643,12 +2810,50 @@
                         {{#if nights}}<div class="card-detail"><span class="label">Nights</span><span class="value">{{nights}}</span></div>{{/if}}
                         {{#if checkIn}}<div class="card-detail"><span class="label">Check-in</span><span class="value">{{checkIn}}</span></div>{{/if}}
                         {{#if checkOut}}<div class="card-detail"><span class="label">Check-out</span><span class="value">{{checkOut}}</span></div>{{/if}}
+                        {{#if dates}}<div class="card-detail"><span class="label">Dates</span><span class="value">{{dates}}</span></div>{{/if}}
                         {{#if rate}}<div class="card-detail"><span class="label">Rate</span><span class="value">{{formatCurrency rate}}/night</span></div>{{/if}}
+                        {{#if confirmed}}<div class="card-detail"><span class="label">Status</span><span class="value" style="color: var(--accent);">Confirmed</span></div>{{/if}}
+                        {{#if confirmation}}<div class="card-detail"><span class="label">Confirmation</span><span class="value">{{confirmation}}</span></div>{{/if}}
+                        {{#if notes}}<p style="margin-top: 12px; font-size: 0.9em; color: var(--text-light);">{{notes}}</p>{{/if}}
+                        {{#if tripAdvisor}}
+                        <div class="tripadvisor-box">
+                            <div class="tripadvisor-metrics">
+                                {{#if tripAdvisor.rating}}<span>Rating: {{tripAdvisor.rating}}</span>{{/if}}
+                                {{#if tripAdvisor.ranking}}<span>{{tripAdvisor.ranking}}</span>{{/if}}
+                                {{#if tripAdvisor.reviews}}<span>{{tripAdvisor.reviews}} reviews</span>{{/if}}
+                            </div>
+                            {{#if tripAdvisor.highlights}}
+                            <div class="tripadvisor-highlights">
+                                {{#each tripAdvisor.highlights}}<span class="tripadvisor-pill">{{this}}</span>{{/each}}
+                            </div>
+                            {{/if}}
+                            {{#if tripAdvisor.tips}}
+                            <div class="tripadvisor-tips">
+                                <strong>Good to know:</strong>
+                                <ul>
+                                    {{#each tripAdvisor.tips}}<li>{{this}}</li>{{/each}}
+                                </ul>
+                            </div>
+                            {{/if}}
+                            {{#if tripAdvisor.url}}<a href="{{tripAdvisor.url}}" class="card-link small-link" target="_blank" rel="noopener noreferrer">Read reviews →</a>{{/if}}
+                        </div>
+                        {{/if}}
                         {{#if url}}<a href="{{url}}" class="card-link" target="_blank" rel="noopener noreferrer">View Property →</a>{{/if}}
                     </div>
                 </div>
-                {{/each}}
+                {{#if map}}
+                {{#if _config.showMaps}}
+                <div class="inline-map">
+                    <div class="map-container">
+                        <iframe loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"
+                            src="https://www.google.com/maps/embed/v1/place?key={{_config.googleMapsApiKey}}&q={{encodeUri map}}">
+                        </iframe>
+                    </div>
+                </div>
+                {{/if}}
+                {{/if}}
             </div>
+            {{/each}}
         </div>
         {{/if}}
 
@@ -1658,6 +2863,7 @@
             <div class="section-header">
                 <div class="section-icon">📍</div>
                 <h2>Day-by-Day Itinerary</h2>
+                <button class="comment-trigger" data-comment-section="Itinerary">Ask a question</button>
             </div>
             {{#each itinerary}}
             <div class="day-card">
@@ -1680,14 +2886,37 @@
                     {{/if}}
 
                     {{#if description}}
-                    <p style="margin-bottom: 15px; color: var(--text); line-height: 1.7;">{{description}}</p>
+                    <div class="day-description">{{description}}</div>
+                    {{/if}}
+
+                    {{#if cruiseInfo}}
+                    <div class="cruise-info-box">
+                        {{#if cruiseInfo.distance}}
+                        <div class="cruise-info-item">
+                            <div class="label">Distance</div>
+                            <div class="value">{{cruiseInfo.distance}}</div>
+                        </div>
+                        {{/if}}
+                        {{#if cruiseInfo.locks}}
+                        <div class="cruise-info-item">
+                            <div class="label">Locks</div>
+                            <div class="value">{{cruiseInfo.locks}}</div>
+                        </div>
+                        {{/if}}
+                        {{#if cruiseInfo.time}}
+                        <div class="cruise-info-item">
+                            <div class="label">Cruise Time</div>
+                            <div class="value">{{cruiseInfo.time}}</div>
+                        </div>
+                        {{/if}}
+                    </div>
                     {{/if}}
 
                     {{#if schedule}}
                     <div style="margin-bottom: 15px;">
                         {{#each schedule}}
                         <div class="activity">
-                            <div style="font-weight: 600; color: var(--primary); font-size: 0.9em;">{{time}}</div>
+                            <div class="activity-time">{{time}}</div>
                             <div class="activity-title">{{activity}}</div>
                         </div>
                         {{/each}}
@@ -1700,11 +2929,11 @@
                         {{#if images}}
                         <div class="card-gallery" style="margin-bottom: 10px;">
                             {{#each images}}
-                            {{#if urls.thumbnail}}<img src="{{urls.thumbnail}}" alt="{{caption}}" title="{{caption}}" loading="lazy" decoding="async" width="150" height="100" onerror="this.style.display='none'">{{/if}}
+                            {{#if urls.thumbnail}}<img src="{{urls.thumbnail}}" alt="{{caption}}" title="{{caption}}" loading="lazy" decoding="async" width="150" height="100" onerror="this.classList.add('hidden');this.parentElement.classList.add('check-empty')">{{/if}}
                             {{/each}}
                         </div>
                         {{/if}}
-                        {{#if time}}<div style="font-weight: 600; color: var(--primary); font-size: 0.9em;">{{time}}</div>{{/if}}
+                        {{#if time}}<div class="activity-time">{{time}}</div>{{/if}}
                         <div class="activity-title">{{name}}</div>
                         {{#if description}}<div class="activity-details">{{description}}</div>{{/if}}
                         {{#if notes}}<div class="activity-details">{{notes}}</div>{{/if}}
@@ -1713,25 +2942,71 @@
                     {{/each}}
                     {{/if}}
 
+                    {{#if dining}}
+                    <div class="day-dining-section">
+                        <div class="day-dining-header">🍽️ Dining</div>
+                        {{#if dining.recommended}}
+                        <div class="day-dining-item">
+                            <span class="meal-type">Recommended:</span>
+                            {{#if dining.url}}<a href="{{dining.url}}" class="dining-link" target="_blank" rel="noopener noreferrer">{{dining.recommended}}</a>{{else}}<span class="meal-desc">{{dining.recommended}}</span>{{/if}}
+                        </div>
+                        {{/if}}
+                        {{#if dining.description}}
+                        <div class="day-dining-item">
+                            <span class="meal-desc">{{dining.description}}</span>
+                        </div>
+                        {{/if}}
+                        {{#if dining.breakfast}}
+                        <div class="day-dining-item">
+                            <span class="meal-type">Breakfast:</span>
+                            {{#if dining.breakfastUrl}}<a href="{{dining.breakfastUrl}}" class="dining-link" target="_blank" rel="noopener noreferrer">{{dining.breakfast}}</a>{{else}}<span class="meal-desc">{{dining.breakfast}}</span>{{/if}}
+                        </div>
+                        {{/if}}
+                        {{#if dining.lunch}}
+                        <div class="day-dining-item">
+                            <span class="meal-type">Lunch:</span>
+                            {{#if dining.lunchUrl}}<a href="{{dining.lunchUrl}}" class="dining-link" target="_blank" rel="noopener noreferrer">{{dining.lunch}}</a>{{else}}<span class="meal-desc">{{dining.lunch}}</span>{{/if}}
+                        </div>
+                        {{/if}}
+                        {{#if dining.dinner}}
+                        <div class="day-dining-item">
+                            <span class="meal-type">Dinner:</span>
+                            {{#if dining.dinnerUrl}}<a href="{{dining.dinnerUrl}}" class="dining-link" target="_blank" rel="noopener noreferrer">{{dining.dinner}}</a>{{else}}<span class="meal-desc">{{dining.dinner}}</span>{{/if}}
+                        </div>
+                        {{/if}}
+                    </div>
+                    {{/if}}
+
                     {{#if highlights}}
-                    <div style="background: var(--secondary-light); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
-                        <h5 style="color: var(--primary); margin-bottom: 10px;">⭐ Highlights</h5>
-                        <ul style="margin: 0; padding-left: 20px;">
-                            {{#each highlights}}
-                            <li style="margin-bottom: 5px;">{{this}}</li>
-                            {{/each}}
+                    <div class="day-highlights">
+                        <h5>⭐ Highlights</h5>
+                        <ul>
+                        {{#each highlights}}
+                            <li>{{this}}</li>
+                        {{/each}}
                         </ul>
                     </div>
                     {{/if}}
 
                     {{#if tips}}
-                    <div style="background: #fff8e6; border-left: 4px solid #f5a623; border-radius: 0 8px 8px 0; padding: 12px 15px; margin-bottom: 15px;">
-                        <h5 style="color: #c7880a; margin-bottom: 8px;">💡 Tips</h5>
-                        <ul style="margin: 0; padding-left: 20px;">
-                            {{#each tips}}
-                            <li style="margin-bottom: 4px; font-size: 0.9em;">{{this}}</li>
-                            {{/each}}
+                    <div class="day-tips">
+                        <h5>💡 Tips</h5>
+                        <ul>
+                        {{#each tips}}
+                            <li>{{this}}</li>
+                        {{/each}}
                         </ul>
+                    </div>
+                    {{/if}}
+
+                    {{#if shopping}}
+                    <div class="day-shopping">
+                        <h5>🛍️ Shopping</h5>
+                        <div class="shopping-tags">
+                        {{#each shopping}}
+                            <span class="shopping-tag">{{this}}</span>
+                        {{/each}}
+                        </div>
                     </div>
                     {{/if}}
 
@@ -1779,6 +3054,36 @@
                         {{#if lodging.nights}}<p style="font-size: 0.9em; color: var(--text-light);">{{lodging.nights}} night{{#unless lodging.nights}}s{{/unless}}{{#if lodging.included}} (included){{/if}}</p>{{/if}}
                     </div>
                     {{/if}}
+
+                    {{#if map}}
+                    {{#if _config.showMaps}}
+                    <div class="inline-map" style="margin-top: 15px;">
+                        <div class="map-container">
+                            <iframe loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"
+                                src="https://www.google.com/maps/embed/v1/place?key={{_config.googleMapsApiKey}}&q={{encodeUri map}}">
+                            </iframe>
+                        </div>
+                    </div>
+                    {{/if}}
+                    {{/if}}
+
+                    {{#if videos}}
+                    {{#if _config.showVideos}}
+                    <div class="day-videos">
+                        <h5>🎬 Helpful Videos</h5>
+                        <div class="video-grid">
+                        {{#each videos}}
+                            <div class="video-card">
+                                <div class="video-embed">
+                                    <iframe src="https://www.youtube.com/embed/{{id}}" title="{{title}}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                </div>
+                                {{#if title}}<div class="video-caption">{{title}}</div>{{/if}}
+                            </div>
+                        {{/each}}
+                        </div>
+                    </div>
+                    {{/if}}
+                    {{/if}}
                 </div>
             </div>
             {{/each}}
@@ -1791,6 +3096,7 @@
             <div class="section-header">
                 <div class="section-icon">💎</div>
                 <h2>Special Recommendations</h2>
+                <button class="comment-trigger" data-comment-section="Special Recommendations">Ask a question</button>
             </div>
             <div class="cards-grid">
                 {{#if extras.hiddenGem}}
@@ -1819,12 +3125,57 @@
         </div>
         {{/if}}
 
+        <!-- General Maps Section (Overview) -->
+        {{#if _config.showMaps}}
+        {{#if maps}}
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon">🗺️</div>
+                <h2>Maps</h2>
+                <button class="comment-trigger" data-comment-section="Maps">Ask a question</button>
+            </div>
+            <div class="content-box">
+                {{#each maps}}
+                <div class="map-item">
+                    {{#if label}}<h4 class="map-label">{{label}}</h4>{{/if}}
+                    <div class="map-container">
+                        <iframe loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"
+                            src="https://www.google.com/maps/embed/v1/place?key={{_config.googleMapsApiKey}}&q={{encodeUri location}}">
+                        </iframe>
+                    </div>
+                </div>
+                {{/each}}
+            </div>
+        </div>
+        {{else}}
+        {{#if meta.destination}}
+        <!-- Fallback: single destination map if no maps array -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon">🗺️</div>
+                <h2>Destination Map</h2>
+                <button class="comment-trigger" data-comment-section="Destination Map">Ask a question</button>
+            </div>
+            <div class="content-box">
+                <div class="map-container">
+                    <iframe loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"
+                        src="https://www.google.com/maps/embed/v1/place?key={{_config.googleMapsApiKey}}&q={{encodeUri meta.destination}}">
+                    </iframe>
+                </div>
+            </div>
+        </div>
+        {{/if}}
+        {{/if}}
+        {{/if}}
+
         <!-- YouTube Videos Section -->
+        {{#if _config.showVideos}}
         {{#if media}}
         <div class="section">
             <div class="section-header">
                 <div class="section-icon">🎬</div>
                 <h2>Helpful Videos</h2>
+                <button class="comment-trigger" data-comment-section="Helpful Videos">Ask a question</button>
             </div>
             <div class="video-grid">
                 {{#each media}}
@@ -1843,6 +3194,7 @@
             </div>
         </div>
         {{/if}}
+        {{/if}}
 
         <!-- Featured Links Section -->
         {{#if featuredLinks}}
@@ -1850,6 +3202,7 @@
             <div class="section-header">
                 <div class="section-icon">🔗</div>
                 <h2>Useful Resources</h2>
+                <button class="comment-trigger" data-comment-section="Resources">Ask a question</button>
             </div>
             <div class="cards-grid">
                 {{#each featuredLinks}}
@@ -1865,27 +3218,141 @@
         </div>
         {{/if}}
 
+        {{#if _config.showTiers}}
+        <!-- Tiered Pricing Section -->
+        {{#if tiers}}
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon">📊</div>
+                <h2>Package Options</h2>
+                <button class="comment-trigger" data-comment-section="Package Options">Ask a question</button>
+            </div>
+            <div class="tiers-grid">
+                {{#if tiers.value}}
+                <div class="tier-card">
+                    <div class="tier-header value">
+                        <div class="tier-name">{{default tiers.value.name "Value"}}</div>
+                        {{#if tiers.value.description}}<div class="tier-desc">{{tiers.value.description}}</div>{{/if}}
+                    </div>
+                    <div class="tier-details">
+                        {{#if tiers.value.includes}}<ul>{{#each tiers.value.includes}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
+                        {{#if tiers.value.lodging}}<p><strong>Lodging:</strong> {{#each tiers.value.lodging}}{{name}}{{#unless @last}}, {{/unless}}{{/each}}</p>{{/if}}
+                        {{#if tiers.value.cabin}}<p><strong>Cabin:</strong> {{tiers.value.cabin}}</p>{{/if}}
+                        {{#if tiers.value.flights}}<p><strong>Flights:</strong> {{tiers.value.flights.class}}</p>{{/if}}
+                    </div>
+                    <div class="tier-price">
+                        <div class="total">{{formatCurrency tiers.value.estimatedTotal}}</div>
+                        {{#if tiers.value.perPerson}}<div class="per-person">{{formatCurrency tiers.value.perPerson}} per person</div>{{/if}}
+                    </div>
+                </div>
+                {{/if}}
+
+                {{#if tiers.premium}}
+                <div class="tier-card recommended">
+                    <div class="tier-badge">Recommended</div>
+                    <div class="tier-header premium">
+                        <div class="tier-name">{{default tiers.premium.name "Premium"}}</div>
+                        {{#if tiers.premium.description}}<div class="tier-desc">{{tiers.premium.description}}</div>{{/if}}
+                    </div>
+                    <div class="tier-details">
+                        {{#if tiers.premium.includes}}<ul>{{#each tiers.premium.includes}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
+                        {{#if tiers.premium.lodging}}<p><strong>Lodging:</strong> {{#each tiers.premium.lodging}}{{name}}{{#unless @last}}, {{/unless}}{{/each}}</p>{{/if}}
+                        {{#if tiers.premium.cabin}}<p><strong>Cabin:</strong> {{tiers.premium.cabin}}</p>{{/if}}
+                        {{#if tiers.premium.flights}}<p><strong>Flights:</strong> {{tiers.premium.flights.class}}</p>{{/if}}
+                    </div>
+                    <div class="tier-price">
+                        <div class="total" style="color: var(--accent);">{{formatCurrency tiers.premium.estimatedTotal}}</div>
+                        {{#if tiers.premium.perPerson}}<div class="per-person">{{formatCurrency tiers.premium.perPerson}} per person</div>{{/if}}
+                    </div>
+                </div>
+                {{/if}}
+
+                {{#if tiers.luxury}}
+                <div class="tier-card">
+                    <div class="tier-header luxury">
+                        <div class="tier-name">{{default tiers.luxury.name "Luxury"}}</div>
+                        {{#if tiers.luxury.description}}<div class="tier-desc">{{tiers.luxury.description}}</div>{{/if}}
+                    </div>
+                    <div class="tier-details">
+                        {{#if tiers.luxury.includes}}<ul>{{#each tiers.luxury.includes}}<li>{{this}}</li>{{/each}}</ul>{{/if}}
+                        {{#if tiers.luxury.lodging}}<p><strong>Lodging:</strong> {{#each tiers.luxury.lodging}}{{name}}{{#unless @last}}, {{/unless}}{{/each}}</p>{{/if}}
+                        {{#if tiers.luxury.cabin}}<p><strong>Cabin:</strong> {{tiers.luxury.cabin}}</p>{{/if}}
+                        {{#if tiers.luxury.flights}}<p><strong>Flights:</strong> {{tiers.luxury.flights.class}}</p>{{/if}}
+                    </div>
+                    <div class="tier-price">
+                        <div class="total" style="color: #c7880a;">{{formatCurrency tiers.luxury.estimatedTotal}}</div>
+                        {{#if tiers.luxury.perPerson}}<div class="per-person">{{formatCurrency tiers.luxury.perPerson}} per person</div>{{/if}}
+                    </div>
+                </div>
+                {{/if}}
+            </div>
+            {{#if tiers.notes}}
+            <div class="highlight-box" style="margin-top: 20px;">
+                <h4>Pricing Notes</h4>
+                <p>{{tiers.notes}}</p>
+            </div>
+            {{/if}}
+        </div>
+        {{/if}}
+
         <!-- Pricing Section -->
         {{#if budget}}
         <div class="section">
             <div class="section-header">
                 <div class="section-icon">💰</div>
                 <h2>Investment Summary</h2>
+                <button class="comment-trigger" data-comment-section="Investment Summary">Ask a question</button>
             </div>
             <div class="pricing-box">
+                {{#if budget.lineItems}}
+                {{#each budget.lineItems}}
+                <div class="pricing-row">
+                    <span>{{label}}{{#if notes}} <span style="font-size: 0.85em; color: var(--text-light);">({{notes}})</span>{{/if}}</span>
+                    <span>{{formatCurrency amount}}</span>
+                </div>
+                {{/each}}
+                {{else}}
                 {{#if budget.cruise}}<div class="pricing-row"><span>Cruise Fare</span><span>{{formatCurrency budget.cruise}}</span></div>{{/if}}
                 {{#if budget.flights}}<div class="pricing-row"><span>Flights</span><span>{{formatCurrency budget.flights}}</span></div>{{/if}}
                 {{#if budget.hotels}}<div class="pricing-row"><span>Pre/Post Hotels</span><span>{{formatCurrency budget.hotels}}</span></div>{{/if}}
                 {{#if budget.excursions}}<div class="pricing-row"><span>Shore Excursions</span><span>{{formatCurrency budget.excursions}}</span></div>{{/if}}
                 {{#if budget.gratuities}}<div class="pricing-row"><span>Gratuities</span><span>{{formatCurrency budget.gratuities}}</span></div>{{/if}}
                 {{#if budget.insurance}}<div class="pricing-row"><span>Travel Insurance</span><span>{{formatCurrency budget.insurance}}</span></div>{{/if}}
+                {{/if}}
                 {{#if budget.perPerson}}<div class="pricing-row"><span>Per Person</span><span>{{formatCurrency budget.perPerson}}</span></div>{{/if}}
                 {{#if travelers.count}}<div class="pricing-row"><span>Number of Travelers</span><span>{{travelers.count}}</span></div>{{/if}}
+                {{#if budget.depositPaid}}<div class="pricing-row"><span>Deposit Paid</span><span style="color: var(--accent);">{{formatCurrency budget.depositPaid}}</span></div>{{/if}}
+                {{#if budget.balanceDue}}<div class="pricing-row"><span>Balance Due</span><span>{{formatCurrency budget.balanceDue}}</span></div>{{/if}}
+                {{#if budget.finalPaymentDate}}<div class="pricing-row"><span>Final Payment Date</span><span>{{budget.finalPaymentDate}}</span></div>{{/if}}
                 {{#if budget.total}}<div class="pricing-row total"><span>Total Trip Investment</span><span>{{formatCurrency budget.total}}</span></div>{{/if}}
+                {{#if budget.notes}}
+                <p style="margin-top: 15px; font-size: 0.9em; color: var(--text-light);">{{budget.notes}}</p>
+                {{/if}}
             </div>
         </div>
         {{/if}}
+        {{/if}}
 
+    </div>
+
+    <div id="comment-modal" class="comment-modal">
+        <div class="comment-panel" role="dialog" aria-modal="true" aria-labelledby="comment-title">
+            <div class="comment-panel-header">
+                <div id="comment-title" class="comment-panel-title">Ask a question</div>
+                <button type="button" class="comment-close" aria-label="Close">x</button>
+            </div>
+            <div id="comment-context" class="comment-context"></div>
+            <form id="comment-form" class="comment-form">
+                <label for="comment-name">Name (optional)</label>
+                <input id="comment-name" type="text" autocomplete="name">
+                <label for="comment-email">Email (optional)</label>
+                <input id="comment-email" type="email" autocomplete="email">
+                <label for="comment-message">Question</label>
+                <textarea id="comment-message" rows="4" required></textarea>
+                <button class="comment-submit" type="submit">Send Question</button>
+                <div id="comment-status" class="comment-status"></div>
+            </form>
+        </div>
     </div>
 
     <!-- Footer -->
@@ -1913,19 +3380,161 @@
         <div class="footer-bottom">
             <div class="qr-section">
                 <p>Scan to view on mobile</p>
-                <img id="qr-code" alt="QR Code" style="width: 100px; height: 100px;">
+                <img id="qr-code" alt="QR Code" style="width: 120px; height: 120px;">
             </div>
             <p>Prepared with care by SoMo Travel Specialist, a Cruise Planners Franchise</p>
-            <p style="margin-top: 5px;">Template: cruise v1.0 | Generated {{formatDate meta.lastUpdated}}</p>
+            <p style="margin-top: 5px;">Template: cruise v2.0 | Generated {{formatDate meta.lastUpdated}} | Rendered: {{timestamp}}</p>
         </div>
     </div>
 
     <script>
         (function() {
+            // QR Code generation
             var url = encodeURIComponent(window.location.href);
             var qrImg = document.getElementById('qr-code');
             if (qrImg) {
-                qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + url;
+                qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=' + url;
+            }
+
+            // Hide broken images and empty galleries
+            function cleanupBrokenImages() {
+                // Hide all images that failed to load or have no src
+                document.querySelectorAll('img').forEach(function(img) {
+                    var src = img.getAttribute('src');
+                    if (!src || src === '' || src === 'undefined' || src === 'null' ||
+                        !img.complete || img.naturalWidth === 0 || img.naturalHeight === 0) {
+                        img.classList.add('hidden');
+                        img.style.display = 'none';
+                    }
+                });
+                // Hide galleries where all images are hidden
+                document.querySelectorAll('.card-gallery, .check-empty').forEach(function(gallery) {
+                    var visibleImages = gallery.querySelectorAll('img:not(.hidden)');
+                    if (visibleImages.length === 0) {
+                        gallery.style.display = 'none';
+                        gallery.classList.add('all-hidden');
+                    }
+                });
+                // Hide flight legs that have no content (just arrows)
+                document.querySelectorAll('.flight-leg').forEach(function(leg) {
+                    var cities = leg.querySelector('.flight-cities');
+                    if (cities && cities.textContent.trim() === '→') {
+                        leg.style.display = 'none';
+                    }
+                });
+            }
+
+            // Run cleanup after page loads
+            if (document.readyState === 'complete') {
+                cleanupBrokenImages();
+            } else {
+                window.addEventListener('load', cleanupBrokenImages);
+            }
+            // Also run after delays for lazy-loaded images
+            setTimeout(cleanupBrokenImages, 500);
+            setTimeout(cleanupBrokenImages, 2000);
+
+            // Add error handler to all images
+            document.querySelectorAll('img').forEach(function(img) {
+                img.addEventListener('error', function() {
+                    this.classList.add('hidden');
+                    this.style.display = 'none';
+                    var gallery = this.closest('.card-gallery');
+                    if (gallery) {
+                        var remaining = gallery.querySelectorAll('img:not(.hidden)');
+                        if (remaining.length === 0) {
+                            gallery.style.display = 'none';
+                        }
+                    }
+                });
+            });
+
+            // Comment modal handling
+            var tripKey = "{{_config.tripKey}}";
+            var apiEndpoint = "{{_config.apiEndpoint}}";
+            var commentModal = document.getElementById('comment-modal');
+            var commentForm = document.getElementById('comment-form');
+            var commentContext = document.getElementById('comment-context');
+            var commentStatus = document.getElementById('comment-status');
+            var commentClose = document.querySelector('.comment-close');
+            var commentSection = 'General';
+            var commentItem = '';
+
+            function openCommentModal(section, item) {
+                commentSection = section || 'General';
+                commentItem = item || '';
+                if (commentContext) {
+                    commentContext.textContent = commentItem
+                        ? commentSection + " · " + commentItem
+                        : commentSection;
+                }
+                if (commentStatus) commentStatus.textContent = '';
+                if (commentModal) commentModal.classList.add('active');
+            }
+
+            function closeCommentModal() {
+                if (commentModal) commentModal.classList.remove('active');
+            }
+
+            document.querySelectorAll('.comment-trigger').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    var section = button.getAttribute('data-comment-section') || 'General';
+                    var item = button.getAttribute('data-comment-item') || '';
+                    openCommentModal(section, item);
+                });
+            });
+
+            if (commentClose) {
+                commentClose.addEventListener('click', closeCommentModal);
+            }
+
+            if (commentModal) {
+                commentModal.addEventListener('click', function(event) {
+                    if (event.target === commentModal) closeCommentModal();
+                });
+            }
+
+            if (commentForm) {
+                commentForm.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    if (!tripKey || !apiEndpoint) {
+                        if (commentStatus) commentStatus.textContent = 'Unable to send right now. Please try again later.';
+                        return;
+                    }
+
+                    var nameField = document.getElementById('comment-name');
+                    var emailField = document.getElementById('comment-email');
+                    var messageField = document.getElementById('comment-message');
+                    var message = messageField ? messageField.value.trim() : '';
+
+                    if (!message) {
+                        if (commentStatus) commentStatus.textContent = 'Please enter a question before sending.';
+                        return;
+                    }
+
+                    if (commentStatus) commentStatus.textContent = 'Sending...';
+
+                    fetch(apiEndpoint + '/comment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            tripKey: tripKey,
+                            section: commentSection,
+                            item: commentItem || null,
+                            message: message,
+                            name: nameField ? nameField.value.trim() : '',
+                            email: emailField ? emailField.value.trim() : ''
+                        })
+                    }).then(function(response) {
+                        if (!response.ok) throw new Error('Request failed');
+                        return response.json();
+                    }).then(function() {
+                        if (commentStatus) commentStatus.textContent = 'Sent! We will follow up soon.';
+                        if (commentForm) commentForm.reset();
+                    }).catch(function() {
+                        if (commentStatus) commentStatus.textContent = 'Unable to send right now. Please try again later.';
+                    });
+                });
             }
         })();
     </script>
