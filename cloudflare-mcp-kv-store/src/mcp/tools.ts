@@ -217,6 +217,19 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     }
   },
   {
+    name: "reply_to_comment",
+    description: "Reply to a client comment. The reply will be visible to the traveler on the comment thread page.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        tripId: { type: "string", description: "Trip ID" },
+        commentId: { type: "string", description: "Specific comment ID to reply to (optional - defaults to most recent)" },
+        message: { type: "string", description: "Your reply message" }
+      },
+      required: ["tripId", "message"]
+    }
+  },
+  {
     name: "submit_support",
     description: "Submit support request to admin.",
     inputSchema: {
@@ -293,6 +306,76 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
         maxResults: { type: "number", description: "Results count (1-10, default: 5)" }
       },
       required: ["query"]
+    }
+  },
+  {
+    name: "set_reference",
+    description: "Set confirmed reference data (source of truth) for a trip from official sources like cruise confirmations, hotel bookings, or flight tickets. Only use when you have CONFIRMED data. Reference data is merged with existing - use replace:true to overwrite.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        tripId: { type: "string", description: "Trip ID" },
+        source: {
+          type: "object",
+          description: "Source attribution",
+          properties: {
+            type: { type: "string", enum: ["cruise_confirmation", "hotel_confirmation", "flight_confirmation", "manual_entry", "other"] },
+            provider: { type: "string", description: "Provider name (e.g., Celestyal Cruises)" },
+            reference: { type: "string", description: "Confirmation/booking number" }
+          },
+          required: ["type", "provider"]
+        },
+        travelers: { type: "array", description: "Confirmed travelers [{name, dob?}]" },
+        dates: {
+          type: "object",
+          description: "Confirmed dates",
+          properties: {
+            tripStart: { type: "string" },
+            tripEnd: { type: "string" },
+            cruiseStart: { type: "string" },
+            cruiseEnd: { type: "string" }
+          }
+        },
+        cruise: {
+          type: "object",
+          description: "Confirmed cruise details",
+          properties: {
+            line: { type: "string" },
+            ship: { type: "string" },
+            cabin: { type: "string" },
+            bookingNumber: { type: "string" },
+            embarkation: { type: "object", properties: { port: { type: "string" }, date: { type: "string" }, time: { type: "string" } } },
+            debarkation: { type: "object", properties: { port: { type: "string" }, date: { type: "string" }, time: { type: "string" } } },
+            ports: { type: "array", description: "Port schedule [{date, port, arrive?, depart?}]" }
+          }
+        },
+        lodging: { type: "array", description: "Confirmed lodging [{type, name, checkIn, checkOut, confirmation?}]" },
+        flights: { type: "array", description: "Confirmed flights [{type, date, from, to, confirmation?}]" },
+        replace: { type: "boolean", description: "Replace existing reference instead of merging" }
+      },
+      required: ["tripId", "source"]
+    }
+  },
+  {
+    name: "get_reference",
+    description: "Get confirmed reference data (source of truth) for a trip. Returns authoritative booking data that the itinerary should align with.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        tripId: { type: "string", description: "Trip ID" }
+      },
+      required: ["tripId"]
+    }
+  },
+  {
+    name: "validate_reference",
+    description: "Validate trip against its confirmed reference data. Checks for drift between itinerary and source of truth. Use BEFORE publishing.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        tripId: { type: "string", description: "Trip ID" }
+      },
+      required: ["tripId"]
     }
   }
 ];

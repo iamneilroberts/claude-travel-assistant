@@ -20,7 +20,8 @@ import {
 import {
   handleGetComments,
   handleGetAllComments,
-  handleDismissComments
+  handleDismissComments,
+  handleReplyToComment
 } from './comments';
 import {
   handleListTemplates,
@@ -43,6 +44,11 @@ import {
   handlePrepareImageUpload
 } from './images';
 import { handleYoutubeSearch } from './youtube';
+import {
+  setReference,
+  getReference,
+  validateTrip as validateReference
+} from './reference';
 
 // Tool name to handler mapping - all wrapped with metrics
 export const toolHandlers: Record<string, McpToolHandler> = {
@@ -63,12 +69,16 @@ export const toolHandlers: Record<string, McpToolHandler> = {
   get_comments: withMetrics('get_comments', handleGetComments),
   get_all_comments: withMetrics('get_all_comments', handleGetAllComments),
   dismiss_comments: withMetrics('dismiss_comments', handleDismissComments),
+  reply_to_comment: withMetrics('reply_to_comment', handleReplyToComment),
   submit_support: withMetrics('submit_support', handleSubmitSupport),
   reply_to_admin: withMetrics('reply_to_admin', handleReplyToAdmin),
   dismiss_admin_message: withMetrics('dismiss_admin_message', handleDismissAdminMessage),
   add_trip_image: withMetrics('add_trip_image', handleAddTripImage),
   prepare_image_upload: withMetrics('prepare_image_upload', handlePrepareImageUpload),
-  youtube_search: withMetrics('youtube_search', handleYoutubeSearch)
+  youtube_search: withMetrics('youtube_search', handleYoutubeSearch),
+  set_reference: withMetrics('set_reference', setReference),
+  get_reference: withMetrics('get_reference', getReference),
+  validate_reference: withMetrics('validate_reference', validateReference)
 };
 
 // Re-export all handlers for direct imports if needed
@@ -90,6 +100,7 @@ export {
   handleGetComments,
   handleGetAllComments,
   handleDismissComments,
+  handleReplyToComment,
   handleSubmitSupport,
   handleReplyToAdmin,
   handleDismissAdminMessage,

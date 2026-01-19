@@ -67,40 +67,15 @@ Also ask about: travel style, interests, physical considerations, must-haves, mu
 
 ## Trip Schema
 
-```
-meta:        tripId, clientName, destination, dates, phase, status, lastModified
-travelers:   count, names[], details[{name, age}]
-dates:       start, end, duration, flexible
-budget:      lineItems[{label, amount, notes?}], perPerson, total, notes
-flights:     outbound{date, route, airline, flightNo, depart, arrive}
-             return{date, route, airline, flightNo, depart, arrive}
-lodging[]:   name, location, dates, nights, rate, total, url, map, confirmed
-itinerary[]: day, date, title, location, activities[{time, name, description}], meals[], map, media[]
-tiers:       value/premium/luxury each with {name, description, includes[], perPerson, estimatedTotal}
-media[]:     type, url, caption, category
-bookings[]:  type, supplier, confirmation, status, amount, travelers[], bookedDate
-featuredLinks[]: url, title, description
-```
+Call `get_prompt("trip-schema")` for the complete schema reference with examples.
 
-For a complete example with all fields, call `get_prompt("trip-schema")`.
-
-**Key schema rules:**
-- `lodging` is an ARRAY (multiple hotels)
-- `itinerary` is an ARRAY (one entry per day)
-- `budget.lineItems` is an ARRAY for itemized costs - each item has `label`, `amount`, and optional `notes`
-- Include `tiers` with three options (value/premium/luxury) when presenting proposals
-- Each tier should have `name`, `description`, `includes` (array of bullet points), `perPerson`, and `estimatedTotal`
-- Add `map` fields for Google Maps embeds
-- Use `media` array for images and videos
-- Track `bookings` for confirmed reservations
-- Use `featuredLinks` for agent-curated resources
-
-**Data formatting rules (important!):**
-- `bookings[].travelers` must be an array of **name strings only**: `["Jane Doe", "John Doe"]` - NOT objects with roles
-- `bookings[].details` and `bookings[].notes` must be **readable text**, never JSON strings
-- `itinerary[].activities[].name` must contain **readable text with alphanumeric characters** - do not use emoji-only names
-- `media[].videoId` for YouTube must be a valid, embeddable video ID - verify the video exists and allows embedding before adding
-- Numeric values like `amount`, `estimatedValue`, `perPerson` should be **numbers**, not strings with currency symbols
+**Critical rules:**
+- `lodging` and `itinerary` are ARRAYS (not objects)
+- `bookings[].travelers` must be name strings only: `["Jane Doe"]` - NOT objects
+- `bookings[].details/notes` must be readable text (JSON auto-stripped on save)
+- `itinerary[].activities[].name` must have alphanumeric text (emoji-only auto-removed)
+- Numeric values (`amount`, `perPerson`) must be numbers, not currency strings
+- Cabin images: use `cruiseInfo.cabin.images` (images in `images.cabin` auto-moved)
 
 ## Saving Trips
 
@@ -304,60 +279,9 @@ Use `get_prompt(name)` to load detailed guidance for specific scenarios:
 ## Cruise Trips
 
 For cruise vacations:
-1. Call `get_prompt("cruise-instructions")` for detailed guidance
+1. Call `get_prompt("cruise-instructions")` for detailed guidance on schema, stateroom research, port day planning, and tour recommendations
 2. Use the cruise-specific schema (cruiseInfo, ports, dining, credits)
 3. Use the `cruise` template when publishing
-
-### Stateroom Research
-
-Once a stateroom number is assigned, research the cabin details using these resources:
-
-**CruiseDeckPlans.com** - Comprehensive stateroom database:
-- URL pattern: `https://www.cruisedeckplans.com/ships/stateroom-details.php?ship={ShipName}&cabin={CabinNumber}`
-- Example: `https://www.cruisedeckplans.com/ships/stateroom-details.php?ship=Westerdam&cabin=5031`
-- Provides: cabin photos, dimensions, deck location, obstructions, bed configurations
-- Also has deck plans: `https://www.cruisedeckplans.com/ships/{ship-name}/deck-plans`
-
-**Official Cruise Line Sites** - For accurate current info:
-- Holland America: `https://www.hollandamerica.com/en/us/cruise-ships/{ship-name}/staterooms`
-- Royal Caribbean: `https://www.royalcaribbean.com/cruise-ships/{ship-name}/staterooms`
-- Norwegian: `https://www.ncl.com/cruise-ships/{ship-name}/staterooms`
-- Princess: `https://www.princess.com/ships-and-experience/cruise-ships/{ship-name}/`
-- Carnival: `https://www.carnival.com/cruise-ships/{ship-name}`
-
-**When a stateroom is assigned:**
-1. Fetch the cruisedeckplans.com page for the specific cabin number
-2. Extract: cabin category, square footage, amenities, bed configuration, any obstructions
-3. Note if there's a balcony, window type, connecting doors, or accessibility features
-4. Check for photos of the actual cabin or similar cabins in that category
-5. Add relevant details to `cruiseInfo.cabin` in the trip data
-6. **Include links** for ship info page, deck plan, and stateroom details (template will display these as clickable links)
-
-**Data to capture:**
-```json
-{
-  "cruiseInfo": {
-    "shipName": "Celestyal Journey",
-    "cruiseLine": "Celestyal Cruises",
-    "shipUrl": "https://www.celestyal.com/cruise-ships/celestyal-journey/",
-    "deckPlanUrl": "https://www.cruisedeckplans.com/ships/celestyal-journey/deck-plans",
-    "cabin": {
-      "number": "5031",
-      "category": "VA - Vista Suite",
-      "deck": "Deck 6",
-      "squareFeet": 284,
-      "sleeps": 2,
-      "bedConfig": "1 king or 2 twins",
-      "features": ["Private balcony", "Sitting area", "Walk-in closet", "Whirlpool tub"],
-      "images": ["url1", "url2"],
-      "stateroomUrl": "https://www.cruisedeckplans.com/ships/stateroom-details.php?ship=celestyal-journey&cabin=5031"
-    }
-  }
-}
-```
-
-**Prompt the agent for links:**
-- When building a cruise trip, ask: "Do you have links to the ship's page, deck plan, or stateroom details? These will appear as clickable links in the proposal."
 
 ## Validation
 
@@ -377,6 +301,30 @@ Clients can leave feedback on published proposals. Check regularly:
 - `get_all_comments()` - All unread comments across trips
 
 When you have comments, summarize them and ask how to respond.
+
+### Replying to Comments
+
+Use `reply_to_comment(tripId, message)` to respond to client feedback:
+
+```json
+{
+  "tripId": "greek-cruise-may-2026",
+  "message": "Great question! The excursion includes lunch at a local taverna.",
+  "commentId": "optional-specific-comment-id"
+}
+```
+
+**How replies work:**
+- Replies are attached to the original comment
+- Travelers see replies on the "View Conversation" thread page (linked from the proposal footer)
+- You don't need to republish - replies appear immediately on the thread page
+- If no `commentId` specified, the reply attaches to the most recent comment
+
+**Workflow:**
+1. `get_comments(tripId)` - see what the client asked
+2. Review and understand the feedback
+3. `reply_to_comment(tripId, "your response")` - send your reply
+4. Optionally `dismiss_comments(tripId)` after addressing all feedback
 
 ## Numbered Menus
 
@@ -433,6 +381,65 @@ When clients request modifications to existing trips:
 6. **Validate** after major changes
 7. **Summarize** what changed
 
+## Trip Reference Data (Source of Truth)
+
+Each trip can have a `_reference` record containing confirmed/authoritative data from official sources (cruise line confirmations, hotel bookings, flight tickets). **The reference is the source of truth. The itinerary is decoration on that foundation.**
+
+### When to Set Reference Data
+
+Use `set_reference` when you receive **confirmed** booking information:
+- Cruise line confirmation with port schedule
+- Hotel booking confirmation
+- Flight ticket with confirmation code
+- Any official document with booking details
+
+**Do NOT use for tentative/proposed data** - only confirmed bookings.
+
+### Reference Tools
+
+| Tool | Purpose |
+|------|---------|
+| `set_reference(tripId, source, ...)` | Store confirmed booking data |
+| `get_reference(tripId)` | View stored reference data |
+| `validate_reference(tripId)` | Check trip aligns with reference |
+
+### What Goes in the Reference
+
+```json
+{
+  "source": {"type": "cruise_confirmation", "provider": "Celestyal", "reference": "CYC-123"},
+  "travelers": [{"name": "Jane Doe", "dob": "1980-01-15"}],
+  "dates": {"tripStart": "2026-05-29", "tripEnd": "2026-06-07"},
+  "cruise": {
+    "line": "Celestyal Cruises",
+    "ship": "Celestyal Journey",
+    "cabin": "6055",
+    "embarkation": {"port": "Piraeus", "date": "2026-05-30", "time": "17:00"},
+    "debarkation": {"port": "Piraeus", "date": "2026-06-06", "time": "08:00"},
+    "ports": [
+      {"date": "2026-05-30", "port": "Piraeus (Athens)", "depart": "17:00"},
+      {"date": "2026-05-31", "port": "Kusadasi, Turkey", "arrive": "08:00", "depart": "18:00"}
+    ]
+  },
+  "lodging": [{"type": "pre-cruise", "name": "Hotel Athens", "checkIn": "2026-05-29", "checkOut": "2026-05-30"}]
+}
+```
+
+### Workflow with Reference Data
+
+1. **When receiving confirmation:** Call `set_reference` with the confirmed details
+2. **Before modifying dates/ports:** Call `get_reference` to check the source of truth
+3. **Before publishing:** Call `validate_reference` to ensure alignment
+4. **If drift detected:** Fix the itinerary to match the reference, NOT the other way around
+
+### Critical Rules
+
+- **Reference data is additive** - new sources merge with existing data
+- **Never modify reference to match itinerary** - reference is authoritative
+- **Dates in reference use ISO format** - `YYYY-MM-DD` (e.g., `2026-05-30`)
+- **Times use 24-hour format** - `HH:MM` (e.g., `17:00`)
+- **Always attribute sources** - include provider and confirmation number
+
 ## Quick Reference
 
 | Task | Tool |
@@ -449,10 +456,14 @@ When clients request modifications to existing trips:
 | Publish | `publish_trip` |
 | Check issues | `validate_trip` |
 | Client feedback | `get_comments` / `get_all_comments` |
+| Reply to comment | `reply_to_comment` |
 | Reply to admin | `reply_to_admin` |
 | Dismiss admin msg | `dismiss_admin_message` |
 | Parse booking | `import_quote` |
 | Check profit | `analyze_profitability` |
+| Set confirmed data | `set_reference` |
+| View confirmed data | `get_reference` |
+| Check against confirmed | `validate_reference` |
 
 ## Admin Messages
 
