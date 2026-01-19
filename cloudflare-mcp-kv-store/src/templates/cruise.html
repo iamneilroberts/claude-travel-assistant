@@ -844,6 +844,57 @@
         .activity-title { font-weight: 600; color: var(--text); margin-bottom: 5px; }
         .activity-details { font-size: 0.95em; color: var(--text-light); }
 
+        /* Included vs Optional Activity Styling */
+        .activity.included {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-left: 4px solid var(--accent);
+        }
+
+        .activity.optional {
+            background: var(--bg-light);
+            border-left: 4px solid var(--port);
+        }
+
+        .activity-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        .activity-badge.included {
+            background: var(--accent);
+            color: var(--white);
+        }
+
+        .activity-badge.optional {
+            background: var(--port-light);
+            color: var(--port-dark);
+            border: 1px solid var(--port);
+        }
+
+        .activity-subtext {
+            font-size: 0.8em;
+            color: var(--accent-dark);
+            margin-top: 4px;
+            font-style: italic;
+        }
+
+        .activity.included .activity-subtext {
+            color: var(--accent-dark);
+        }
+
+        .activity.optional .activity-subtext {
+            color: var(--port-dark);
+        }
+
         /* Pricing Section */
         .pricing-box {
             background: linear-gradient(135deg, var(--bg-section) 0%, var(--secondary-light) 100%);
@@ -1161,7 +1212,7 @@
         .cruise-quick-links {
             display: flex;
             gap: 12px;
-            margin: 15px 0;
+            margin: 15px 0 30px 0;
             flex-wrap: wrap;
         }
 
@@ -1176,12 +1227,41 @@
             border-radius: 6px;
             font-weight: 600;
             font-size: 0.9em;
-            transition: background 0.2s, transform 0.2s;
+            transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .quick-link .click-hint {
+            position: absolute;
+            bottom: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.7em;
+            font-weight: 400;
+            color: var(--text-secondary, #666);
+            white-space: nowrap;
+            opacity: 0.7;
+        }
+
+        .quick-link::after {
+            content: '↗';
+            font-size: 0.85em;
+            margin-left: 4px;
+            opacity: 0.8;
+            transition: transform 0.2s, opacity 0.2s;
         }
 
         .quick-link:hover {
             background: var(--primary-dark);
             transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .quick-link:hover::after {
+            transform: translate(2px, -2px);
+            opacity: 1;
         }
 
         .quick-link .icon {
@@ -2914,6 +2994,20 @@
                                 {{#if balanceDue}}<div class="card-detail"><span class="label">Balance Due</span><span class="value">{{formatDate balanceDue}}</span></div>{{/if}}
                                 {{/if}}
                                 {{#if travelersText}}<div class="card-detail"><span class="label">Travelers</span><span class="value">{{travelersText}}</span></div>{{/if}}
+                                {{#if isInsurance}}
+                                {{#if insurancePlans}}
+                                <div class="insurance-options-summary" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
+                                    <div style="font-size: 0.85em; color: var(--text-light); margin-bottom: 8px;">Available Plans:</div>
+                                    {{#each insurancePlans}}
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.9em; margin-bottom: 4px;">
+                                        <span>{{name}}{{#if recommended}} ⭐{{/if}}</span>
+                                        <span style="font-weight: 600;">{{formatCurrency price}}/pp</span>
+                                    </div>
+                                    {{/each}}
+                                </div>
+                                <a href="#travel-insurance" class="card-link" style="margin-top: 12px; font-size: 0.85em; padding: 8px 16px;">View Details →</a>
+                                {{/if}}
+                                {{/if}}
                             </div>
                         </div>
                         {{/each}}
@@ -2999,18 +3093,21 @@
                     <a href="{{cruiseInfo.shipUrl}}" target="_blank" rel="noopener" class="quick-link ship-info">
                         <span class="icon">🛳️</span>
                         <span class="label">Ship Info</span>
+                        <span class="click-hint">click to view</span>
                     </a>
                     {{/if}}
                     {{#if cruiseInfo.deckPlanUrl}}
                     <a href="{{cruiseInfo.deckPlanUrl}}" target="_blank" rel="noopener" class="quick-link deck-plan">
                         <span class="icon">📋</span>
                         <span class="label">Deck Plan</span>
+                        <span class="click-hint">click to view</span>
                     </a>
                     {{/if}}
                     {{#if cruiseInfo.cabin.stateroomUrl}}
                     <a href="{{cruiseInfo.cabin.stateroomUrl}}" target="_blank" rel="noopener" class="quick-link stateroom">
                         <span class="icon">🚪</span>
                         <span class="label">Stateroom</span>
+                        <span class="click-hint">click to view</span>
                     </a>
                     {{/if}}
                 </div>
@@ -4140,9 +4237,15 @@
 
                     {{#if activities}}
                     {{#each activities}}
-                    <div class="activity">
+                    <div class="activity{{#if included}} included{{/if}}{{#if optional}} optional{{/if}}">
                         {{#if time}}<div class="activity-time">{{time}}</div>{{/if}}
-                        <div class="activity-title">{{name}}</div>
+                        <div class="activity-title">
+                            {{name}}
+                            {{#if included}}<span class="activity-badge included">✓ Included</span>{{/if}}
+                            {{#if optional}}<span class="activity-badge optional">Optional</span>{{/if}}
+                        </div>
+                        {{#if included}}<div class="activity-subtext">Part of your cruise package - no extra cost</div>{{/if}}
+                        {{#if optional}}<div class="activity-subtext">Available if you have free time</div>{{/if}}
                         {{#if description}}<div class="activity-details">{{description}}</div>{{/if}}
                         {{#if notes}}<div class="activity-details">{{notes}}</div>{{/if}}
                         {{#if url}}<a href="{{url}}" class="card-link small-link" target="_blank" rel="noopener noreferrer">More Info →</a>{{/if}}
@@ -4323,7 +4426,7 @@
 
                     {{#if activities}}
                     {{#each activities}}
-                    <div class="activity">
+                    <div class="activity{{#if included}} included{{/if}}{{#if optional}} optional{{/if}}">
                         {{#if images}}
                         <div class="card-gallery" style="margin-bottom: 10px;">
                             {{#each images}}
@@ -4332,7 +4435,13 @@
                         </div>
                         {{/if}}
                         {{#if time}}<div class="activity-time">{{time}}</div>{{/if}}
-                        <div class="activity-title">{{name}}</div>
+                        <div class="activity-title">
+                            {{name}}
+                            {{#if included}}<span class="activity-badge included">✓ Included</span>{{/if}}
+                            {{#if optional}}<span class="activity-badge optional">Optional</span>{{/if}}
+                        </div>
+                        {{#if included}}<div class="activity-subtext">Part of your cruise package - no extra cost</div>{{/if}}
+                        {{#if optional}}<div class="activity-subtext">Available if you have free time</div>{{/if}}
                         {{#if description}}<div class="activity-details">{{description}}</div>{{/if}}
                         {{#if notes}}<div class="activity-details">{{notes}}</div>{{/if}}
                         {{#if url}}<a href="{{url}}" class="card-link small-link" target="_blank" rel="noopener noreferrer">More Info →</a>{{/if}}

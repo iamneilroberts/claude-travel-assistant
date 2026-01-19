@@ -22,6 +22,104 @@ import {
 import { stripEmpty } from '../../lib/utils';
 import { validateTripId, validateSections } from '../../lib/validation';
 
+/**
+ * Validate and clean trip data on save to prevent common data quality issues.
+ * This runs before saving to enforce schema conventions documented in system-prompt.md.
+ *
+ * Cleans:
+ * - Emoji-only itinerary activities/schedule items
+ * - JSON strings in booking.details/notes (converts to empty)
+ * - Normalizes cabin images to cruiseInfo.cabin.images
+ */
+function validateAndCleanTripData(tripData: any): { data: any; warnings: string[] } {
+  const warnings: string[] = [];
+  const hasAlphanumeric = (str: string) => /[a-zA-Z0-9]/.test(str);
+
+  // Clean emoji-only itinerary content
+  if (Array.isArray(tripData?.itinerary)) {
+    tripData.itinerary = tripData.itinerary.map((day: any) => {
+      // Filter activities with emoji-only names
+      if (Array.isArray(day?.activities)) {
+        const before = day.activities.length;
+        day.activities = day.activities.filter((act: any) => {
+          const name = typeof act?.name === 'string' ? act.name.trim() : '';
+          return hasAlphanumeric(name) ||
+                 (act?.description && hasAlphanumeric(String(act.description)));
+        });
+        if (day.activities.length < before) {
+          warnings.push(`Day ${day.day}: Removed ${before - day.activities.length} emoji-only activity name(s)`);
+        }
+      }
+      // Filter schedule items with emoji-only activity names
+      if (Array.isArray(day?.schedule)) {
+        const before = day.schedule.length;
+        day.schedule = day.schedule.filter((item: any) => {
+          const activity = typeof item?.activity === 'string' ? item.activity.trim() : '';
+          return hasAlphanumeric(activity);
+        });
+        if (day.schedule.length < before) {
+          warnings.push(`Day ${day.day}: Removed ${before - day.schedule.length} emoji-only schedule item(s)`);
+        }
+      }
+      return day;
+    });
+  }
+
+  // Clean JSON strings in booking.details/notes
+  if (Array.isArray(tripData?.bookings)) {
+    tripData.bookings = tripData.bookings.map((booking: any, idx: number) => {
+      const cleanJsonField = (val: any, fieldName: string): any => {
+        if (typeof val !== 'string') return val;
+        const trimmed = val.trim();
+        if ((trimmed.startsWith('[') && trimmed.endsWith(']')) ||
+            (trimmed.startsWith('{') && trimmed.endsWith('}'))) {
+          try {
+            JSON.parse(trimmed);
+            warnings.push(`Booking #${idx + 1}: Cleared JSON in ${fieldName} - use readable text instead`);
+            return '';
+          } catch {
+            return val;
+          }
+        }
+        return val;
+      };
+      return {
+        ...booking,
+        details: cleanJsonField(booking.details, 'details'),
+        notes: cleanJsonField(booking.notes, 'notes')
+      };
+    });
+  }
+
+  // Normalize cabin images to canonical location: cruiseInfo.cabin.images
+  if (tripData?.images?.cabin && Array.isArray(tripData.images.cabin)) {
+    if (!tripData.cruiseInfo) tripData.cruiseInfo = {};
+    if (!tripData.cruiseInfo.cabin) tripData.cruiseInfo.cabin = {};
+    if (!Array.isArray(tripData.cruiseInfo.cabin.images)) {
+      tripData.cruiseInfo.cabin.images = [];
+    }
+    // Merge images.cabin into cruiseInfo.cabin.images (deduped)
+    const seen = new Set(
+      tripData.cruiseInfo.cabin.images.map((img: any) => img?.urls?.original || img?.url || img).filter(Boolean)
+    );
+    for (const img of tripData.images.cabin) {
+      const key = img?.urls?.original || img?.url || img;
+      if (key && !seen.has(key)) {
+        tripData.cruiseInfo.cabin.images.push(img);
+        seen.add(key);
+      }
+    }
+    // Remove the non-canonical location
+    delete tripData.images.cabin;
+    if (Object.keys(tripData.images).length === 0) {
+      delete tripData.images;
+    }
+    warnings.push('Moved images.cabin to cruiseInfo.cabin.images (canonical location)');
+  }
+
+  return { data: tripData, warnings };
+}
+
 export const handleListTrips: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
   const trips = await getTripIndex(env, keyPrefix);
   const visibleTrips = await filterPendingTripDeletions(env, keyPrefix, trips, ctx);
@@ -174,9 +272,12 @@ export const handleSaveTrip: McpToolHandler = async (args, env, keyPrefix, userP
   // Security: Validate trip ID to prevent path traversal
   validateTripId(args.key);
 
+  // Validate and clean trip data before saving
+  const { data: cleanedData, warnings } = validateAndCleanTripData(args.data);
+
   const fullKey = keyPrefix + args.key;
-  await env.TRIPS.put(fullKey, JSON.stringify(args.data));
-  const summary = await computeTripSummary(args.key, args.data);
+  await env.TRIPS.put(fullKey, JSON.stringify(cleanedData));
+  const summary = await computeTripSummary(args.key, cleanedData);
   await writeTripSummary(env, keyPrefix, args.key, summary, ctx);
   await addToTripIndex(env, keyPrefix, args.key);
   await removePendingTripDeletion(env, keyPrefix, args.key, ctx);
@@ -192,9 +293,8 @@ export const handleSaveTrip: McpToolHandler = async (args, env, keyPrefix, userP
     };
 
     // Extract change description from trip meta if available
-    const tripData = args.data as any;
-    const changeDescription = tripData?.meta?.status || "Updated";
-    const tripName = tripData?.meta?.clientName || tripData?.meta?.destination || args.key;
+    const changeDescription = cleanedData?.meta?.status || "Updated";
+    const tripName = cleanedData?.meta?.clientName || cleanedData?.meta?.destination || args.key;
 
     // Add to recent changes (prepend, newest first)
     activityLog.recentChanges.unshift({
@@ -226,8 +326,11 @@ export const handleSaveTrip: McpToolHandler = async (args, env, keyPrefix, userP
     await activityUpdate;
   }
 
+  const warningText = warnings.length > 0
+    ? `\n⚠️ Data quality fixes applied:\n${warnings.map(w => `  - ${w}`).join('\n')}`
+    : '';
   return {
-    content: [{ type: "text", text: `Successfully saved ${args.key}` }]
+    content: [{ type: "text", text: `Successfully saved ${args.key}${warningText}` }]
   };
 };
 
@@ -267,9 +370,12 @@ export const handlePatchTrip: McpToolHandler = async (args, env, keyPrefix, user
     existingData.meta.lastUpdated = new Date().toISOString();
   }
 
+  // Validate and clean trip data before saving
+  const { data: cleanedData, warnings } = validateAndCleanTripData(existingData);
+
   // Save updated trip
-  await env.TRIPS.put(fullKey, JSON.stringify(existingData));
-  const summary = await computeTripSummary(args.key, existingData);
+  await env.TRIPS.put(fullKey, JSON.stringify(cleanedData));
+  const summary = await computeTripSummary(args.key, cleanedData);
   await writeTripSummary(env, keyPrefix, args.key, summary, ctx);
 
   // PERFORMANCE: Move activity logging to background (don't block response)
@@ -282,8 +388,8 @@ export const handlePatchTrip: McpToolHandler = async (args, env, keyPrefix, user
       tripsActive: []
     };
 
-    const changeDescription = existingData?.meta?.status || `Updated: ${updatedFields.join(', ')}`;
-    const tripName = existingData?.meta?.clientName || existingData?.meta?.destination || args.key;
+    const changeDescription = cleanedData?.meta?.status || `Updated: ${updatedFields.join(', ')}`;
+    const tripName = cleanedData?.meta?.clientName || cleanedData?.meta?.destination || args.key;
 
     activityLog.recentChanges.unshift({
       tripId: args.key,
@@ -306,8 +412,11 @@ export const handlePatchTrip: McpToolHandler = async (args, env, keyPrefix, user
     await activityUpdate;
   }
 
+  const warningText = warnings.length > 0
+    ? `\n⚠️ Data quality fixes applied:\n${warnings.map(w => `  - ${w}`).join('\n')}`
+    : '';
   return {
-    content: [{ type: "text", text: `Patched ${args.key}: updated ${updatedFields.join(', ')}` }]
+    content: [{ type: "text", text: `Patched ${args.key}: updated ${updatedFields.join(', ')}${warningText}` }]
   };
 };
 

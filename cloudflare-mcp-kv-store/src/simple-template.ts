@@ -43,6 +43,28 @@ function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
+function formatTime(timeStr: string): string {
+  if (!timeStr) return '';
+
+  // Already in 12-hour format
+  if (timeStr.toLowerCase().includes('am') || timeStr.toLowerCase().includes('pm')) {
+    return timeStr;
+  }
+
+  // Parse 24-hour format: "14:30", "1430", "9:00"
+  const match = timeStr.match(/^(\d{1,2}):?(\d{2})$/);
+  if (match) {
+    const hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    const displayMinutes = minutes.toString().padStart(2, '0');
+    return `${displayHours}:${displayMinutes} ${period}`;
+  }
+
+  return timeStr; // Return as-is if can't parse
+}
+
 function pluralize(count: number, singular: string, plural?: string): string {
   const p = plural || singular + 's';
   return `${count} ${count === 1 ? singular : p}`;
@@ -369,6 +391,14 @@ function processVariable(tagContent: string, ctx: any, parentCtx?: any): string 
     let value = getValue(ctx, path);
     if (value === undefined && parentCtx) value = getValue(parentCtx, path);
     return formatDate(value);
+  }
+
+  // {{formatTime path}} - 12-hour format
+  if (tagContent.startsWith('formatTime ')) {
+    const path = tagContent.slice(11).trim();
+    let value = getValue(ctx, path);
+    if (value === undefined && parentCtx) value = getValue(parentCtx, path);
+    return formatTime(String(value || ''));
   }
 
   // {{capitalize path}}

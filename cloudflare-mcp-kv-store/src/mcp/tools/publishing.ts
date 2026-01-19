@@ -10,6 +10,7 @@ import { getMonthlyUsage, incrementPublishCount } from '../../lib/usage';
 import { renderTripHtml, listAvailableTemplates, resolveTemplateName } from '../../template-renderer';
 import { savePublishedTrip } from '../../lib/published';
 import { validateTripId, validateFilename } from '../../lib/validation';
+import { analyzeOpenSlots } from '../../lib/slot-analysis';
 
 export const handleListTemplates: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
   // List both user-specific and system templates
@@ -62,13 +63,32 @@ export const handlePreviewPublish: McpToolHandler = async (args, env, keyPrefix,
   const draftFilename = `drafts/${tripId}.html`;
   const previewUrl = await publishDraftToGitHub(env, draftFilename, html);
 
+  // Analyze open slots for profitability opportunities
+  const openSlotAnalysis = analyzeOpenSlots(tripData, tripId);
+
   const result = {
     previewUrl,
     tripId,
     template,
     message: `Preview ready! View at ${previewUrl}`,
     note: "This is a draft preview. When ready, use publish_trip to publish to the main site.",
-    cacheNote: "GitHub Pages may take up to 1 minute to update. If you don't see the latest changes, use hard refresh (Ctrl+Shift+R or Cmd+Shift+R)."
+    cacheNote: "GitHub Pages may take up to 1 minute to update. If you don't see the latest changes, use hard refresh (Ctrl+Shift+R or Cmd+Shift+R).",
+    // Include open slot analysis for profitability check
+    openSlotAnalysis: {
+      summary: openSlotAnalysis.summary,
+      daysWithOpportunity: openSlotAnalysis.daysWithOpportunity,
+      days: openSlotAnalysis.days.filter(d => d.opportunity !== 'none').map(d => ({
+        day: d.day,
+        date: d.date,
+        location: d.location,
+        dayType: d.dayType,
+        portHours: d.portHours,
+        availableHours: d.availableHours,
+        bookedCount: d.bookedActivities.length,
+        opportunity: d.opportunity,
+        suggestion: d.suggestion
+      }))
+    }
   };
 
   return {

@@ -32,3 +32,4 @@ coverage/
 mcp-sdk/
 python-sdk/
 typescript-sdk/
+voygent-core/

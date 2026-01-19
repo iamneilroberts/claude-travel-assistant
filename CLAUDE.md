@@ -88,6 +88,22 @@ Trip data MUST use arrays for `lodging` and `itinerary`:
 
 Do NOT use nested objects like `lodging.options` or `itinerary.days.day1`.
 
+## Code Quality: No Hard-Coding
+
+**NEVER hard-code domain-specific data** such as:
+- Cruise line port schedules or included excursions
+- Hotel chains, airline routes, or vendor-specific information
+- Geographic data (cities, attractions, coordinates)
+- Pricing tiers or commission rates
+
+**Instead:**
+- Store configurable data in KV (under `_config/` or similar)
+- Use pattern detection from actual trip data
+- Let the AI model analyze and infer (users pay for tokens)
+- Accept data via MCP tool parameters
+
+**Why:** Hard-coded data becomes stale, creates maintenance burden, and fails silently when vendors change. Pattern-based detection + AI reasoning is more resilient.
+
 ## Database & Secrets
 
 - **Production KV**: `voygent-themed` (ID: 62077781-9458-4206-a5c6-f38dc419e599)

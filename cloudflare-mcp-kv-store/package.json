@@ -4,7 +4,9 @@
   "scripts": {
     "deploy": "wrangler deploy",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "verify-sessions": "node scripts/verify-session-changes.js",
+    "test:all": "npm run test && npm run verify-sessions"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.5.0",

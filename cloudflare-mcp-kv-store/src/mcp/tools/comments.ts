@@ -185,3 +185,85 @@ export const handleDismissComments: McpToolHandler = async (args, env, keyPrefix
     content: [{ type: "text", text: `✓ Dismissed ${dismissedCount} comment(s) for trip '${tripId}'. They will no longer appear in session start.` }]
   };
 };
+
+export const handleReplyToComment: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
+  const { tripId, commentId, message } = args;
+
+  if (!tripId || !message) {
+    return {
+      content: [{ type: "text", text: "Error: tripId and message are required." }]
+    };
+  }
+
+  const commentsKey = `${keyPrefix}${tripId}/_comments`;
+  const data = await env.TRIPS.get(commentsKey, "json") as { comments: any[] } | null;
+
+  if (!data?.comments?.length) {
+    return {
+      content: [{ type: "text", text: `No comments found for trip '${tripId}'.` }]
+    };
+  }
+
+  // Find the comment to reply to
+  let targetComment: any = null;
+  let targetIndex = -1;
+
+  if (commentId) {
+    // Reply to specific comment by ID
+    targetIndex = data.comments.findIndex(c => c.id === commentId);
+    if (targetIndex >= 0) {
+      targetComment = data.comments[targetIndex];
+    }
+  } else {
+    // Reply to most recent unread/active comment
+    for (let i = data.comments.length - 1; i >= 0; i--) {
+      if (!data.comments[i].dismissed) {
+        targetComment = data.comments[i];
+        targetIndex = i;
+        break;
+      }
+    }
+  }
+
+  if (!targetComment) {
+    return {
+      content: [{ type: "text", text: `Could not find comment to reply to.` }]
+    };
+  }
+
+  // Add reply to the comment
+  const reply = {
+    id: `reply_${Date.now()}`,
+    message,
+    timestamp: new Date().toISOString(),
+    from: userProfile?.displayName || userProfile?.name || 'Travel Agent'
+  };
+
+  if (!targetComment.replies) {
+    targetComment.replies = [];
+  }
+  targetComment.replies.push(reply);
+
+  // Mark as read since we're responding
+  targetComment.read = true;
+
+  // Update in the array
+  data.comments[targetIndex] = targetComment;
+
+  // Save back to KV
+  await env.TRIPS.put(commentsKey, JSON.stringify(data));
+
+  // Build response
+  const section = targetComment.item ? `${targetComment.section} - ${targetComment.item}` : targetComment.section;
+  const travelerName = targetComment.name || 'Traveler';
+
+  // Generate the comment thread URL
+  const threadUrl = `https://voygent.somotravel.workers.dev/trips/${encodeURIComponent(tripId)}/comments`;
+
+  return {
+    content: [{
+      type: "text",
+      text: `✓ Reply sent to ${travelerName}'s comment on "${section}".\n\nYour reply: "${message}"\n\nThe traveler can view the conversation at:\n${threadUrl}\n\n${targetComment.email ? `You may also want to email them directly at: ${targetComment.email}` : ''}`
+    }]
+  };
+};

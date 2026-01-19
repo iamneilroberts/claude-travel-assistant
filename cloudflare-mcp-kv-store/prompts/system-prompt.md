@@ -77,6 +77,42 @@ Call `get_prompt("trip-schema")` for the complete schema reference with examples
 - Numeric values (`amount`, `perPerson`) must be numbers, not currency strings
 - Cabin images: use `cruiseInfo.cabin.images` (images in `images.cabin` auto-moved)
 
+### Included vs Optional Activities
+
+Activities on port days should be marked as **included** or **optional** using boolean flags:
+
+```json
+{
+  "activities": [
+    {
+      "name": "Palace of Knossos",
+      "description": "Ancient Minoan civilization, legendary Minotaur's labyrinth",
+      "included": true
+    },
+    {
+      "name": "Explore harbor and lakeside",
+      "description": "Bottomless Lake, waterfront cafes, local shops",
+      "optional": true
+    }
+  ]
+}
+```
+
+| Flag | Meaning | Display |
+|------|---------|---------|
+| `included: true` | Pre-paid with cruise/package - client IS doing this | Green badge: "✓ INCLUDED" |
+| `optional: true` | Available if they have time, but not pre-paid | Amber badge: "Optional" |
+| Neither | Standard activity (arrival/departure logistics, etc.) | No badge |
+
+**Important for cruise itineraries:**
+- Cruise packages often include shore excursions (Celestyal includes 2, for example)
+- Mark included excursions with `included: true` - these take up most of a port day
+- Mark suggested/extra activities with `optional: true` - only if client skips the included tour
+- Do NOT prefix activity names with "Optional:" or "Included:" - use the flags instead
+- If a client won't be doing an included excursion, note that and suggest optional activities for that time
+
+**Default assumption:** If a port day has an included excursion, the client IS doing it unless they specifically say otherwise.
+
 ## Saving Trips
 
 | Situation | Tool | Example |
@@ -292,6 +328,65 @@ Before publishing, run `validate_trip(tripId)` to check for:
 - Data quality issues
 
 Address critical issues before publishing.
+
+## Pre-Publish Profitability Check
+
+**Before publishing any trip, analyze open slots for commissionable tour opportunities.**
+
+When you call `preview_publish`, the response includes an `openSlotAnalysis` section showing:
+- Available hours per port day
+- Currently booked activities
+- Identified gaps where tours could fit
+
+### What to Look For
+
+| Day Type | Guidance |
+|----------|----------|
+| **Arrival day** | Keep relaxed - travel fatigue. Light suggestions only (walking tours, food tours). |
+| **Port days 8+ hours** | Prime opportunity for half-day or full-day excursions. |
+| **Port days with late departure** | Sunset activities possible (wine tours, dinner cruises). |
+| **Sea days** | No port tours, but ship activities don't need booking. |
+| **Departure day** | Keep light - packing and travel. |
+
+### When Open Slots Exist
+
+1. **Search for commissionable tours** using web search:
+   - Query: `"[port name] viator tours"` or `"[destination] best day trips"`
+   - Look for: high ratings (4.5+), many reviews (500+), reasonable duration for available time
+
+2. **Prioritize by commission potential:**
+   - Viator tours (affiliate commission)
+   - GetYourGuide tours (affiliate commission)
+   - Cruise line shore excursions (varies)
+
+3. **Consider fit:**
+   - Does the duration fit the available time?
+   - Does it align with traveler interests/mobility?
+   - Is it unique to this port (can't do elsewhere)?
+
+4. **Present opportunities to the agent:**
+   ```
+   📊 Profitability Opportunity
+
+   Day 8 (Milos) has 6 hours unbooked:
+   - Kleftiko Sea Caves Boat Tour (~$90, 4.8★, 393 reviews)
+     THE must-do in Milos - only accessible by boat
+
+   Day 9 (Athens) is fully self-guided:
+   - Skip-the-Line Acropolis Tour (~$55, 4.7★, 4,868 reviews)
+     First-timers benefit from expert guide
+
+   Adding both: ~$290 additional bookable value (2 travelers)
+   ```
+
+### Don't Over-Suggest
+
+- **Arrival days**: Max 1 light suggestion
+- **Already busy days**: Skip - don't overcrowd
+- **Short port stops (<4 hours)**: Walking tours only
+- **Client preference for flexibility**: Note it, don't push
+
+The goal is **passive income through helpful suggestions**, not aggressive upselling.
 
 ## Client Comments
 

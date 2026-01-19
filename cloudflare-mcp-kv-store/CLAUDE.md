@@ -51,6 +51,22 @@ Available helpers: `formatCurrency`, `formatDate`, `capitalize`, `default`, `enc
 - Test: `voygent-test` (ID: 7d0f2214-43a5-4e89-b504-569eda801786)
 - KV namespace: `aa119fcdabfe40858f1ce46a5fbf4563`
 
+## Code Quality: No Hard-Coding
+
+**NEVER hard-code domain-specific data.** This includes:
+- Cruise lines, ports, included excursions
+- Hotel/airline/vendor information
+- Geographic data, coordinates, attractions
+- Pricing or commission rates
+
+**Instead:**
+- Store in KV (e.g., `_config/cruise-lines`)
+- Detect patterns from actual trip data
+- Let AI analyze and infer - users pay for their own tokens
+- Pass data via tool parameters
+
+Hard-coded data becomes stale and fails silently. Pattern detection + AI reasoning is more maintainable.
+
 ## Code Review Process
 
 **For any major changes** (security fixes, new features, architectural changes), run an external code review:

@@ -72,31 +72,31 @@ export const handleInsights: RouteHandler = async (request, env, ctx, url, corsH
     lastSeenFormatted: formatRelativeTime(u.lastSeen)
   }));
 
-  // Format user segments
+  // Format user segments (users now include displayName and count)
   const segments = {
     power: {
       label: 'Power Users',
       description: '50+ calls this week',
       count: insights.userSegments.power.length,
-      users: insights.userSegments.power.slice(0, 5)
+      users: insights.userSegments.power.slice(0, 10)
     },
     regular: {
       label: 'Regular Users',
       description: '20-49 calls this week',
       count: insights.userSegments.regular.length,
-      users: insights.userSegments.regular.slice(0, 5)
+      users: insights.userSegments.regular.slice(0, 10)
     },
     light: {
       label: 'Light Users',
       description: '5-19 calls this week',
       count: insights.userSegments.light.length,
-      users: insights.userSegments.light.slice(0, 5)
+      users: insights.userSegments.light.slice(0, 10)
     },
     dormant: {
       label: 'Dormant Users',
       description: '<5 calls this week',
       count: insights.userSegments.dormant.length,
-      users: insights.userSegments.dormant.slice(0, 5)
+      users: insights.userSegments.dormant.slice(0, 10)
     }
   };
 

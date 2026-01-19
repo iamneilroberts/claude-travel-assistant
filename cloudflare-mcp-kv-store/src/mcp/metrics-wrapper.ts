@@ -53,11 +53,33 @@ function extractMetadata(toolName: string, args: Record<string, any>): Record<st
     metadata.templateName = args.template;
   }
 
+  // Section reads - capture which section
+  if (toolName === 'read_trip_section' && args.section) {
+    metadata.section = args.section;
+  }
+
   // Patch operations - track which fields changed
   if (toolName === 'patch_trip' && args.updates) {
     try {
       const updates = typeof args.updates === 'string' ? JSON.parse(args.updates) : args.updates;
       metadata.fieldsChanged = Object.keys(updates);
+      // Capture count of changes
+      metadata.changeCount = metadata.fieldsChanged.length;
+    } catch {
+      // Ignore parse errors
+    }
+  }
+
+  // Save trip - check if it includes key data
+  if (toolName === 'save_trip' && args.data) {
+    try {
+      const data = typeof args.data === 'string' ? JSON.parse(args.data) : args.data;
+      if (data.meta?.destination) {
+        metadata.destination = data.meta.destination;
+      }
+      if (data.meta?.clientName) {
+        metadata.clientName = data.meta.clientName;
+      }
     } catch {
       // Ignore parse errors
     }
@@ -66,6 +88,46 @@ function extractMetadata(toolName: string, args: Record<string, any>): Record<st
   // Publishing tools
   if (toolName === 'publish_trip') {
     metadata.category = args.category;
+  }
+  if (toolName === 'preview_publish') {
+    metadata.templateName = args.template || 'default';
+  }
+
+  // Comments tools
+  if (toolName === 'dismiss_comments' && args.commentIds) {
+    try {
+      const ids = typeof args.commentIds === 'string' ? JSON.parse(args.commentIds) : args.commentIds;
+      metadata.commentCount = Array.isArray(ids) ? ids.length : 1;
+    } catch {
+      // Ignore parse errors
+    }
+  }
+
+  // Support tools
+  if (toolName === 'submit_support') {
+    metadata.category = args.category;
+    metadata.priority = args.priority;
+  }
+  if (toolName === 'reply_to_admin' && args.messageId) {
+    metadata.messageId = args.messageId;
+  }
+
+  // Media tools
+  if (toolName === 'youtube_search' && args.query) {
+    metadata.searchQuery = args.query.substring(0, 50);
+  }
+  if (toolName === 'add_trip_image' && args.imageUrl) {
+    metadata.imageType = args.imageUrl.includes('r2.') ? 'r2' : 'external';
+  }
+
+  // Validation
+  if (toolName === 'validate_trip') {
+    metadata.validationType = args.sections || 'full';
+  }
+
+  // Import
+  if (toolName === 'import_quote' && args.source) {
+    metadata.importSource = args.source;
   }
 
   // Search/list tools

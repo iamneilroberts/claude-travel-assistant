@@ -3,7 +3,7 @@
  */
 
 import type { Env, RouteHandler } from '../types';
-import { handleComment } from './comment';
+import { handleComment, handleCommentThread } from './comment';
 import { handleMedia } from './media';
 import { handleUpload } from './upload';
 import { handleGallery } from './gallery';
@@ -16,6 +16,7 @@ import { handleHealth } from './health';
 export const publicRouteHandlers: RouteHandler[] = [
   handleHealth, // Health check first for fastest response
   handleComment,
+  handleCommentThread,
   handleMedia,
 ];
 
@@ -110,7 +111,7 @@ export async function handleSubscribeRoutes(
 
 // Re-export individual handlers
 export { handleHealth } from './health';
-export { handleComment } from './comment';
+export { handleComment, handleCommentThread } from './comment';
 export { handleMedia } from './media';
 export { handleUpload } from './upload';
 export { handleGallery } from './gallery';

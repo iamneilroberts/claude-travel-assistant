@@ -78,6 +78,11 @@ export const handleAdminRoutes: RouteHandler = async (request, env, ctx, url, co
     });
   }
 
+  // Admin MCP endpoint handles its own auth (supports query param for MCP clients)
+  if (url.pathname === "/admin/mcp") {
+    return handleAdminMcp(request, env, ctx, url, corsHeaders);
+  }
+
   // Admin auth check for API endpoints (header only - query string disabled for security)
   const adminKey = request.headers.get("X-Admin-Key");
   if (!adminKey || adminKey !== env.ADMIN_KEY) {
@@ -87,8 +92,9 @@ export const handleAdminRoutes: RouteHandler = async (request, env, ctx, url, co
     });
   }
 
-  // Try each handler
+  // Try each handler (skip MCP since handled above)
   for (const handler of adminHandlers) {
+    if (handler === handleAdminMcp) continue;
     const response = await handler(request, env, ctx, url, corsHeaders);
     if (response) return response;
   }

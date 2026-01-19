@@ -258,6 +258,52 @@ Use `cruise-planners` (general Cruise Planners branded) for non-cruise trips.
 - `recommended` - Suggested but not booked
 - `cancelled` - Was booked, now cancelled
 
+### Included vs Optional Excursions in Itinerary
+
+Many cruise packages include shore excursions. When building the day-by-day itinerary, mark activities correctly:
+
+**In `itinerary[].activities[]` use these flags:**
+
+```json
+{
+  "day": 5,
+  "port": "Agios Nikolaos, Crete",
+  "activities": [
+    {
+      "name": "Palace of Knossos",
+      "description": "Ancient Minoan civilization, legendary Minotaur's labyrinth",
+      "included": true
+    },
+    {
+      "name": "Explore harbor and lakeside",
+      "description": "Bottomless Lake, waterfront cafes, local shops",
+      "optional": true
+    }
+  ]
+}
+```
+
+| Flag | Meaning | How it displays |
+|------|---------|-----------------|
+| `included: true` | Pre-paid excursion included with cruise package | Green badge: "✓ INCLUDED" with "Part of your cruise package" |
+| `optional: true` | Available if they skip included tour or have extra time | Amber badge: "Optional" with "Available if you have free time" |
+| Neither flag | Standard activity (arrivals, departures, ship logistics) | No badge |
+
+**Critical points:**
+- **Do NOT prefix names** with "Optional:" or "Included:" text - use the boolean flags
+- **Included tours take up most of the day** - don't suggest competing activities during that time
+- **Default assumption**: If a port has an included excursion, the client IS doing it
+- **Only add optional activities** if:
+  - Client explicitly says they won't do the included tour
+  - There's genuinely time before/after the included tour (e.g., evening activities after a morning tour)
+  - The port doesn't have an included excursion
+
+**Cruise lines with included excursions:**
+- **Celestyal**: 2 shore excursions included (usually Ephesus + one other)
+- **Viking Ocean**: Excursion included at every port
+- **Oceania**: Some packages include shore excursions
+- Always verify what's included by checking the booking confirmation
+
 ## Cruise Pricing Tips
 
 1. **Always include gratuities** - Most cruise lines charge $15-20/person/day

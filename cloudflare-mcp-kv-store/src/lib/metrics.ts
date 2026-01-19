@@ -413,12 +413,14 @@ export async function getActivityStream(
 /**
  * Compute insights from metrics
  */
+type UserWithCount = { userId: string; displayName?: string; count: number };
+
 export async function computeInsights(env: Env): Promise<{
   healthScore: number;
   atRiskUsers: Array<{ userId: string; userName?: string; lastSeen: string; daysSinceActive: number }>;
   underusedFeatures: Array<{ tool: string; usagePercent: number }>;
   trends: { callsToday: number; callsYesterday: number; changePercent: number };
-  userSegments: { power: string[]; regular: string[]; light: string[]; dormant: string[] };
+  userSegments: { power: UserWithCount[]; regular: UserWithCount[]; light: UserWithCount[]; dormant: UserWithCount[] };
 }> {
   const today = new Date().toISOString().split('T')[0];
   const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -478,19 +480,30 @@ export async function computeInsights(env: Env): Promise<{
     ? ((callsToday - callsYesterday) / callsYesterday) * 100
     : 0;
 
-  // User segments based on weekly activity
-  const segments = { power: [] as string[], regular: [] as string[], light: [] as string[], dormant: [] as string[] };
+  // User segments based on weekly activity (include call counts)
+  const segments = {
+    power: [] as UserWithCount[],
+    regular: [] as UserWithCount[],
+    light: [] as UserWithCount[],
+    dormant: [] as UserWithCount[]
+  };
   for (const [userId, data] of Object.entries(userActivity)) {
+    const user: UserWithCount = { userId, displayName: data.name, count: data.callCount };
     if (data.callCount >= 50) {
-      segments.power.push(userId);
+      segments.power.push(user);
     } else if (data.callCount >= 20) {
-      segments.regular.push(userId);
+      segments.regular.push(user);
     } else if (data.callCount >= 5) {
-      segments.light.push(userId);
+      segments.light.push(user);
     } else {
-      segments.dormant.push(userId);
+      segments.dormant.push(user);
     }
   }
+  // Sort each segment by call count descending
+  segments.power.sort((a, b) => b.count - a.count);
+  segments.regular.sort((a, b) => b.count - a.count);
+  segments.light.sort((a, b) => b.count - a.count);
+  segments.dormant.sort((a, b) => b.count - a.count);
 
   // Calculate health score (0-100)
   let healthScore = 100;

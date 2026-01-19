@@ -1,0 +1,186 @@
+# Voygent MCP Server Bug Fixes
+
+## Overview
+
+We have two issues to fix in the voygent MCP server:
+
+1. **`read_trip_section` validation error** - Users are getting validation errors when calling this tool with valid parameters
+2. **Poor error messages** - When trip CRUD operations fail (save_trip, read_trip, patch_trip), error messages don't provide enough context to diagnose issues
+
+---
+
+## Issue 1: read_trip_section Validation Error
+
+### Observed Behavior
+- User "Kim Henderson" called `read_trip_section` with tripId `greek-cruise-may-2026` 
+- The call failed immediately (0ms duration) with `errorType: "validation_error"`
+- She successfully worked around it by using `read_trip` instead (which worked fine)
+- The trip exists and is valid (confirmed by successful `read_trip` call)
+
+### Expected Behavior
+The `read_trip_section` tool should accept these parameters:
+- `tripId` (string, required) - Trip ID
+- `sections` (array of strings, required) - Sections to retrieve. Valid values: "meta", "travelers", "dates", "budget", "flights", "lodging", "itinerary", "tiers", "media", "bookings", "featuredLinks", "cruiseInfo"
+- `itineraryDay` (number, optional) - If sections includes 'itinerary', optionally fetch only this day
+
+### Investigation Steps
+1. Find the `read_trip_section` tool handler in the MCP server code
+2. Check the Zod schema or validation logic for the `sections` parameter
+3. Look for issues like:
+   - Array validation not accepting valid section names
+   - Case sensitivity issues
+   - Type coercion problems (e.g., expecting object but receiving array)
+   - Missing or overly strict enum validation
+
+### Likely Fix Areas
+- The `sections` parameter schema definition
+- The enum values list for valid sections
+- Array validation logic
+
+---
+
+## Issue 2: Improve Error Messages for Trip CRUD Operations
+
+### Observed Behavior
+When `save_trip`, `read_trip`, `patch_trip`, or `read_trip_section` fail, the activity log shows:
+- `errorType: "error"` or `errorType: "validation_error"` 
+- No specific error message captured
+- Duration of 0ms indicates early failure
+
+Example failures from test agents:
+```
+save_trip: validation_error (0ms)
+read_trip: error (0ms)
+patch_trip: validation_error (0ms)
+```
+
+### Expected Behavior
+Error responses should include:
+1. **Specific error message** - What exactly failed
+2. **Field-level details** - Which field caused validation to fail
+3. **Helpful context** - What was expected vs what was received
+
+### Recommended Changes
+
+#### For validation errors, return structured details:
+```typescript
+{
+  success: false,
+  error: {
+    type: "validation_error",
+    message: "Invalid trip data",
+    details: [
+      {
+        field: "meta.tripId",
+        message: "Trip ID is required",
+        received: undefined
+      },
+      {
+        field: "dates.start", 
+        message: "Must be a valid ISO date string",
+        received: "May 2026"
+      }
+    ]
+  }
+}
+```
+
+#### For not-found errors:
+```typescript
+{
+  success: false,
+  error: {
+    type: "not_found",
+    message: "Trip 'invalid-trip-id' not found",
+    suggestion: "Use list_trips to see available trips"
+  }
+}
+```
+
+#### For permission/auth errors:
+```typescript
+{
+  success: false,
+  error: {
+    type: "unauthorized",
+    message: "You don't have access to trip 'other-users-trip'",
+    tripOwner: "different-user"
+  }
+}
+```
+
+### Implementation Steps
+1. Find the error handling code for each tool (save_trip, read_trip, patch_trip, read_trip_section)
+2. Wrap Zod validation in try-catch to capture detailed errors
+3. Use Zod's `.safeParse()` method instead of `.parse()` to get error details without throwing
+4. Format Zod errors into user-friendly messages
+5. Log detailed errors for debugging while returning sanitized messages to users
+6. Update the activity logging to capture the error message, not just the type
+
+### Example Zod Error Handling Pattern
+```typescript
+import { z } from 'zod';
+
+const tripSchema = z.object({
+  // ... schema definition
+});
+
+function saveTripHandler(input: unknown) {
+  const result = tripSchema.safeParse(input);
+  
+  if (!result.success) {
+    const formattedErrors = result.error.issues.map(issue => ({
+      field: issue.path.join('.'),
+      message: issue.message,
+      code: issue.code
+    }));
+    
+    return {
+      success: false,
+      error: {
+        type: 'validation_error',
+        message: `Validation failed: ${formattedErrors.length} error(s)`,
+        details: formattedErrors
+      }
+    };
+  }
+  
+  // Continue with valid data
+  const trip = result.data;
+  // ...
+}
+```
+
+---
+
+## Files to Investigate
+
+Based on typical MCP server structure, check these locations:
+- `src/tools/trips.ts` or similar - Trip CRUD tool handlers
+- `src/schemas/trip.ts` or similar - Zod schemas for trip validation
+- `src/utils/errors.ts` or similar - Error formatting utilities
+- `src/index.ts` - Tool registration and main handler
+
+---
+
+## Testing After Fixes
+
+1. Test `read_trip_section` with valid parameters:
+   ```
+   tripId: "greek-cruise-may-2026"
+   sections: ["meta", "cruiseInfo"]
+   ```
+
+2. Test error messages by intentionally sending:
+   - Invalid trip ID to `read_trip`
+   - Malformed data to `save_trip`
+   - Invalid section names to `read_trip_section`
+   - Missing required fields to `patch_trip`
+
+3. Verify activity logging captures the new error details
+
+---
+
+## Priority
+- **Issue 1 (read_trip_section)**: HIGH - Blocking functionality for real users
+- **Issue 2 (error messages)**: MEDIUM - Quality of life improvement for debugging

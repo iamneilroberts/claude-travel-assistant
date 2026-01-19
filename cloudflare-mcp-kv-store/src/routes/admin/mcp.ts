@@ -18,6 +18,15 @@ const SERVER_VERSION = '1.0.0';
 export const handleAdminMcp: RouteHandler = async (request, env, ctx, url, corsHeaders) => {
   if (url.pathname !== '/admin/mcp') return null;
 
+  // Admin auth check - accept header OR query param for MCP client compatibility
+  const adminKey = request.headers.get('X-Admin-Key') || url.searchParams.get('adminKey');
+  if (!adminKey || adminKey !== env.ADMIN_KEY) {
+    return new Response(JSON.stringify({ error: 'Unauthorized - admin key required' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
   // Handle GET - return endpoint info
   if (request.method === 'GET') {
     return new Response(JSON.stringify({

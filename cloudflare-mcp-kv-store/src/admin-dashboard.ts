@@ -72,59 +72,66 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     .icon { font-size: 14px; margin-right: 5px; }
     @media (max-width: 768px) { .detail-grid { grid-template-columns: 1fr; } }
 
-    /* Mission Control - Arrivals Board Styling */
+    /* Mission Control - Clean Dark Theme */
     .mission-control-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
-    .mode-tabs { display: flex; gap: 5px; }
-    .mode-tab { padding: 8px 16px; background: #e5e7eb; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; }
-    .mode-tab.active { background: #1a5f7a; color: white; }
-    .mode-tab:hover:not(.active) { background: #d1d5db; }
-    .auto-controls { display: flex; align-items: center; gap: 10px; }
-    .toggle-label { font-size: 13px; color: #666; }
+    .mode-tabs { display: flex; gap: 4px; background: #1e293b; padding: 4px; border-radius: 8px; }
+    .mode-tab { padding: 8px 18px; background: transparent; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; color: #94a3b8; transition: all 0.2s; }
+    .mode-tab.active { background: #3b82f6; color: white; }
+    .mode-tab:hover:not(.active) { background: #334155; color: #e2e8f0; }
+    .auto-controls { display: flex; align-items: center; gap: 12px; }
+    .toggle-label { font-size: 13px; color: #94a3b8; }
     .toggle { position: relative; width: 44px; height: 24px; }
     .toggle input { opacity: 0; width: 0; height: 0; }
-    .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #ccc; border-radius: 24px; transition: .3s; }
-    .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .3s; }
-    .toggle input:checked + .toggle-slider { background: #22c55e; }
+    .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #475569; border-radius: 24px; transition: .2s; }
+    .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .2s; }
+    .toggle input:checked + .toggle-slider { background: #10b981; }
     .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
 
-    /* Arrivals Board */
-    .arrivals-board { background: #1a1a1a; border-radius: 8px; padding: 20px; font-family: 'Roboto Mono', 'Courier New', monospace; box-shadow: inset 0 0 30px rgba(0,0,0,0.5); }
-    .board-header { display: flex; color: #fbbf24; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; border-bottom: 2px solid #333; padding-bottom: 12px; margin-bottom: 8px; }
-    .board-rows { max-height: 500px; overflow-y: auto; }
-    .board-row { display: flex; padding: 10px 0; border-bottom: 1px solid #333; color: #fff; font-size: 14px; align-items: center; }
-    .board-row.new { animation: flipIn 0.5s ease-out; }
-    .col-time { width: 70px; color: #fbbf24; font-weight: 500; }
-    .col-user { width: 140px; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .col-action { flex: 1; color: #e5e7eb; }
-    .col-trip { width: 120px; color: #9ca3af; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .col-status { width: 70px; text-align: right; font-weight: 600; }
-    .status-ok { color: #22c55e; }
-    .status-err { color: #ef4444; }
+    /* Activity Table - Clean Design */
+    .arrivals-board { background: #0f172a; border-radius: 12px; padding: 0; overflow: hidden; border: 1px solid #1e293b; }
+    .board-header { display: flex; background: #1e293b; color: #64748b; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; padding: 12px 16px; }
+    .board-rows { max-height: 550px; overflow-y: auto; }
+    .board-rows::-webkit-scrollbar { width: 6px; }
+    .board-rows::-webkit-scrollbar-track { background: #0f172a; }
+    .board-rows::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    .board-row { display: flex; padding: 10px 16px; border-bottom: 1px solid #1e293b; color: #e2e8f0; font-size: 13px; align-items: center; transition: background 0.15s; }
+    .board-row:hover { background: #1e293b; }
+    .board-row.new { animation: slideIn 0.3s ease-out; background: rgba(59, 130, 246, 0.1); }
+    .col-time { width: 70px; color: #64748b; font-size: 12px; font-weight: 500; }
+    .col-user { width: 110px; color: #f1f5f9; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+    .col-action { width: 95px; font-size: 11px; }
+    .col-action span { display: inline-block; padding: 3px 8px; background: #1e293b; border-radius: 4px; color: #94a3b8; font-weight: 500; }
+    .col-trip { width: 150px; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .col-trip a { color: #60a5fa; text-decoration: none; }
+    .col-trip a:hover { color: #93c5fd; text-decoration: underline; }
+    .col-detail { flex: 1; color: #a78bfa; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 10px; }
+    .col-detail.error { color: #fca5a5; }
+    .col-dur { width: 60px; color: #64748b; font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }
+    .col-status { width: 60px; text-align: right; font-size: 11px; }
+    .status-ok { color: #4ade80; }
+    .status-err { color: #f87171; cursor: pointer; }
+    .status-err:hover { color: #fca5a5; }
 
-    /* Age-based row styling */
-    .board-row.fresh { background: rgba(34, 197, 94, 0.15); }
-    .board-row.fresh .col-time { animation: pulse 2s infinite; }
-    .board-row.recent { background: rgba(59, 130, 246, 0.1); }
+    /* Age-based row styling - subtle */
+    .board-row.fresh { background: rgba(34, 197, 94, 0.08); }
+    .board-row.fresh .col-time { color: #4ade80; }
+    .board-row.recent { background: transparent; }
     .board-row.stale { opacity: 0.7; }
     .board-row.old { opacity: 0.5; }
 
-    @keyframes flipIn {
-      0% { transform: rotateX(-90deg); opacity: 0; }
-      100% { transform: rotateX(0); opacity: 1; }
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.6; }
+    @keyframes slideIn {
+      0% { transform: translateY(-10px); opacity: 0; }
+      100% { transform: translateY(0); opacity: 1; }
     }
 
-    /* Stats Panel */
-    .stats-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
-    .stats-panel .stat-card { background: white; border-radius: 8px; padding: 15px; }
-    .stats-panel .stat-card .label { color: #666; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
-    .stats-panel .stat-card .value { font-size: 24px; font-weight: 700; color: #1a5f7a; margin-top: 5px; }
+    /* Stats Panel - Dark Cards */
+    .stats-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 16px; }
+    .stats-panel .stat-card { background: #1e293b; border-radius: 10px; padding: 16px; border: 1px solid #334155; }
+    .stats-panel .stat-card .label { color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; }
+    .stats-panel .stat-card .value { font-size: 26px; font-weight: 700; color: #f1f5f9; margin-top: 6px; }
     .stats-panel .stat-card .change { font-size: 12px; margin-top: 5px; }
-    .stats-panel .stat-card .change.up { color: #22c55e; }
-    .stats-panel .stat-card .change.down { color: #ef4444; }
+    .stats-panel .stat-card .change.up { color: #4ade80; }
+    .stats-panel .stat-card .change.down { color: #f87171; }
 
     /* Insights Panel */
     .insights-panel { background: white; border-radius: 12px; padding: 20px; }
@@ -141,6 +148,283 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     .recommendation .title { font-weight: 600; margin-bottom: 4px; }
     .recommendation .message { font-size: 13px; color: #555; }
     .recommendation .action { font-size: 12px; color: #666; margin-top: 4px; font-style: italic; }
+
+    /* Expandable Rows */
+    .board-row.expandable { cursor: pointer; }
+    .board-row-details { display: none; padding: 10px 16px; background: #1e293b; border-bottom: 1px solid #334155; font-size: 12px; }
+    .board-row-details.expanded { display: flex; gap: 24px; flex-wrap: wrap; }
+    .board-row-details .detail-item { color: #94a3b8; }
+    .board-row-details .detail-item .label { color: #64748b; margin-right: 6px; }
+    .board-row-details .detail-item .value { color: #e2e8f0; }
+    .expand-indicator { color: #64748b; font-size: 10px; margin-left: 6px; transition: transform 0.2s; }
+
+    /* Slow Call Highlighting */
+    .board-row.slow { background: rgba(251, 191, 36, 0.1) !important; }
+    .board-row.slow .col-dur { color: #fbbf24 !important; font-weight: 600; }
+    .slow-badge { display: inline-block; background: #fbbf24; color: #000; font-size: 9px; padding: 2px 5px; border-radius: 3px; margin-left: 6px; font-weight: 700; letter-spacing: 0.5px; }
+
+    /* Mission Control Grid Layout */
+    .mc-grid { display: grid; grid-template-columns: 1fr 280px; gap: 16px; }
+    .mc-sidebar { display: flex; flex-direction: column; gap: 12px; }
+    @media (max-width: 1200px) { .mc-grid { grid-template-columns: 1fr; } }
+
+    /* Sidebar Panels - Clean Dark */
+    .heatmap-panel, .error-panel, .tool-panel { background: #0f172a; border-radius: 10px; padding: 14px; border: 1px solid #1e293b; }
+    .heatmap-panel h4, .error-panel h4, .tool-panel h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; }
+    .heatmap-panel h4 { color: #4ade80; }
+    .error-panel h4 { color: #f87171; }
+    .tool-panel h4 { color: #60a5fa; }
+
+    /* Error Breakdown */
+    .error-bar { display: flex; align-items: center; margin-bottom: 8px; }
+    .error-bar .type { width: 85px; font-size: 11px; color: #94a3b8; }
+    .error-bar .bar-container { flex: 1; height: 8px; background: #1e293b; border-radius: 4px; margin: 0 10px; overflow: hidden; }
+    .error-bar .bar { height: 100%; border-radius: 4px; }
+    .error-bar .bar.validation { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .error-bar .bar.auth { background: linear-gradient(90deg, #ef4444, #f87171); }
+    .error-bar .bar.not_found { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+    .error-bar .bar.timeout { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .error-bar .bar.rate_limit { background: linear-gradient(90deg, #ec4899, #f472b6); }
+    .error-bar .bar.unknown { background: linear-gradient(90deg, #64748b, #94a3b8); }
+    .error-bar .count { font-size: 11px; color: #e2e8f0; font-weight: 600; min-width: 28px; text-align: right; }
+
+    /* Hourly Heatmap */
+    .heatmap-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; }
+    .heatmap-cell { aspect-ratio: 1; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; color: #fff; cursor: default; transition: transform 0.15s; }
+    .heatmap-cell:hover { transform: scale(1.15); z-index: 1; }
+    .heatmap-cell.level-0 { background: #1e293b; color: #475569; }
+    .heatmap-cell.level-1 { background: #064e3b; }
+    .heatmap-cell.level-2 { background: #047857; }
+    .heatmap-cell.level-3 { background: #059669; }
+    .heatmap-cell.level-4 { background: #10b981; }
+    .heatmap-cell.level-5 { background: #34d399; }
+    .heatmap-labels { display: flex; justify-content: space-between; margin-top: 8px; font-size: 9px; color: #64748b; }
+
+    /* Tool Distribution */
+    .tool-bar { display: flex; align-items: center; margin-bottom: 6px; }
+    .tool-bar .name { width: 70px; font-size: 11px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tool-bar .bar-container { flex: 1; height: 8px; background: #1e293b; border-radius: 4px; margin: 0 8px; overflow: hidden; }
+    .tool-bar .bar { height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa); border-radius: 4px; }
+    .tool-bar .count { font-size: 11px; color: #e2e8f0; font-weight: 500; min-width: 30px; text-align: right; }
+
+    /* Recent Errors Panel */
+    .recent-errors { background: #0f172a; border-radius: 10px; padding: 14px; border: 1px solid #1e293b; max-height: 180px; overflow-y: auto; }
+    .recent-errors h4 { color: #f87171; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; }
+    .recent-errors h4 .count-badge { background: #dc2626; color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 10px; }
+    .error-item { padding: 10px 12px; background: rgba(239, 68, 68, 0.08); border-left: 3px solid #f87171; border-radius: 0 6px 6px 0; margin-bottom: 8px; }
+    .error-item .error-header { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; }
+    .error-item .error-type { color: #fca5a5; font-weight: 600; }
+    .error-item .error-time { color: #64748b; }
+    .error-item .error-detail { font-size: 11px; color: #94a3b8; }
+
+    /* Enhanced Stats Cards */
+    .stats-panel .stat-card.has-detail { cursor: pointer; transition: all 0.15s; }
+    .stats-panel .stat-card.has-detail:hover { background: #334155; border-color: #475569; }
+    .stat-card .sub-value { font-size: 11px; color: #64748b; margin-top: 4px; }
+    .stat-card .sub-value.highlight { color: #fbbf24; }
+
+    /* ============ RESPONSIVE - TABLET ============ */
+    @media (max-width: 1024px) {
+      .mc-grid { grid-template-columns: 1fr; }
+      .mc-sidebar { flex-direction: row; flex-wrap: wrap; }
+      .mc-sidebar > * { flex: 1 1 200px; min-width: 200px; }
+      .col-detail { display: none; }
+      .col-trip { flex: 1; }
+      .stats-panel { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ============ RESPONSIVE - MOBILE ============ */
+    @media (max-width: 640px) {
+      .container { padding: 12px; }
+
+      /* Header adjustments */
+      .mission-control-header { flex-direction: column; align-items: stretch; gap: 12px; }
+      .mode-tabs { justify-content: center; }
+      .auto-controls { justify-content: center; }
+
+      /* Activity table - card-based layout on mobile */
+      .arrivals-board { border-radius: 8px; }
+      .board-header { display: none; }
+      .board-rows { max-height: none; }
+      .board-row {
+        flex-wrap: wrap;
+        padding: 12px;
+        gap: 8px;
+        position: relative;
+      }
+      .col-time {
+        width: auto;
+        order: 1;
+        font-size: 11px;
+      }
+      .col-user {
+        width: auto;
+        flex: 1;
+        order: 2;
+        font-size: 13px;
+      }
+      .col-status {
+        width: auto;
+        order: 3;
+        position: static;
+      }
+      .col-action {
+        width: auto;
+        order: 4;
+      }
+      .col-action span {
+        padding: 4px 10px;
+        font-size: 10px;
+      }
+      .col-trip {
+        width: 100%;
+        order: 5;
+        font-size: 11px;
+        padding-top: 4px;
+      }
+      .col-detail {
+        width: 100%;
+        order: 6;
+        display: block;
+        font-size: 11px;
+        padding-top: 2px;
+        color: #94a3b8;
+      }
+      .col-detail.error { color: #fca5a5; }
+      .col-dur {
+        display: none;
+      }
+      .slow-badge {
+        position: absolute;
+        top: 8px;
+        right: 60px;
+      }
+      .expand-indicator { display: none; }
+
+      /* Expandable details */
+      .board-row-details.expanded {
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px;
+      }
+
+      /* Stats panel */
+      .stats-panel {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .stats-panel .stat-card {
+        padding: 12px;
+      }
+      .stats-panel .stat-card .value {
+        font-size: 22px;
+      }
+      .stats-panel .stat-card .label {
+        font-size: 10px;
+      }
+      .stat-card .sub-value {
+        font-size: 10px;
+      }
+
+      /* Sidebar panels */
+      .mc-sidebar {
+        flex-direction: column;
+        gap: 10px;
+      }
+      .mc-sidebar > * {
+        min-width: 100%;
+      }
+      .heatmap-panel, .error-panel, .tool-panel, .recent-errors {
+        padding: 12px;
+      }
+      .heatmap-grid {
+        gap: 2px;
+      }
+      .heatmap-cell {
+        font-size: 8px;
+      }
+      .error-bar .type {
+        width: 70px;
+        font-size: 10px;
+      }
+      .tool-bar .name {
+        width: 60px;
+        font-size: 10px;
+      }
+
+      /* Recent errors */
+      .recent-errors {
+        max-height: 150px;
+      }
+      .error-item {
+        padding: 8px 10px;
+      }
+      .error-item .error-header {
+        flex-direction: column;
+        gap: 2px;
+      }
+      .error-item .error-detail {
+        font-size: 10px;
+      }
+    }
+
+    /* ============ RESPONSIVE - SMALL MOBILE ============ */
+    @media (max-width: 380px) {
+      .mode-tabs {
+        width: 100%;
+      }
+      .mode-tab {
+        flex: 1;
+        padding: 8px 12px;
+        font-size: 12px;
+        text-align: center;
+      }
+      .stats-panel {
+        grid-template-columns: 1fr 1fr;
+      }
+      .stats-panel .stat-card .value {
+        font-size: 20px;
+      }
+      .col-user {
+        font-size: 12px;
+      }
+      .col-action span {
+        font-size: 9px;
+        padding: 3px 6px;
+      }
+    }
+
+    /* Touch-friendly adjustments */
+    @media (hover: none) and (pointer: coarse) {
+      .board-row {
+        min-height: 44px;
+      }
+      .mode-tab {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .toggle {
+        width: 50px;
+        height: 28px;
+      }
+      .toggle-slider:before {
+        height: 22px;
+        width: 22px;
+      }
+      .toggle input:checked + .toggle-slider:before {
+        transform: translateX(22px);
+      }
+      .heatmap-cell:hover {
+        transform: none;
+      }
+      .status-err {
+        padding: 4px 8px;
+        margin: -4px -8px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -183,23 +467,84 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
       <!-- Live Mode Panel -->
       <div id="panel-live" class="mode-panel">
-        <div class="arrivals-board">
-          <div class="board-header">
-            <span class="col-time">TIME</span>
-            <span class="col-user">USER</span>
-            <span class="col-action">ACTION</span>
-            <span class="col-trip">TRIP</span>
-            <span class="col-status">STATUS</span>
+        <div class="mc-grid">
+          <div class="mc-main">
+            <div class="arrivals-board">
+              <div class="board-header">
+                <span class="col-time">TIME</span>
+                <span class="col-user">USER</span>
+                <span class="col-action">ACTION</span>
+                <span class="col-trip">TRIP</span>
+                <span class="col-detail">DETAIL</span>
+                <span class="col-dur">MS</span>
+                <span class="col-status">STATUS</span>
+              </div>
+              <div class="board-rows" id="activityRows">
+                <div style="padding:40px;text-align:center;color:#666;">Loading activity stream...</div>
+              </div>
+            </div>
+
+            <!-- Recent Errors Panel -->
+            <div class="recent-errors" id="recentErrorsPanel" style="margin-top:15px;">
+              <h4>Recent Errors <span class="count-badge" id="errorCountBadge">0</span></h4>
+              <div id="recentErrorsList">
+                <div style="color:#6b7280;text-align:center;padding:10px;">No recent errors</div>
+              </div>
+            </div>
           </div>
-          <div class="board-rows" id="activityRows">
-            <div style="padding:40px;text-align:center;color:#666;">Loading activity stream...</div>
+
+          <div class="mc-sidebar">
+            <!-- Hourly Heatmap -->
+            <div class="heatmap-panel">
+              <h4>Activity Heatmap (Today)</h4>
+              <div class="heatmap-grid" id="hourlyHeatmap"></div>
+              <div class="heatmap-labels">
+                <span>12am</span>
+                <span>6am</span>
+                <span>12pm</span>
+                <span>6pm</span>
+              </div>
+            </div>
+
+            <!-- Error Breakdown -->
+            <div class="error-panel">
+              <h4>Error Breakdown</h4>
+              <div id="errorBreakdown">
+                <div style="color:#6b7280;text-align:center;padding:10px;font-size:11px;">No errors today</div>
+              </div>
+            </div>
+
+            <!-- Tool Distribution -->
+            <div class="tool-panel">
+              <h4>Tool Usage (Today)</h4>
+              <div id="toolDistribution">
+                <div style="color:#6b7280;text-align:center;padding:10px;font-size:11px;">Loading...</div>
+              </div>
+            </div>
           </div>
         </div>
+
         <div class="stats-panel" id="liveStats">
-          <div class="stat-card"><div class="label">Calls Today</div><div class="value" id="liveCallsToday">-</div></div>
-          <div class="stat-card"><div class="label">Active Users</div><div class="value" id="liveActiveUsers">-</div></div>
-          <div class="stat-card"><div class="label">Avg Response</div><div class="value" id="liveAvgResponse">-</div></div>
-          <div class="stat-card"><div class="label">Error Rate</div><div class="value" id="liveErrorRate">-</div></div>
+          <div class="stat-card has-detail">
+            <div class="label">Calls Today</div>
+            <div class="value" id="liveCallsToday">-</div>
+            <div class="sub-value" id="liveCallsSub">-</div>
+          </div>
+          <div class="stat-card has-detail">
+            <div class="label">Active Users</div>
+            <div class="value" id="liveActiveUsers">-</div>
+            <div class="sub-value" id="liveUsersSub">-</div>
+          </div>
+          <div class="stat-card has-detail">
+            <div class="label">Avg Response</div>
+            <div class="value" id="liveAvgResponse">-</div>
+            <div class="sub-value" id="liveP95">P95: -</div>
+          </div>
+          <div class="stat-card has-detail">
+            <div class="label">Error Rate</div>
+            <div class="value" id="liveErrorRate">-</div>
+            <div class="sub-value" id="liveErrorsSub">-</div>
+          </div>
         </div>
       </div>
 
@@ -598,8 +943,17 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
   </div>
 
   <script>
-    const ADMIN_KEY = localStorage.getItem('voygent_admin_key') || prompt('Enter admin key:');
-    if (ADMIN_KEY) localStorage.setItem('voygent_admin_key', ADMIN_KEY);
+    let ADMIN_KEY = localStorage.getItem('voygent_admin_key');
+
+    function promptForAdminKey() {
+      ADMIN_KEY = prompt('Enter admin key:');
+      if (ADMIN_KEY) {
+        localStorage.setItem('voygent_admin_key', ADMIN_KEY);
+        location.reload();
+      }
+    }
+
+    if (!ADMIN_KEY) promptForAdminKey();
 
     const API_BASE = window.location.origin;
 
@@ -619,13 +973,13 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     function escapeJsString(unsafe) {
       if (unsafe === null || unsafe === undefined) return '';
       return String(unsafe)
-        .replace(/\\/g, '\\\\')
-        .replace(/'/g, "\\'")
-        .replace(/"/g, '\\"')
-        .replace(/\n/g, '\\n')
-        .replace(/\r/g, '\\r')
-        .replace(/</g, '\\x3c')
-        .replace(/>/g, '\\x3e');
+        .replace(/\\\\/g, '\\\\\\\\')
+        .replace(/'/g, "\\\\'")
+        .replace(/"/g, '\\\\"')
+        .replace(/\\n/g, '\\\\n')
+        .replace(/\\r/g, '\\\\r')
+        .replace(/</g, '\\\\x3c')
+        .replace(/>/g, '\\\\x3e');
     }
 
     // SECURITY: Validate URL scheme to prevent javascript: XSS
@@ -677,12 +1031,18 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     let activityCache = [];
 
     async function api(endpoint, options = {}) {
-      const res = await fetch(API_BASE + endpoint + '?adminKey=' + encodeURIComponent(ADMIN_KEY), {
+      const res = await fetch(API_BASE + endpoint, {
         ...options,
-        headers: { 'Content-Type': 'application/json', ...options.headers }
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY, ...options.headers }
       });
       if (!res.ok) {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({ error: 'Unknown error' }));
+        if (res.status === 401) {
+          localStorage.removeItem('voygent_admin_key');
+          alert('Invalid admin key. Please enter a valid key.');
+          promptForAdminKey();
+          throw new Error('Unauthorized');
+        }
         throw new Error(err.error || 'API Error');
       }
       return res.json();
@@ -834,6 +1194,7 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
       const d = new Date(ts);
       const now = new Date();
       const diff = now.getTime() - d.getTime();
+      const tzOpts = { timeZone: 'America/Chicago' };
 
       // Within last hour: "X minutes ago"
       if (diff < 3600000) {
@@ -847,12 +1208,12 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
       }
       // Within last 7 days: "Mon 2:30 PM"
       if (diff < 604800000) {
-        return d.toLocaleDateString('en-US', { weekday: 'short' }) + ' ' +
-               d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        return d.toLocaleDateString('en-US', { weekday: 'short', ...tzOpts }) + ' ' +
+               d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', ...tzOpts });
       }
       // Older: "Jan 5, 2:30 PM"
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' +
-             d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...tzOpts }) + ', ' +
+             d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', ...tzOpts });
     }
 
     function showAddUserModal() { document.getElementById('addUserModal').classList.add('active'); }
@@ -1758,38 +2119,234 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     }
 
     function renderActivityBoard(newIds = []) {
-      const rows = activityCache_mc.slice(0, 15).map(a => {
+      const rows = activityCache_mc.slice(0, 25).map(a => {
         const isNew = newIds.includes(a.id);
+        const isSlow = a.isSlow;
+        const hasExpandableDetails = a.metadata?.fieldsChanged?.length > 3 || (a.metadata?.fieldsChanged?.length > 0 && a.metadata?.templateName);
+
+        const tripLink = a.tripId
+          ? \`<a href="#" class="trip-link" data-trip-id="\${escapeHtml(a.tripId)}" data-user-id="\${escapeHtml(a.userId)}" style="color:#3b82f6;text-decoration:none;">\${escapeHtml(a.tripId)}</a>\`
+          : '-';
+
+        const statusHtml = a.success
+          ? '<span class="status-ok">✓ OK</span>'
+          : \`<a href="#" class="status-err error-link" data-error-type="\${escapeHtml(a.errorType || 'unknown')}" data-tool="\${escapeHtml(a.tool)}" data-user="\${escapeHtml(a.user)}" data-time="\${escapeHtml(a.time)}" data-trip="\${escapeHtml(a.tripId || '')}">✗ \${escapeHtml(a.errorType || 'error')}</a>\`;
+
+        const slowBadge = isSlow ? '<span class="slow-badge">SLOW</span>' : '';
+        const expandIndicator = hasExpandableDetails ? '<span class="expand-indicator">▼</span>' : '';
+
+        // Inline detail from server
+        const detailClass = a.errorType ? 'col-detail error' : 'col-detail';
+        const detailText = a.detail || '-';
+
+        // Build expandable details row content (for complex metadata)
+        let detailsContent = '';
+        if (hasExpandableDetails) {
+          if (a.metadata?.fieldsChanged?.length > 0) {
+            detailsContent += \`<span class="detail-item"><span class="label">All Fields:</span><span class="value">\${escapeHtml(a.metadata.fieldsChanged.join(', '))}</span></span>\`;
+          }
+          if (a.metadata?.section) {
+            detailsContent += \`<span class="detail-item"><span class="label">Section:</span><span class="value">\${escapeHtml(a.metadata.section)}</span></span>\`;
+          }
+          if (a.metadata?.templateName) {
+            detailsContent += \`<span class="detail-item"><span class="label">Template:</span><span class="value">\${escapeHtml(a.metadata.templateName)}</span></span>\`;
+          }
+          if (a.metadata?.destination) {
+            detailsContent += \`<span class="detail-item"><span class="label">Destination:</span><span class="value">\${escapeHtml(a.metadata.destination)}</span></span>\`;
+          }
+          detailsContent += \`<span class="detail-item"><span class="label">Duration:</span><span class="value">\${a.durationMs}ms</span></span>\`;
+        }
+
         return \`
-          <div class="board-row \${a.ageClass}\${isNew ? ' new' : ''}">
+          <div class="board-row \${a.ageClass}\${isNew ? ' new' : ''}\${isSlow ? ' slow' : ''}\${hasExpandableDetails ? ' expandable' : ''}" data-id="\${a.id}">
             <span class="col-time">\${escapeHtml(a.time)}</span>
-            <span class="col-user">\${escapeHtml(a.user).substring(0, 12)}</span>
-            <span class="col-action">\${escapeHtml(a.action)}</span>
-            <span class="col-trip">\${a.tripId ? escapeHtml(a.tripId) : '-'}</span>
-            <span class="col-status \${a.success ? 'status-ok' : 'status-err'}">\${a.success ? '✓ OK' : '✗ ERR'}</span>
+            <span class="col-user">\${escapeHtml(a.user).substring(0, 11)}\${expandIndicator}</span>
+            <span class="col-action"><span>\${escapeHtml(a.action)}</span></span>
+            <span class="col-trip">\${tripLink}</span>
+            <span class="\${detailClass}" title="\${escapeHtml(detailText)}">\${escapeHtml(detailText)}</span>
+            <span class="col-dur">\${escapeHtml(a.durationDisplay || '-')}\${slowBadge}</span>
+            <span class="col-status">\${statusHtml}</span>
           </div>
+          \${detailsContent ? \`<div class="board-row-details" data-for="\${a.id}">\${detailsContent}</div>\` : ''}
         \`;
       }).join('');
 
       document.getElementById('activityRows').innerHTML = rows || '<div style="padding:40px;text-align:center;color:#666;">No activity yet</div>';
+
+      // Add click handlers for expandable rows
+      document.querySelectorAll('#activityRows .board-row.expandable').forEach(row => {
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('.trip-link') || e.target.closest('.error-link')) return;
+          const id = row.dataset.id;
+          const details = document.querySelector(\`.board-row-details[data-for="\${id}"]\`);
+          if (details) {
+            details.classList.toggle('expanded');
+            const indicator = row.querySelector('.expand-indicator');
+            if (indicator) indicator.textContent = details.classList.contains('expanded') ? '▲' : '▼';
+          }
+        });
+      });
+
+      // Add click handlers for trip links
+      document.querySelectorAll('#activityRows .trip-link').forEach(link => {
+        link.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const tripId = link.dataset.tripId;
+          const userId = link.dataset.userId;
+          const publishedUrl = 'https://somotravel.us/trips/' + tripId + '.html';
+          try {
+            const res = await fetch(publishedUrl, { method: 'HEAD' });
+            if (res.ok) {
+              window.open(publishedUrl, '_blank');
+              return;
+            }
+          } catch {}
+          viewTripDetail(userId, tripId);
+        });
+      });
+
+      // Add click handlers for error links
+      document.querySelectorAll('#activityRows .error-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const errorType = link.dataset.errorType;
+          const tool = link.dataset.tool;
+          const user = link.dataset.user;
+          const time = link.dataset.time;
+          const trip = link.dataset.trip;
+          alert(\`Error Details\\n\\nType: \${errorType}\\nTool: \${tool}\\nUser: \${user}\\nTime: \${time}\${trip ? '\\nTrip: ' + trip : ''}\\n\\nCommon causes:\\n- validation_error: Invalid input data\\n- not_found: Trip or resource not found\\n- auth_error: Permission denied\\n- timeout: Operation took too long\`);
+        });
+      });
     }
 
     function updateLiveStats(data) {
-      // Calculate stats from activity cache
-      const now = Date.now();
-      const todayStart = new Date().setHours(0, 0, 0, 0);
-      const todayCalls = activityCache_mc.filter(a => new Date(a.timestamp).getTime() > todayStart).length;
-      const activeUsers = new Set(activityCache_mc.filter(a => now - new Date(a.timestamp).getTime() < 3600000).map(a => a.userId)).size;
+      const liveStats = data.liveStats || {};
+
+      // Update main stats cards
+      document.getElementById('liveCallsToday').textContent = liveStats.totalCallsToday || 0;
+      document.getElementById('liveCallsSub').textContent = \`\${liveStats.uniqueUsersToday || 0} unique users\`;
+
+      const activeUsers = new Set(activityCache_mc.filter(a => Date.now() - new Date(a.timestamp).getTime() < 3600000).map(a => a.userId)).size;
+      document.getElementById('liveActiveUsers').textContent = activeUsers;
+      document.getElementById('liveUsersSub').textContent = 'in last hour';
+
       const avgResponse = activityCache_mc.length > 0
         ? Math.round(activityCache_mc.slice(0, 20).reduce((sum, a) => sum + (a.durationMs || 0), 0) / Math.min(activityCache_mc.length, 20))
         : 0;
+      document.getElementById('liveAvgResponse').textContent = avgResponse + 'ms';
+      document.getElementById('liveP95').textContent = \`P95: \${liveStats.p95Threshold || 0}ms\`;
+      document.getElementById('liveP95').className = liveStats.p95Threshold > 1000 ? 'sub-value highlight' : 'sub-value';
+
       const errors = activityCache_mc.filter(a => !a.success).length;
       const errorRate = activityCache_mc.length > 0 ? ((errors / activityCache_mc.length) * 100).toFixed(1) : '0';
-
-      document.getElementById('liveCallsToday').textContent = todayCalls;
-      document.getElementById('liveActiveUsers').textContent = activeUsers;
-      document.getElementById('liveAvgResponse').textContent = avgResponse + 'ms';
       document.getElementById('liveErrorRate').textContent = errorRate + '%';
+      const totalErrors = Object.values(liveStats.errorBreakdown || {}).reduce((a, b) => a + b, 0);
+      document.getElementById('liveErrorsSub').textContent = \`\${totalErrors} errors today\`;
+
+      // Render sidebar panels
+      renderHourlyHeatmap(liveStats.hourlyBreakdown || {});
+      renderErrorBreakdown(liveStats.errorBreakdown || {});
+      renderToolDistribution(liveStats.toolDistribution || {});
+      renderRecentErrors(data.recentErrors || []);
+    }
+
+    function renderHourlyHeatmap(hourlyData) {
+      const maxCount = Math.max(...Object.values(hourlyData).map(h => h.count || 0), 1);
+      let html = '';
+
+      for (let i = 0; i < 24; i++) {
+        const hour = String(i).padStart(2, '0');
+        const data = hourlyData[hour] || { count: 0, uniqueUsers: [] };
+        const count = data.count || 0;
+        const level = count === 0 ? 0 : Math.min(5, Math.ceil((count / maxCount) * 5));
+        const users = data.uniqueUsers?.length || 0;
+        const hourLabel = i === 0 ? '12am' : i < 12 ? \`\${i}am\` : i === 12 ? '12pm' : \`\${i - 12}pm\`;
+
+        html += \`<div class="heatmap-cell level-\${level}" title="\${hourLabel}: \${count} calls, \${users} users">\${count || ''}</div>\`;
+      }
+
+      document.getElementById('hourlyHeatmap').innerHTML = html;
+    }
+
+    function renderErrorBreakdown(errorData) {
+      const entries = Object.entries(errorData).sort((a, b) => b[1] - a[1]);
+      if (entries.length === 0) {
+        document.getElementById('errorBreakdown').innerHTML = '<div style="color:#22c55e;text-align:center;padding:10px;font-size:11px;">No errors today</div>';
+        return;
+      }
+
+      const maxCount = Math.max(...entries.map(e => e[1]));
+      const html = entries.slice(0, 5).map(([type, count]) => {
+        const barType = type.includes('validation') ? 'validation' :
+                        type.includes('auth') ? 'auth' :
+                        type.includes('not_found') ? 'not_found' :
+                        type.includes('timeout') ? 'timeout' :
+                        type.includes('rate') ? 'rate_limit' : 'unknown';
+        const width = Math.max(5, (count / maxCount) * 100);
+        return \`
+          <div class="error-bar">
+            <span class="type">\${escapeHtml(type.replace(/_/g, ' '))}</span>
+            <div class="bar-container"><div class="bar \${barType}" style="width:\${width}%"></div></div>
+            <span class="count">\${count}</span>
+          </div>
+        \`;
+      }).join('');
+
+      document.getElementById('errorBreakdown').innerHTML = html;
+    }
+
+    function renderToolDistribution(toolData) {
+      const entries = Object.entries(toolData).sort((a, b) => b[1].count - a[1].count);
+      if (entries.length === 0) {
+        document.getElementById('toolDistribution').innerHTML = '<div style="color:#6b7280;text-align:center;padding:10px;font-size:11px;">No data yet</div>';
+        return;
+      }
+
+      const maxCount = Math.max(...entries.map(e => e[1].count));
+      const toolNames = {
+        get_context: 'Context', list_trips: 'List', read_trip: 'Read', save_trip: 'Save',
+        patch_trip: 'Update', preview_publish: 'Preview', publish_trip: 'Publish',
+        validate_trip: 'Validate', get_comments: 'Comments', read_trip_section: 'Section'
+      };
+
+      const html = entries.slice(0, 8).map(([tool, data]) => {
+        const width = Math.max(5, (data.count / maxCount) * 100);
+        const name = toolNames[tool] || tool.replace(/_/g, ' ').substring(0, 10);
+        return \`
+          <div class="tool-bar" title="\${escapeHtml(tool)}: \${data.count} calls, \${data.successRate}% success, avg \${data.avgMs}ms">
+            <span class="name">\${escapeHtml(name)}</span>
+            <div class="bar-container"><div class="bar" style="width:\${width}%"></div></div>
+            <span class="count">\${data.count}</span>
+          </div>
+        \`;
+      }).join('');
+
+      document.getElementById('toolDistribution').innerHTML = html;
+    }
+
+    function renderRecentErrors(errors) {
+      document.getElementById('errorCountBadge').textContent = errors.length;
+
+      if (errors.length === 0) {
+        document.getElementById('recentErrorsList').innerHTML = '<div style="color:#22c55e;text-align:center;padding:10px;font-size:11px;">No recent errors</div>';
+        return;
+      }
+
+      const html = errors.map(err => \`
+        <div class="error-item">
+          <div class="error-header">
+            <span class="error-type">\${escapeHtml(err.errorType || 'unknown')}</span>
+            <span class="error-time">\${escapeHtml(err.time)} · \${escapeHtml(err.ageDisplay)}</span>
+          </div>
+          <div class="error-detail">
+            <strong>\${escapeHtml(err.action)}</strong> by \${escapeHtml(err.user)}\${err.tripId ? \` on \${escapeHtml(err.tripId)}\` : ''}
+          </div>
+        </div>
+      \`).join('');
+
+      document.getElementById('recentErrorsList').innerHTML = html;
     }
 
     async function loadStatsPanel() {
@@ -1862,13 +2419,40 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
           </tr>
         \`).join('') || '<tr><td colspan="3" style="color:#666;text-align:center;">No at-risk users</td></tr>';
 
-        const segmentsHtml = Object.entries(data.userSegments).map(([key, seg]) => \`
-          <div class="stat-card">
-            <div class="label">\${escapeHtml(seg.label)}</div>
-            <div class="value">\${seg.count}</div>
-            <div style="font-size:11px;color:#666;">\${escapeHtml(seg.description)}</div>
-          </div>
-        \`).join('');
+        // Create detailed user segment cards with user lists
+        const segmentsHtml = Object.entries(data.userSegments).map(([key, seg]) => {
+          const userList = seg.users && seg.users.length > 0
+            ? seg.users.map(u => \`<div style="font-size:11px;padding:2px 0;border-bottom:1px solid #eee;"><span style="color:#333;">\${escapeHtml(u.displayName || u.userId)}</span> <span style="color:#999;float:right;">\${u.count} calls</span></div>\`).join('')
+            : '<div style="font-size:11px;color:#999;">No users</div>';
+          return \`
+            <div class="stat-card" style="min-height:140px;">
+              <div class="label">\${escapeHtml(seg.label)}</div>
+              <div class="value" style="color:\${key === 'power' ? '#22c55e' : key === 'dormant' ? '#f97316' : '#3b82f6'}">\${seg.count}</div>
+              <div style="font-size:10px;color:#666;margin-bottom:8px;">\${escapeHtml(seg.description)}</div>
+              <div style="max-height:80px;overflow-y:auto;">\${userList}</div>
+            </div>
+          \`;
+        }).join('');
+
+        // Create power users leaderboard
+        const powerUsers = data.userSegments.power?.users || [];
+        const regularUsers = data.userSegments.regular?.users || [];
+        const topUsers = [...powerUsers, ...regularUsers].slice(0, 10);
+        const leaderboardHtml = topUsers.length > 0 ? \`
+          <table style="font-size:12px;">
+            <thead><tr><th>#</th><th>User</th><th>Calls</th><th>Status</th></tr></thead>
+            <tbody>
+              \${topUsers.map((u, i) => \`
+                <tr>
+                  <td style="width:30px;font-weight:bold;color:\${i < 3 ? '#f59e0b' : '#666'};">\${i + 1}</td>
+                  <td>\${escapeHtml(u.displayName || u.userId)}</td>
+                  <td style="font-weight:600;">\${u.count}</td>
+                  <td><span class="badge \${u.count >= 50 ? 'badge-green' : 'badge-blue'}">\${u.count >= 50 ? 'Power' : 'Regular'}</span></td>
+                </tr>
+              \`).join('')}
+            </tbody>
+          </table>
+        \` : '<p style="color:#666;">No active users this week.</p>';
 
         document.getElementById('insightsContent').innerHTML = \`
           <div class="health-score">
@@ -1884,14 +2468,22 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
           <h3 style="margin-bottom:15px;">Recommendations</h3>
           \${recommendationsHtml}
 
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;">
+            <div>
+              <h3 style="margin-bottom:10px;">Top Users This Week</h3>
+              \${leaderboardHtml}
+            </div>
+            <div>
+              <h3 style="margin-bottom:10px;">At-Risk Users</h3>
+              <table style="font-size:12px;">
+                <thead><tr><th>User</th><th>Last Active</th><th>Inactive</th></tr></thead>
+                <tbody>\${atRiskHtml}</tbody>
+              </table>
+            </div>
+          </div>
+
           <h3 style="margin:20px 0 10px;">User Segments</h3>
           <div class="stats-grid">\${segmentsHtml}</div>
-
-          <h3 style="margin:20px 0 10px;">At-Risk Users</h3>
-          <table>
-            <thead><tr><th>User</th><th>Last Active</th><th>Inactive</th></tr></thead>
-            <tbody>\${atRiskHtml}</tbody>
-          </table>
         \`;
       } catch (e) {
         document.getElementById('insightsContent').innerHTML = '<p class="error">' + e.message + '</p>';

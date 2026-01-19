@@ -595,6 +595,15 @@ export function buildTemplateData(
 
       // Remove travelers from spread to prevent template from rendering raw array
       const { travelers: _travelers, ...bookingRest } = booking;
+
+      // For insurance bookings, include plan summary from travelInsurance data
+      const isInsurance = typeKey === 'insurance';
+      let insurancePlans: any[] = [];
+      if (isInsurance && tripData.travelInsurance) {
+        // Use plans or options array
+        insurancePlans = tripData.travelInsurance.plans || tripData.travelInsurance.options || [];
+      }
+
       return {
         ...bookingRest,
         typeLabel: typeInfo.label,
@@ -604,7 +613,9 @@ export function buildTemplateData(
         statusBadge: statusInfo.label ? `${statusInfo.icon} ${statusInfo.label}`.trim() : '',
         confirmationDisplay: confirmationText,
         travelersText,
-        showBalance
+        showBalance,
+        isInsurance,
+        insurancePlans
       };
     });
   }
