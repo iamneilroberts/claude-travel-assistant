@@ -80,24 +80,6 @@ If it lists trips (or says none found), you're connected.
 https://voygent.somotravel.workers.dev/sse?key=YOUR_KEY
 ```
 
----
-
-## Tester Keys
-
-Each tester gets their own key for isolated data:
-
-| Tester | Key | URL |
-|--------|-----|-----|
-| Kim | `Home.Star1` | `...?key=Home.Star1` |
-| Susie | `Susie.Star2` | `...?key=Susie.Star2` |
-| Matt | `Matt.Star3` | `...?key=Matt.Star3` |
-| [Name] | `Test.Alpha1` | `...?key=Test.Alpha1` |
-| [Name] | `Test.Beta2` | `...?key=Test.Beta2` |
-| [Name] | `Test.Gamma3` | `...?key=Test.Gamma3` |
-
-*(Keys are case-sensitive)*
-
----
 
 ## Quick Commands
 
