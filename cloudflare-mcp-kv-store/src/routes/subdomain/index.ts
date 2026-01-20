@@ -7,6 +7,7 @@ import type { Env, UserProfile } from '../../types';
 import { extractSubdomain, getSubdomainOwner } from '../../lib/subdomain';
 import { handleUserDashboard } from './dashboard';
 import { handlePublishedTrip, handleSubdomainHome } from './published';
+import { handleUpload } from '../upload';
 
 /**
  * Main subdomain route handler
@@ -60,6 +61,12 @@ export async function handleSubdomainRoutes(
   // Dashboard routes: /admin, /admin/*, /admin/login, etc.
   if (path === '/admin' || path.startsWith('/admin/')) {
     return handleUserDashboard(request, env, ctx, url, userProfile, subdomain, corsHeaders);
+  }
+
+  // Upload route - used by dashboard branding settings
+  if (path === '/upload') {
+    const uploadResponse = await handleUpload(request, env, ctx, url, corsHeaders);
+    if (uploadResponse) return uploadResponse;
   }
 
   // Published trip routes: /trips/*, /*.html

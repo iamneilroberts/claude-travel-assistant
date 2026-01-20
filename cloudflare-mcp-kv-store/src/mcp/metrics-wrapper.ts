@@ -157,9 +157,19 @@ export function withMetrics(toolName: string, handler: McpToolHandler): McpToolH
     const startTime = performance.now();
     let success = true;
     let errorType: string | undefined;
+    let responseBytes: number | undefined;
+    let result: any;
 
     try {
-      const result = await handler(args, env, keyPrefix, userProfile, authKey, ctx);
+      result = await handler(args, env, keyPrefix, userProfile, authKey, ctx);
+
+      // Measure response size (bytes, not tokens)
+      try {
+        responseBytes = JSON.stringify(result).length;
+      } catch {
+        // Circular references or non-serializable - skip size tracking
+      }
+
       return result;
     } catch (error) {
       success = false;
@@ -180,6 +190,7 @@ export function withMetrics(toolName: string, handler: McpToolHandler): McpToolH
           userName: userProfile?.name,
           tool: toolName,
           durationMs,
+          responseBytes,
           success,
           errorType,
           metadata: extractMetadata(toolName, args)

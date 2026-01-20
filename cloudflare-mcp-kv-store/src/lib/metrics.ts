@@ -18,6 +18,7 @@ export interface ToolCallMetric {
   userName?: string;
   tool: string;
   durationMs: number;
+  responseBytes?: number;  // Size of JSON response in bytes
   success: boolean;
   errorType?: string;
   metadata?: {
@@ -36,6 +37,11 @@ export interface ToolStats {
   avgDurationMs: number;
   durations: number[];  // For percentile calculations
   errors: Record<string, number>;  // Error type counts
+  // Response size tracking
+  totalBytes: number;
+  avgBytes: number;
+  maxBytes: number;
+  responseSizes: number[];  // For percentile calculations
 }
 
 export interface HourlyStats {
@@ -65,6 +71,9 @@ export interface ToolUsageSummary {
     successRate: number;
     avgDurationMs: number;
     p95DurationMs: number;
+    avgBytes: number;
+    maxBytes: number;
+    p95Bytes: number;
   }>;
   peakHour: { hour: string; count: number };
   topUsers: Array<{ userId: string; userName?: string; count: number }>;
@@ -159,7 +168,12 @@ async function updateDailyAggregates(env: Env, metric: ToolCallMetric): Promise<
       totalDurationMs: 0,
       avgDurationMs: 0,
       durations: [],
-      errors: {}
+      errors: {},
+      // Response size tracking
+      totalBytes: 0,
+      avgBytes: 0,
+      maxBytes: 0,
+      responseSizes: []
     };
   }
 
@@ -172,6 +186,19 @@ async function updateDailyAggregates(env: Env, metric: ToolCallMetric): Promise<
   toolStats.durations.push(metric.durationMs);
   if (toolStats.durations.length > 100) {
     toolStats.durations = toolStats.durations.slice(-100);
+  }
+
+  // Track response size if available
+  if (metric.responseBytes !== undefined) {
+    toolStats.totalBytes += metric.responseBytes;
+    toolStats.avgBytes = toolStats.totalBytes / toolStats.count;
+    toolStats.maxBytes = Math.max(toolStats.maxBytes, metric.responseBytes);
+
+    // Keep only last 100 sizes for percentile calcs
+    toolStats.responseSizes.push(metric.responseBytes);
+    if (toolStats.responseSizes.length > 100) {
+      toolStats.responseSizes = toolStats.responseSizes.slice(-100);
+    }
   }
 
   if (metric.success) {
@@ -300,7 +327,15 @@ export async function getToolUsageSummary(
   const dailyMetrics = await getMetricsRange(env, startDate, endDate);
 
   // Aggregate data
-  const tools: Record<string, { count: number; successCount: number; totalMs: number; durations: number[] }> = {};
+  const tools: Record<string, {
+    count: number;
+    successCount: number;
+    totalMs: number;
+    durations: number[];
+    totalBytes: number;
+    maxBytes: number;
+    responseSizes: number[];
+  }> = {};
   const userCounts: Record<string, { count: number; name?: string }> = {};
   const hourCounts: Record<string, number> = {};
   let totalCalls = 0;
@@ -314,13 +349,28 @@ export async function getToolUsageSummary(
     // Aggregate tool stats
     for (const [tool, stats] of Object.entries(daily.tools)) {
       if (!tools[tool]) {
-        tools[tool] = { count: 0, successCount: 0, totalMs: 0, durations: [] };
+        tools[tool] = {
+          count: 0,
+          successCount: 0,
+          totalMs: 0,
+          durations: [],
+          totalBytes: 0,
+          maxBytes: 0,
+          responseSizes: []
+        };
       }
       tools[tool].count += stats.count;
       tools[tool].successCount += stats.successCount;
       tools[tool].totalMs += stats.totalDurationMs;
       tools[tool].durations.push(...stats.durations);
       totalErrors += stats.errorCount;
+
+      // Aggregate response size stats (handle legacy data without these fields)
+      tools[tool].totalBytes += stats.totalBytes || 0;
+      tools[tool].maxBytes = Math.max(tools[tool].maxBytes, stats.maxBytes || 0);
+      if (stats.responseSizes) {
+        tools[tool].responseSizes.push(...stats.responseSizes);
+      }
     }
 
     // Aggregate hourly
@@ -347,13 +397,16 @@ export async function getToolUsageSummary(
   };
 
   // Build tool summary
-  const toolSummary: Record<string, { count: number; successRate: number; avgDurationMs: number; p95DurationMs: number }> = {};
+  const toolSummary: ToolUsageSummary['tools'] = {};
   for (const [tool, data] of Object.entries(tools)) {
     toolSummary[tool] = {
       count: data.count,
       successRate: data.count > 0 ? (data.successCount / data.count) * 100 : 0,
       avgDurationMs: data.count > 0 ? Math.round(data.totalMs / data.count) : 0,
-      p95DurationMs: calculateP95(data.durations)
+      p95DurationMs: calculateP95(data.durations),
+      avgBytes: data.count > 0 ? Math.round(data.totalBytes / data.count) : 0,
+      maxBytes: data.maxBytes,
+      p95Bytes: calculateP95(data.responseSizes)
     };
   }
 
@@ -523,5 +576,61 @@ export async function computeInsights(env: Env): Promise<{
     underusedFeatures,
     trends: { callsToday, callsYesterday, changePercent },
     userSegments: segments
+  };
+}
+
+/**
+ * Get response size benchmarks - which tools return the most data
+ * Useful for identifying optimization targets
+ */
+export interface ResponseSizeBenchmark {
+  tool: string;
+  avgBytes: number;
+  maxBytes: number;
+  p95Bytes: number;
+  callCount: number;
+  // Rough token estimate (4 chars/token) for reference only
+  estimatedAvgTokens: number;
+  estimatedP95Tokens: number;
+}
+
+export async function getResponseSizeBenchmarks(
+  env: Env,
+  period: 'day' | 'week' | 'month' = 'week'
+): Promise<{
+  benchmarks: ResponseSizeBenchmark[];
+  totalAvgBytesPerCall: number;
+  largestTools: string[];  // Top 3 by avg bytes
+  period: { start: string; end: string };
+}> {
+  const summary = await getToolUsageSummary(env, period);
+
+  const benchmarks: ResponseSizeBenchmark[] = Object.entries(summary.tools)
+    .map(([tool, stats]) => ({
+      tool,
+      avgBytes: stats.avgBytes,
+      maxBytes: stats.maxBytes,
+      p95Bytes: stats.p95Bytes,
+      callCount: stats.count,
+      // Rough token estimate - divide by 4 (not accurate, just directional)
+      estimatedAvgTokens: Math.round(stats.avgBytes / 4),
+      estimatedP95Tokens: Math.round(stats.p95Bytes / 4)
+    }))
+    .filter(b => b.avgBytes > 0)  // Exclude tools with no size data yet
+    .sort((a, b) => b.avgBytes - a.avgBytes);
+
+  // Calculate weighted average bytes per call
+  const totalBytes = benchmarks.reduce((sum, b) => sum + (b.avgBytes * b.callCount), 0);
+  const totalCalls = benchmarks.reduce((sum, b) => sum + b.callCount, 0);
+  const totalAvgBytesPerCall = totalCalls > 0 ? Math.round(totalBytes / totalCalls) : 0;
+
+  // Top 3 largest tools
+  const largestTools = benchmarks.slice(0, 3).map(b => b.tool);
+
+  return {
+    benchmarks,
+    totalAvgBytesPerCall,
+    largestTools,
+    period: summary.period
   };
 }

@@ -100,10 +100,13 @@ export function validateSections(sections: string[]): void {
     throw new Error('Sections array is required');
   }
 
+  // Must match the enum in mcp/tools.ts read_trip_section schema
   const allowedSections = [
-    'meta', 'travelers', 'lodging', 'itinerary', 'tours', 'transportation',
-    'flights', 'budget', 'maps', 'media', 'contacts', 'documents', 'notes',
-    'tiers', 'bookings', 'payments', 'deposits'
+    'meta', 'travelers', 'dates', 'budget', 'flights', 'lodging', 'itinerary',
+    'tiers', 'media', 'bookings', 'featuredLinks', 'cruiseInfo',
+    // Additional sections used in trips but not in schema enum
+    'tours', 'transportation', 'maps', 'contacts', 'documents', 'notes',
+    'payments', 'deposits'
   ];
 
   for (const section of sections) {

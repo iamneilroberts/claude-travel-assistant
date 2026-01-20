@@ -62,7 +62,7 @@ export const adminTools: AdminTool[] = [
   },
   {
     name: 'admin_get_tool_usage',
-    description: 'Get tool usage statistics for a time period. Shows call counts, success rates, and response times.',
+    description: 'Get tool usage statistics for a time period. Shows call counts, success rates, response times, and response sizes (bytes).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -106,7 +106,7 @@ export const adminTools: AdminTool[] = [
   },
   {
     name: 'admin_get_performance',
-    description: 'Get system performance metrics: response times, error rates, slow operations.',
+    description: 'Get system performance metrics: response times, error rates, slow operations, and heavy tools (large response sizes).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -114,6 +114,20 @@ export const adminTools: AdminTool[] = [
           type: 'string',
           enum: ['day', 'week', 'month'],
           description: 'Time period to analyze (default: day)'
+        }
+      }
+    }
+  },
+  {
+    name: 'admin_get_response_sizes',
+    description: 'Get response size benchmarks for all tools. Shows which tools return the most data (useful for context window optimization). Includes rough token estimates.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        period: {
+          type: 'string',
+          enum: ['day', 'week', 'month'],
+          description: 'Time period to analyze (default: week)'
         }
       }
     }

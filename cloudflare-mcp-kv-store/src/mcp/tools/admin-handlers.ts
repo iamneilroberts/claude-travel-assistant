@@ -7,7 +7,8 @@ import type { Env, UserProfile } from '../../types';
 import {
   getRealtimeCalls,
   getToolUsageSummary,
-  computeInsights
+  computeInsights,
+  getResponseSizeBenchmarks
 } from '../../lib/metrics';
 import {
   listAllKeys,
@@ -232,7 +233,11 @@ export const handleAdminGetToolUsage: AdminToolHandler = async (args, env) => {
         calls: stats.count,
         successRate: Math.round(stats.successRate) + '%',
         avgResponseMs: stats.avgDurationMs,
-        p95ResponseMs: stats.p95DurationMs
+        p95ResponseMs: stats.p95DurationMs,
+        // Response size stats (may be 0 for tools without data yet)
+        avgBytes: stats.avgBytes,
+        p95Bytes: stats.p95Bytes,
+        maxBytes: stats.maxBytes
       }))
       .sort((a, b) => b.calls - a.calls)
   });
@@ -358,6 +363,19 @@ export const handleAdminGetPerformance: AdminToolHandler = async (args, env) => 
     }))
     .sort((a, b) => parseFloat(b.errorRate) - parseFloat(a.errorRate));
 
+  // Find heavy tools (large response sizes > 5KB avg)
+  const heavyTools = Object.entries(summary.tools)
+    .filter(([_, stats]) => stats.avgBytes > 5000)
+    .map(([name, stats]) => ({
+      name,
+      avgBytes: stats.avgBytes,
+      p95Bytes: stats.p95Bytes,
+      maxBytes: stats.maxBytes,
+      // Rough token estimate for context
+      estimatedTokens: Math.round(stats.avgBytes / 4)
+    }))
+    .sort((a, b) => b.avgBytes - a.avgBytes);
+
   return json({
     period: summary.period,
     overview: {
@@ -367,15 +385,50 @@ export const handleAdminGetPerformance: AdminToolHandler = async (args, env) => 
     },
     slowOperations: slowTools,
     errorProneTools: errorTools,
+    heavyTools,  // Tools with large response sizes
     toolPerformance: Object.entries(summary.tools)
       .map(([name, stats]) => ({
         name,
         calls: stats.count,
         avgMs: stats.avgDurationMs,
         p95Ms: stats.p95DurationMs,
+        avgBytes: stats.avgBytes,
         successRate: Math.round(stats.successRate) + '%'
       }))
       .sort((a, b) => b.calls - a.calls)
+  });
+};
+
+export const handleAdminGetResponseSizes: AdminToolHandler = async (args, env) => {
+  const period = args.period || 'week';
+  const benchmarks = await getResponseSizeBenchmarks(env, period);
+
+  // Format for display
+  const formatBytes = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  };
+
+  return json({
+    period: benchmarks.period,
+    summary: {
+      totalAvgBytesPerCall: benchmarks.totalAvgBytesPerCall,
+      totalAvgBytesFormatted: formatBytes(benchmarks.totalAvgBytesPerCall),
+      largestTools: benchmarks.largestTools,
+      toolCount: benchmarks.benchmarks.length
+    },
+    _note: 'Token estimates are rough (bytes/4). Actual tokenization varies by model.',
+    benchmarks: benchmarks.benchmarks.map(b => ({
+      tool: b.tool,
+      calls: b.callCount,
+      avgBytes: b.avgBytes,
+      avgFormatted: formatBytes(b.avgBytes),
+      p95Bytes: b.p95Bytes,
+      maxBytes: b.maxBytes,
+      estimatedAvgTokens: b.estimatedAvgTokens,
+      estimatedP95Tokens: b.estimatedP95Tokens
+    }))
   });
 };
 
@@ -1844,6 +1897,7 @@ export const adminHandlers: Record<string, AdminToolHandler> = {
   admin_get_user_segments: handleAdminGetUserSegments,
   admin_get_at_risk_users: handleAdminGetAtRiskUsers,
   admin_get_performance: handleAdminGetPerformance,
+  admin_get_response_sizes: handleAdminGetResponseSizes,
   admin_get_revenue: handleAdminGetRevenue,
   admin_search_users: handleAdminSearchUsers,
   admin_search_trips: handleAdminSearchTrips,

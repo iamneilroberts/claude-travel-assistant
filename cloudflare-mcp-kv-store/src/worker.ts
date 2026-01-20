@@ -45,8 +45,12 @@ function getCorsHeaders(request: Request): Record<string, string> {
     WORKER_BASE_URL,
   ];
 
-  // Use the request origin if it's in our allowed list, otherwise use default
-  const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+  // Check if origin is in allowed list OR is a *.voygent.ai subdomain
+  const isAllowedOrigin = allowedOrigins.includes(origin) ||
+    /^https:\/\/[a-z0-9-]+\.voygent\.ai$/.test(origin);
+
+  // Use the request origin if allowed, otherwise use default
+  const allowOrigin = isAllowedOrigin ? origin : allowedOrigins[0];
 
   return {
     "Access-Control-Allow-Origin": allowOrigin,
@@ -93,7 +97,8 @@ export default {
     if (adminResponse) return adminResponse;
 
     // 1. Authentication - check against list of valid keys OR KV users (for MCP endpoints)
-    const requestKey = url.searchParams.get("key");
+    // Accept both "key" and "authKey" params (docs use authKey, legacy uses key)
+    const requestKey = url.searchParams.get("key") || url.searchParams.get("authKey");
     if (!requestKey) {
       return new Response("Unauthorized - key required", { status: 401 });
     }
