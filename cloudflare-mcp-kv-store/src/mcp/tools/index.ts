@@ -49,6 +49,11 @@ import {
   getReference,
   validateTrip as validateReference
 } from './reference';
+import {
+  handleListSampleTrips,
+  handleAcceptSampleTrips,
+  handleDeclineSampleTrips
+} from './sample-trips';
 
 // Tool name to handler mapping - all wrapped with metrics
 export const toolHandlers: Record<string, McpToolHandler> = {
@@ -78,7 +83,10 @@ export const toolHandlers: Record<string, McpToolHandler> = {
   youtube_search: withMetrics('youtube_search', handleYoutubeSearch),
   set_reference: withMetrics('set_reference', setReference),
   get_reference: withMetrics('get_reference', getReference),
-  validate_reference: withMetrics('validate_reference', validateReference)
+  validate_reference: withMetrics('validate_reference', validateReference),
+  list_sample_trips: withMetrics('list_sample_trips', handleListSampleTrips),
+  accept_sample_trips: withMetrics('accept_sample_trips', handleAcceptSampleTrips),
+  decline_sample_trips: withMetrics('decline_sample_trips', handleDeclineSampleTrips)
 };
 
 // Re-export all handlers for direct imports if needed
@@ -106,5 +114,8 @@ export {
   handleDismissAdminMessage,
   handleAddTripImage,
   handlePrepareImageUpload,
-  handleYoutubeSearch
+  handleYoutubeSearch,
+  handleListSampleTrips,
+  handleAcceptSampleTrips,
+  handleDeclineSampleTrips
 };

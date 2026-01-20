@@ -150,12 +150,17 @@ export function buildAgentInfo(userProfile: UserProfile | null): AgentInfo {
     email: userProfile.email,
     phone: userProfile.phone,
     agency: userProfile.agency.name,
+    title: userProfile.agency.title,
     franchise: userProfile.agency.franchise,
     logo: userProfile.agency.logo,
     website: userProfile.agency.website,
     bookingUrl: userProfile.agency.bookingUrl,
     primaryColor: userProfile.branding?.primaryColor,
-    accentColor: userProfile.branding?.accentColor
+    accentColor: userProfile.branding?.accentColor,
+    agentPhoto: userProfile.branding?.agentPhoto,
+    tagline: userProfile.branding?.tagline,
+    stylePreset: userProfile.branding?.stylePreset,
+    social: userProfile.branding?.social
   };
 }
 
@@ -688,7 +693,7 @@ export function buildTemplateData(
     ?? (commentCount === 1 ? '1 comment' : `${commentCount} comments`);
 
   // Extract tripId from tripKey (format: "prefix/tripId")
-  const tripId = tripKey.includes('/') ? tripKey.split('/').pop() : tripKey;
+  const tripId = tripKey.includes('/') ? tripKey.split('/').pop() || tripKey : tripKey;
   const commentThreadUrl = `https://voygent.somotravel.workers.dev/trips/${encodeURIComponent(tripId)}/comments`;
 
   // Build unified timeline (merges ports + itinerary + flights + lodging)

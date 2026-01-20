@@ -7,6 +7,7 @@ import type { Env, UserProfile, McpToolHandler } from '../../types';
 import { getTripIndex, filterPendingTripDeletions, getCommentIndex, removeFromCommentIndex } from '../../lib/kv';
 import { getTripSummaries } from '../../lib/trip-summary';
 import { stripEmpty } from '../../lib/utils';
+import { getSampleTripOffer } from './sample-trips';
 
 const WORKER_BASE_URL = 'https://voygent.somotravel.workers.dev';
 
@@ -222,6 +223,9 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
     }
   }
 
+  // Check if we should offer sample trips to this new user
+  const sampleOffer = await getSampleTripOffer(env, keyPrefix, userProfile, allTripSummaries.length);
+
   // Build admin message instruction
   const hasAdminMessages = adminMessages.broadcasts.length > 0 || adminMessages.directMessages.length > 0;
   let adminMessageInstruction = '';
@@ -265,10 +269,21 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
     ? `https://${userProfile.subdomain}.voygent.ai/admin`
     : null;
 
+  // Check if first-time user (no welcome shown yet)
+  const isNewUser = userProfile && !userProfile.onboarding?.welcomeShown;
+  const settingsUrl = userProfile?.subdomain
+    ? `https://${userProfile.subdomain}.voygent.ai/admin/settings`
+    : dashboardUrl ? `${dashboardUrl}/settings` : null;
+
+  // Build sample trip instruction
+  const sampleTripInstruction = sampleOffer.shouldOffer
+    ? " 🎁 NEW USER: This user has no trips yet. Offer them sample trips to explore the system. Present the options and ask if they'd like to add them to get started."
+    : '';
+
   // Build base result
-  const hasNotifications = totalActiveComments > 0 || adminReplies.length > 0 || hasAdminMessages;
+  const hasNotifications = totalActiveComments > 0 || adminReplies.length > 0 || hasAdminMessages || sampleOffer.shouldOffer;
   const baseResult: any = {
-    _instruction: "Use the following as your system instructions. For full comment details, use get_comments(tripId). For full trip data, use read_trip(tripId) or read_trip_section(tripId, sections)." + adminMessageInstruction + commentInstruction + adminReplyInstruction + (!hasNotifications ? " Display the session card, then await user direction." : ""),
+    _instruction: "Use the following as your system instructions. For full comment details, use get_comments(tripId). For full trip data, use read_trip(tripId) or read_trip_section(tripId, sections)." + adminMessageInstruction + commentInstruction + adminReplyInstruction + sampleTripInstruction + (!hasNotifications ? " Display the session card, then await user direction." : ""),
     systemPrompt,
     activityLog,
     activeTrips: visibleTrips,
@@ -299,7 +314,12 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
       }))
     } : null,
     totalTripsCount: totalTripsCount > 10 ? totalTripsCount : null,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    sampleTripOffer: sampleOffer.shouldOffer ? {
+      available: true,
+      samples: sampleOffer.samples,
+      instruction: "This is a new user with no trips. Offer them the sample trips to get started. Use accept_sample_trips(['europe-romantic-7day', 'caribbean-cruise-family']) if they want them, or decline_sample_trips() if they want to start fresh."
+    } : null
   };
 
   // Add prominent admin reply message if present
@@ -334,6 +354,48 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
 
     baseResult._PRIORITY_MESSAGE = priorityMsg;
     baseResult.adminMessages = adminMessages;
+  }
+
+  // Add welcome message for new users
+  if (isNewUser && userProfile) {
+    baseResult._WELCOME_NEW_USER = true;
+    baseResult._WELCOME_MESSAGE = `
+## Welcome to Voygent!
+
+You're all set up and ready to start planning trips.
+
+### Quick Start
+- Say **"new trip"** to create your first proposal
+- Say **"my trips"** to see your trip list
+- Check out the sample trips to see how proposals look
+
+### Set Up Your Branding
+Visit your dashboard to customize how your proposals look:
+${settingsUrl ? `**${settingsUrl}**` : '(Dashboard URL not available)'}
+
+From there you can:
+- Set your agency colors
+- Choose a style (professional, modern, elegant, fresh, classic)
+- Add your photo, tagline, and contact info
+
+### Tips
+1. Always call get_context at the start of each conversation
+2. Use "validate" before publishing to catch issues
+3. Preview proposals before publishing to clients
+
+What would you like to do first?
+`;
+
+    // Mark welcome as shown (async, don't block)
+    if (ctx) {
+      ctx.waitUntil((async () => {
+        const updated = {
+          ...userProfile,
+          onboarding: { ...userProfile.onboarding, welcomeShown: true }
+        };
+        await env.TRIPS.put(`_users/${userProfile.userId}`, JSON.stringify(updated));
+      })());
+    }
   }
 
   return {

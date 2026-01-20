@@ -41,9 +41,11 @@ Upload templates to KV:
 npx wrangler kv:key put "_templates/[name]" --path=[file] --namespace-id=aa119fcdabfe40858f1ce46a5fbf4563
 ```
 
+**GitHub Pages Caching:** Newly published/previewed proposals take up to 60 seconds to show changes on somotravel.us due to GitHub Pages CDN caching. Use hard refresh (Ctrl+Shift+R or Cmd+Shift+R) if testing recent changes.
+
 ## Template Helpers
 
-Available helpers: `formatCurrency`, `formatDate`, `capitalize`, `default`, `encodeUri`, `timestamp`, `pluralize`
+Available helpers: `formatCurrency`, `formatDate`, `formatTime`, `capitalize`, `default`, `encodeUri`, `timestamp`, `pluralize`, `initials`
 
 ## Database
 

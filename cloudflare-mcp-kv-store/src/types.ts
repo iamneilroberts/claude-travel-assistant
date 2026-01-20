@@ -24,6 +24,7 @@ export interface UserProfile {
   phone?: string;
   agency: {
     name: string;
+    title?: string;           // e.g., "Cruise & Tour Specialist"
     franchise?: string;
     logo?: string;
     website?: string;
@@ -31,8 +32,19 @@ export interface UserProfile {
   };
   template?: string;
   branding?: {
-    primaryColor?: string;
-    accentColor?: string;
+    colorScheme?: string;       // Preset name: 'ocean', 'sunset', 'forest', etc. or 'custom'
+    darkMode?: boolean;         // Light (false) or dark (true) mode
+    primaryColor?: string;      // e.g., "#1b619c"
+    accentColor?: string;       // e.g., "#3baf2a"
+    stylePreset?: 'professional' | 'modern' | 'elegant' | 'fresh' | 'classic';
+    agentPhoto?: string;        // Headshot URL
+    tagline?: string;           // Hero tagline on proposals
+    social?: {
+      facebook?: string;
+      instagram?: string;
+      linkedin?: string;
+      twitter?: string;
+    };
   };
   affiliates?: AffiliateIds;
   subdomain?: string;  // e.g., "trial-abc123" or "kimstravel"
@@ -40,6 +52,10 @@ export interface UserProfile {
   lastActive: string;
   status: 'active' | 'inactive' | 'pending' | 'suspended';
   subscription?: SubscriptionInfo;
+  sampleTripsOffered?: boolean;  // Set to true after offering sample trips on first login
+  onboarding?: {
+    welcomeShown?: boolean;   // True after first get_context
+  };
 }
 
 export interface AffiliateIds {
@@ -103,12 +119,22 @@ export interface AgentInfo {
   email?: string;
   phone?: string;
   agency: string;
+  title?: string;
   franchise?: string;
   logo?: string;
   website?: string;
   bookingUrl?: string;
   primaryColor?: string;
   accentColor?: string;
+  agentPhoto?: string;
+  tagline?: string;
+  stylePreset?: string;
+  social?: {
+    facebook?: string;
+    instagram?: string;
+    linkedin?: string;
+    twitter?: string;
+  };
 }
 
 export interface TemplateConfig {

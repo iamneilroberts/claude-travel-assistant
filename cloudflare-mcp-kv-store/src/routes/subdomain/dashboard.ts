@@ -18,9 +18,10 @@ import {
   buildMagicLinkUrl,
   checkMagicLinkRateLimit
 } from '../../lib/magic-link';
-import { listPublishedTrips } from '../../lib/published';
+import { listPublishedTrips, getPublishedTripMetadata } from '../../lib/published';
 import { getUserStats, getTripStats } from '../../lib/stats';
-import { getCommentIndex } from '../../lib/kv';
+import { getCommentIndex, getTripIndex, filterPendingTripDeletions } from '../../lib/kv';
+import { getTripSummaries } from '../../lib/trip-summary';
 import {
   getLoginPageHtml,
   getDashboardHomeHtml,
@@ -97,12 +98,17 @@ export async function handleUserDashboard(
 
   // Settings page
   if (path === '/admin/settings' && method === 'GET') {
-    return handleSettingsPage(request, env, userProfile, session, subdomain, corsHeaders);
+    return handleSettingsPage(request, env, url, userProfile, session, subdomain, corsHeaders);
   }
 
-  // Settings form submission
+  // Settings form submission (profile)
   if (path === '/admin/settings' && method === 'POST') {
     return handleSettingsUpdate(request, env, userProfile, session, subdomain, corsHeaders);
+  }
+
+  // Branding settings form submission
+  if (path === '/admin/settings/branding' && method === 'POST') {
+    return handleBrandingUpdate(request, env, userProfile, session, subdomain, corsHeaders);
   }
 
   // Unknown admin route
@@ -256,15 +262,42 @@ async function handleDashboardHome(
   subdomain: string,
   corsHeaders: Record<string, string>
 ): Promise<Response> {
-  // Get published trips
-  const publishedTrips = await listPublishedTrips(env, userProfile.userId);
-  const tripIds = publishedTrips.map(t => t.tripId);
+  const keyPrefix = userProfile.userId + '/';
 
-  // Get stats
-  const stats = await getUserStats(env, userProfile.userId, tripIds);
+  // Get ALL trips for this user (not just published)
+  const allTripIds = await getTripIndex(env, keyPrefix);
+  const visibleTripIds = await filterPendingTripDeletions(env, keyPrefix, allTripIds, ctx);
+
+  // Get trip summaries for all trips
+  const tripSummaries = await getTripSummaries(env, keyPrefix, visibleTripIds, ctx);
+
+  // Get published trips to check publish status
+  const publishedTrips = await listPublishedTrips(env, userProfile.userId);
+  const publishedMap = new Map(publishedTrips.map(t => [t.tripId, t]));
+
+  // Combine trip data with publish status
+  const recentTrips = tripSummaries.slice(0, 5).map(summary => {
+    const published = publishedMap.get(summary.tripId);
+    return {
+      tripId: summary.tripId,
+      title: summary.title,
+      destination: summary.destination,
+      status: summary.status || summary.phase || 'draft',
+      lastModified: summary.updatedAt,
+      isPublished: !!published,
+      filename: published?.filename,
+      category: published?.category || 'proposal',
+      views: published?.views || 0
+    };
+  });
+
+  // Get stats (using published trip IDs for view stats)
+  const publishedTripIds = publishedTrips.map(t => t.tripId);
+  const stats = await getUserStats(env, userProfile.userId, publishedTripIds);
+  stats.totalTrips = visibleTripIds.length;
 
   // Get comment count
-  const commentIndex = await getCommentIndex(env, userProfile.userId + '/');
+  const commentIndex = await getCommentIndex(env, keyPrefix);
   stats.unreadComments = commentIndex.length;
 
   // Fill in trip titles for top trips
@@ -278,7 +311,7 @@ async function handleDashboardHome(
   // Get monthly usage for publish limits
   const usage = await getMonthlyUsage(env, userProfile.userId);
 
-  const html = getDashboardHomeHtml(userProfile, subdomain, stats, publishedTrips.slice(0, 5), usage);
+  const html = getDashboardHomeHtml(userProfile, subdomain, stats, recentTrips, usage);
 
   return new Response(html, {
     headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders }
@@ -297,17 +330,39 @@ async function handleTripsPage(
   subdomain: string,
   corsHeaders: Record<string, string>
 ): Promise<Response> {
-  // Get published trips with stats
-  const publishedTrips = await listPublishedTrips(env, userProfile.userId);
+  const keyPrefix = userProfile.userId + '/';
 
-  // Enrich with view stats
+  // Get ALL trips for this user
+  const allTripIds = await getTripIndex(env, keyPrefix);
+  const visibleTripIds = await filterPendingTripDeletions(env, keyPrefix, allTripIds, ctx);
+
+  // Get trip summaries
+  const tripSummaries = await getTripSummaries(env, keyPrefix, visibleTripIds, ctx);
+
+  // Get published trips to check publish status
+  const publishedTrips = await listPublishedTrips(env, userProfile.userId);
+  const publishedMap = new Map(publishedTrips.map(t => [t.tripId, t]));
+
+  // Combine trip data with stats
   const tripsWithStats = await Promise.all(
-    publishedTrips.map(async trip => {
-      const stats = await getTripStats(env, userProfile.userId, trip.tripId, 7);
+    tripSummaries.map(async summary => {
+      const published = publishedMap.get(summary.tripId);
+      const stats = published
+        ? await getTripStats(env, userProfile.userId, summary.tripId, 7)
+        : { totalViews: 0, dailyViews: [] };
+
       return {
-        ...trip,
+        tripId: summary.tripId,
+        title: summary.title,
+        destination: summary.destination,
+        status: summary.status || summary.phase || 'draft',
+        lastModified: summary.updatedAt,
+        isPublished: !!published,
+        filename: published?.filename,
+        category: published?.category || 'proposal',
+        publishedAt: published?.publishedAt,
         viewsTotal: stats.totalViews,
-        viewsLast7Days: stats.dailyViews.reduce((sum, d) => sum + d.views, 0)
+        viewsLast7Days: stats.dailyViews.reduce((sum: number, d: any) => sum + d.views, 0)
       };
     })
   );
@@ -374,12 +429,14 @@ async function handleCommentsPage(
 async function handleSettingsPage(
   request: Request,
   env: Env,
+  url: URL,
   userProfile: UserProfile,
   session: Session,
   subdomain: string,
   corsHeaders: Record<string, string>
 ): Promise<Response> {
-  const html = getSettingsPageHtml(userProfile, subdomain);
+  const success = url.searchParams.get('saved') === '1' ? 'Settings saved successfully!' : undefined;
+  const html = getSettingsPageHtml(userProfile, subdomain, success);
 
   return new Response(html, {
     headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders }
@@ -421,6 +478,68 @@ async function handleSettingsUpdate(
     return Response.redirect(`https://${subdomain}.voygent.ai/admin/settings?saved=1`, 302);
   } catch (err) {
     console.error('Settings update error:', err);
+    return Response.redirect(`https://${subdomain}.voygent.ai/admin/settings?error=1`, 302);
+  }
+}
+
+/**
+ * Handle branding settings update
+ */
+async function handleBrandingUpdate(
+  request: Request,
+  env: Env,
+  userProfile: UserProfile,
+  session: Session,
+  subdomain: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    const formData = await request.formData();
+
+    // Get form values
+    const colorScheme = formData.get('colorScheme') as string;
+    const darkMode = formData.get('darkMode') as string;
+    const primaryColor = formData.get('primaryColor') as string;
+    const accentColor = formData.get('accentColor') as string;
+    const tagline = formData.get('tagline') as string;
+    const agentPhoto = formData.get('agentPhoto') as string;
+    const agencyTitle = formData.get('agencyTitle') as string;
+    const agencyLogo = formData.get('agencyLogo') as string;
+
+    // Validate color scheme
+    const validSchemes = ['ocean', 'sunset', 'forest', 'royal', 'coral', 'slate', 'wine', 'tropical', 'custom'];
+    const validColorScheme = validSchemes.includes(colorScheme) ? colorScheme : undefined;
+
+    // Validate hex colors
+    const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
+    const validPrimaryColor = hexColorRegex.test(primaryColor) ? primaryColor : undefined;
+    const validAccentColor = hexColorRegex.test(accentColor) ? accentColor : undefined;
+
+    // Update branding
+    userProfile.branding = {
+      ...userProfile.branding,
+      colorScheme: validColorScheme || userProfile.branding?.colorScheme,
+      darkMode: darkMode === 'true',
+      primaryColor: validPrimaryColor || userProfile.branding?.primaryColor,
+      accentColor: validAccentColor || userProfile.branding?.accentColor,
+      tagline: tagline || undefined,
+      agentPhoto: agentPhoto || undefined
+    };
+
+    // Update agency title and logo
+    userProfile.agency = {
+      ...userProfile.agency,
+      title: agencyTitle || userProfile.agency?.title,
+      logo: agencyLogo || userProfile.agency?.logo
+    };
+
+    // Save updated profile
+    await env.TRIPS.put(`_users/${userProfile.userId}`, JSON.stringify(userProfile));
+
+    // Redirect back to settings with success message
+    return Response.redirect(`https://${subdomain}.voygent.ai/admin/settings?saved=1`, 302);
+  } catch (err) {
+    console.error('Branding update error:', err);
     return Response.redirect(`https://${subdomain}.voygent.ai/admin/settings?error=1`, 302);
   }
 }

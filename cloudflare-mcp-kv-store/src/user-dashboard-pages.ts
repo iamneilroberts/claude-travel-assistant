@@ -5,19 +5,27 @@
 import type { UserProfile, MonthlyUsage } from './types';
 
 /**
+ * Branding config for dashboard styling
+ */
+interface DashboardBranding {
+  primaryColor: string;
+  accentColor: string;
+  darkMode: boolean;
+}
+
+/**
  * Common HTML head with styles
  */
-function getCommonHead(title: string, primaryColor: string = '#667eea'): string {
-  return `
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${escapeHtml(title)} - Voygent Dashboard</title>
-    <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      :root {
+function getCommonHead(title: string, branding: DashboardBranding = { primaryColor: '#667eea', accentColor: '#3baf2a', darkMode: false }): string {
+  const { primaryColor, accentColor, darkMode } = branding;
+
+  // Light mode colors
+  const lightVars = `
         --primary: ${primaryColor};
+        --accent: ${accentColor};
         --primary-dark: color-mix(in srgb, ${primaryColor} 80%, black);
         --bg: #f8f9fa;
+        --surface: #f0f0f0;
         --card-bg: white;
         --text: #333;
         --text-muted: #666;
@@ -25,6 +33,32 @@ function getCommonHead(title: string, primaryColor: string = '#667eea'): string 
         --success: #28a745;
         --warning: #ffc107;
         --danger: #dc3545;
+  `;
+
+  // Dark mode colors
+  const darkVars = `
+        --primary: ${primaryColor};
+        --accent: ${accentColor};
+        --primary-dark: color-mix(in srgb, ${primaryColor} 80%, white);
+        --bg: #1a1a2e;
+        --surface: #16213e;
+        --card-bg: #0f3460;
+        --text: #eaeaea;
+        --text-muted: #a0a0a0;
+        --border: #2a2a4a;
+        --success: #2dd36f;
+        --warning: #ffc409;
+        --danger: #eb445a;
+  `;
+
+  return `
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${escapeHtml(title)} - Voygent Dashboard</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      :root {
+        ${darkMode ? darkVars : lightVars}
       }
       body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -222,6 +256,32 @@ function getCommonHead(title: string, primaryColor: string = '#667eea'): string 
 }
 
 /**
+ * Extract branding config from user profile
+ */
+function getBranding(userProfile: UserProfile): DashboardBranding {
+  const colorScheme = userProfile.branding?.colorScheme || 'ocean';
+  const darkMode = userProfile.branding?.darkMode || false;
+
+  // Color scheme defaults
+  const schemes: Record<string, { primary: string; accent: string }> = {
+    ocean: { primary: '#0077b6', accent: '#00b4d8' },
+    sunset: { primary: '#e63946', accent: '#f4a261' },
+    forest: { primary: '#2d6a4f', accent: '#95d5b2' },
+    royal: { primary: '#5a189a', accent: '#e0aaff' },
+    coral: { primary: '#ff6b6b', accent: '#feca57' },
+    slate: { primary: '#475569', accent: '#38bdf8' },
+    wine: { primary: '#722f37', accent: '#c9ada7' },
+    tropical: { primary: '#0891b2', accent: '#34d399' },
+  };
+
+  const scheme = schemes[colorScheme];
+  const primaryColor = userProfile.branding?.primaryColor || scheme?.primary || '#0077b6';
+  const accentColor = userProfile.branding?.accentColor || scheme?.accent || '#00b4d8';
+
+  return { primaryColor, accentColor, darkMode };
+}
+
+/**
  * Common navigation
  */
 function getNav(subdomain: string, activePage: string): string {
@@ -249,19 +309,19 @@ export function getLoginPageHtml(
   userProfile: UserProfile,
   error?: string
 ): string {
-  const primaryColor = userProfile.branding?.primaryColor || '#667eea';
+  const branding = getBranding(userProfile);
   const displayName = userProfile.agency?.name || userProfile.name || 'Travel Advisor';
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
-  ${getCommonHead('Login', primaryColor)}
+  ${getCommonHead('Login', branding)}
 </head>
 <body>
   <div class="login-container">
     <div class="login-card">
       <div class="login-logo">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="${primaryColor}">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="${branding.primaryColor}">
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
         </svg>
       </div>
@@ -298,18 +358,18 @@ export function getMagicLinkSentHtml(
   email: string,
   magicLinkUrl: string
 ): string {
-  const primaryColor = userProfile.branding?.primaryColor || '#667eea';
+  const branding = getBranding(userProfile);
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
-  ${getCommonHead('Check Your Email', primaryColor)}
+  ${getCommonHead('Check Your Email', branding)}
 </head>
 <body>
   <div class="login-container">
     <div class="login-card">
       <div class="login-logo">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="${primaryColor}">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="${branding.primaryColor}">
           <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
         </svg>
       </div>
@@ -346,7 +406,7 @@ export function getDashboardHomeHtml(
   recentTrips: any[],
   usage?: MonthlyUsage
 ): string {
-  const primaryColor = userProfile.branding?.primaryColor || '#667eea';
+  const branding = getBranding(userProfile);
   const displayName = userProfile.agency?.name || userProfile.name || 'Travel Advisor';
 
   // Usage and limits
@@ -367,19 +427,28 @@ export function getDashboardHomeHtml(
   const recentTripsHtml = recentTrips.length > 0
     ? recentTrips.map(trip => `
         <tr>
-          <td><a href="/trips/${escapeHtml(trip.filename)}">${escapeHtml(trip.title)}</a></td>
-          <td><span class="badge badge-info">${escapeHtml(trip.category)}</span></td>
-          <td>${trip.views || 0}</td>
+          <td>
+            ${trip.isPublished && trip.filename
+              ? `<a href="/trips/${escapeHtml(trip.filename)}">${escapeHtml(trip.title)}</a>`
+              : escapeHtml(trip.title)}
+            ${trip.destination ? `<br><small style="color:var(--text-muted);">${escapeHtml(trip.destination)}</small>` : ''}
+          </td>
+          <td>
+            ${trip.isPublished
+              ? `<span class="badge badge-success">Published</span>`
+              : `<span class="badge badge-warning">Draft</span>`}
+          </td>
+          <td>${trip.isPublished ? (trip.views || 0) : '-'}</td>
           <td>${formatDate(trip.lastModified)}</td>
           <td><button class="btn btn-sm btn-primary" onclick="openTripInClaude('${escapeHtml(trip.tripId)}', '${escapeHtml(trip.title).replace(/'/g, "\\'")}')">Open in Claude</button></td>
         </tr>
       `).join('')
-    : '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">No trips published yet</td></tr>';
+    : '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">No trips yet</td></tr>';
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
-  ${getCommonHead('Dashboard', primaryColor)}
+  ${getCommonHead('Dashboard', branding)}
 </head>
 <body>
   ${getNav(subdomain, 'home')}
@@ -494,46 +563,78 @@ export function getTripsPageHtml(
   subdomain: string,
   trips: Array<{
     tripId: string;
-    filename: string;
     title: string;
-    destination?: string;
-    category: string;
-    publishedAt: string;
+    destination?: string | null;
+    status?: string;
     lastModified: string;
+    isPublished: boolean;
+    filename?: string;
+    category?: string;
+    publishedAt?: string;
     viewsTotal: number;
     viewsLast7Days: number;
   }>
 ): string {
-  const primaryColor = userProfile.branding?.primaryColor || '#667eea';
+  const branding = getBranding(userProfile);
 
   const tripsHtml = trips.length > 0
     ? trips.map(trip => `
         <tr>
           <td>
-            <strong>${escapeHtml(trip.title)}</strong>
+            <strong>${trip.isPublished && trip.filename
+              ? `<a href="/trips/${escapeHtml(trip.filename)}">${escapeHtml(trip.title)}</a>`
+              : escapeHtml(trip.title)}</strong>
             ${trip.destination ? `<br><small style="color:var(--text-muted);">${escapeHtml(trip.destination)}</small>` : ''}
           </td>
-          <td><span class="badge badge-info">${escapeHtml(trip.category)}</span></td>
-          <td>${trip.viewsTotal}</td>
-          <td>${trip.viewsLast7Days}</td>
-          <td>${formatDate(trip.publishedAt)}</td>
           <td>
-            <a href="/trips/${escapeHtml(trip.filename)}" class="btn btn-sm btn-secondary">View</a>
+            ${trip.isPublished
+              ? `<span class="badge badge-success">Published</span>`
+              : `<span class="badge badge-warning">Draft</span>`}
+          </td>
+          <td>${trip.isPublished ? trip.viewsTotal : '-'}</td>
+          <td>${trip.isPublished ? trip.viewsLast7Days : '-'}</td>
+          <td>${trip.isPublished && trip.publishedAt ? formatDate(trip.publishedAt) : formatDate(trip.lastModified)}</td>
+          <td>
+            ${trip.isPublished && trip.filename
+              ? `<a href="/trips/${escapeHtml(trip.filename)}" class="btn btn-sm btn-secondary">View</a>`
+              : `<button class="btn btn-sm btn-primary" onclick="openTripInClaude('${escapeHtml(trip.tripId)}', '${escapeHtml(trip.title).replace(/'/g, "\\'")}')">Open in Claude</button>`}
           </td>
         </tr>
       `).join('')
-    : '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">No trips published yet. Use Claude to create and publish your first trip.</td></tr>';
+    : '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">No trips yet. Use Claude to create your first trip.</td></tr>';
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
-  ${getCommonHead('Trips', primaryColor)}
+  ${getCommonHead('Trips', branding)}
 </head>
 <body>
   ${getNav(subdomain, 'trips')}
 
   <div class="container">
-    <h1 class="page-title">Published Trips</h1>
+    <h1 class="page-title">All Trips</h1>
+
+    <!-- Toast notification -->
+    <div id="toast" style="display:none;position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:#333;color:white;padding:1rem 1.5rem;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:1000;max-width:90%;text-align:center;">
+      <div id="toast-message"></div>
+    </div>
+    <script>
+      function openTripInClaude(tripId, tripTitle) {
+        const command = 'use voygent work on trip ' + tripId;
+        navigator.clipboard.writeText(command).then(() => {
+          showToast('Copied to clipboard: "' + command + '"<br><br>Paste this in Claude to start working on <strong>' + tripTitle + '</strong>');
+          setTimeout(() => {
+            window.open('https://claude.ai/new', '_blank');
+          }, 1500);
+        });
+      }
+      function showToast(message) {
+        const toast = document.getElementById('toast');
+        document.getElementById('toast-message').innerHTML = message;
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, 4000);
+      }
+    </script>
 
     <div class="card">
       <div class="table-wrapper">
@@ -544,7 +645,7 @@ export function getTripsPageHtml(
               <th>Status</th>
               <th>Total Views</th>
               <th>Last 7 Days</th>
-              <th>Published</th>
+              <th>Last Modified</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -580,7 +681,7 @@ export function getCommentsPageHtml(
     }>;
   }>
 ): string {
-  const primaryColor = userProfile.branding?.primaryColor || '#667eea';
+  const branding = getBranding(userProfile);
 
   let commentsHtml = '';
   if (commentsData.length === 0) {
@@ -609,7 +710,7 @@ export function getCommentsPageHtml(
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
-  ${getCommonHead('Comments', primaryColor)}
+  ${getCommonHead('Comments', branding)}
 </head>
 <body>
   ${getNav(subdomain, 'comments')}
@@ -626,11 +727,32 @@ export function getCommentsPageHtml(
 /**
  * Settings page
  */
+// Color scheme presets
+const COLOR_SCHEMES: Record<string, { name: string; primary: string; accent: string; description: string }> = {
+  ocean: { name: 'Ocean', primary: '#0077b6', accent: '#00b4d8', description: 'Cool blues for a calm, professional feel' },
+  sunset: { name: 'Sunset', primary: '#e63946', accent: '#f4a261', description: 'Warm reds and oranges for energy' },
+  forest: { name: 'Forest', primary: '#2d6a4f', accent: '#95d5b2', description: 'Natural greens for eco-friendly vibes' },
+  royal: { name: 'Royal', primary: '#5a189a', accent: '#e0aaff', description: 'Rich purples for luxury travel' },
+  coral: { name: 'Coral', primary: '#ff6b6b', accent: '#feca57', description: 'Vibrant and playful' },
+  slate: { name: 'Slate', primary: '#475569', accent: '#38bdf8', description: 'Modern and minimal' },
+  wine: { name: 'Wine', primary: '#722f37', accent: '#c9ada7', description: 'Sophisticated and elegant' },
+  tropical: { name: 'Tropical', primary: '#0891b2', accent: '#34d399', description: 'Fresh beach destination feel' },
+};
+
 export function getSettingsPageHtml(
   userProfile: UserProfile,
-  subdomain: string
+  subdomain: string,
+  success?: string
 ): string {
-  const primaryColor = userProfile.branding?.primaryColor || '#667eea';
+  const branding = getBranding(userProfile);
+  const colorScheme = userProfile.branding?.colorScheme || 'ocean';
+  const darkMode = userProfile.branding?.darkMode || false;
+  const primaryColor = branding.primaryColor;
+  const accentColor = branding.accentColor;
+  const stylePreset = userProfile.branding?.stylePreset || 'professional';
+  const tagline = userProfile.branding?.tagline || '';
+  const agentPhoto = userProfile.branding?.agentPhoto || '';
+  const agencyTitle = userProfile.agency?.title || '';
   const displayName = userProfile.name || '';
   const agencyName = userProfile.agency?.name || '';
   const email = userProfile.email || '';
@@ -642,16 +764,311 @@ export function getSettingsPageHtml(
     ? formatDate(userProfile.subscription.currentPeriodEnd)
     : 'N/A';
 
+  // Generate color scheme cards (no radio inputs - use hidden input instead)
+  const schemeCards = Object.entries(COLOR_SCHEMES).map(([key, scheme]) => `
+    <div class="color-scheme-card ${colorScheme === key ? 'selected' : ''}" onclick="selectScheme('${key}', '${scheme.primary}', '${scheme.accent}')">
+      <div class="color-scheme-preview">
+        <div style="background:${scheme.primary};flex:2;"></div>
+        <div style="background:${scheme.accent};flex:1;"></div>
+      </div>
+      <div class="color-scheme-name">${scheme.name}</div>
+    </div>
+  `).join('');
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
-  ${getCommonHead('Settings', primaryColor)}
+  ${getCommonHead('Settings', branding)}
+  <style>
+    .color-schemes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .color-scheme-card {
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .color-scheme-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+    .color-scheme-card.selected {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+    }
+    .color-scheme-preview {
+      display: flex;
+      height: 40px;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+    .color-scheme-name {
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    .custom-colors {
+      display: none;
+      margin-top: 1rem;
+      padding: 1rem;
+      background: var(--surface);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .custom-colors.visible {
+      display: block;
+    }
+    .mode-toggle {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .mode-btn {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      font-size: 0.9rem;
+    }
+    .mode-btn:hover {
+      border-color: var(--primary);
+    }
+    .mode-btn.selected {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: white;
+    }
+    .mode-btn .icon {
+      font-size: 1.2rem;
+      margin-bottom: 0.25rem;
+    }
+  </style>
+  <script>
+    // Color scheme data
+    const schemes = ${JSON.stringify(COLOR_SCHEMES)};
+
+    function selectScheme(key, primary, accent) {
+      // Update hidden input
+      document.getElementById('colorSchemeInput').value = key;
+
+      // Update visual selection
+      document.querySelectorAll('.color-scheme-card').forEach(c => c.classList.remove('selected'));
+      event.currentTarget.classList.add('selected');
+
+      // Update color inputs
+      document.getElementById('primaryColorPicker').value = primary;
+      document.getElementById('primaryColorText').value = primary;
+      document.getElementById('accentColorPicker').value = accent;
+      document.getElementById('accentColorText').value = accent;
+
+      // Hide custom colors unless 'custom' selected
+      document.getElementById('customColors').classList.remove('visible');
+    }
+
+    function showCustomColors() {
+      document.getElementById('customColors').classList.add('visible');
+      document.querySelectorAll('.color-scheme-card').forEach(c => c.classList.remove('selected'));
+      document.getElementById('colorSchemeInput').value = 'custom';
+    }
+
+    function selectMode(mode) {
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('selected'));
+      event.currentTarget.classList.add('selected');
+      document.getElementById('darkModeInput').value = mode === 'dark' ? 'true' : 'false';
+    }
+
+    // Sync color pickers with text inputs
+    function syncColorInput(colorPicker, textInput) {
+      document.getElementById(textInput).value = document.getElementById(colorPicker).value;
+      showCustomColors();
+    }
+    function syncColorPicker(textInput, colorPicker) {
+      const val = document.getElementById(textInput).value;
+      if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+        document.getElementById(colorPicker).value = val;
+        showCustomColors();
+      }
+    }
+  </script>
 </head>
 <body>
   ${getNav(subdomain, 'settings')}
 
   <div class="container">
     <h1 class="page-title">Account Settings</h1>
+
+    ${success ? '<div class="alert alert-success">Settings saved successfully!</div>' : ''}
+
+    <!-- Branding & Appearance -->
+    <div class="card">
+      <div class="card-title">Branding & Appearance</div>
+      <p style="color:var(--text-muted);margin-bottom:1rem;font-size:0.9rem;">Customize how your proposals look to clients.</p>
+      <form method="POST" action="/admin/settings/branding">
+
+        <!-- Light/Dark Mode Toggle -->
+        <div class="form-group">
+          <label class="form-label">Mode</label>
+          <div class="mode-toggle">
+            <div class="mode-btn ${!darkMode ? 'selected' : ''}" onclick="selectMode('light')">
+              <div class="icon">☀️</div>
+              <div>Light</div>
+            </div>
+            <div class="mode-btn ${darkMode ? 'selected' : ''}" onclick="selectMode('dark')">
+              <div class="icon">🌙</div>
+              <div>Dark</div>
+            </div>
+          </div>
+          <input type="hidden" name="darkMode" id="darkModeInput" value="${darkMode ? 'true' : 'false'}">
+        </div>
+
+        <!-- Color Scheme Selection -->
+        <div class="form-group">
+          <label class="form-label">Color Scheme</label>
+          <div class="color-schemes-grid">
+            ${schemeCards}
+          </div>
+          <button type="button" class="btn btn-sm btn-secondary" onclick="showCustomColors()" style="margin-top:0.5rem;">
+            Customize Colors
+          </button>
+          <input type="hidden" name="colorScheme" id="colorSchemeInput" value="${escapeHtml(colorScheme)}">
+        </div>
+
+        <!-- Custom Color Pickers (hidden by default) -->
+        <div id="customColors" class="custom-colors ${colorScheme === 'custom' ? 'visible' : ''}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Primary Color</label>
+              <div style="display:flex;gap:0.5rem;align-items:center;">
+                <input type="color" id="primaryColorPicker" name="primaryColor" value="${escapeHtml(primaryColor)}"
+                       style="width:50px;height:40px;border:1px solid var(--border);border-radius:4px;cursor:pointer;"
+                       onchange="syncColorInput('primaryColorPicker', 'primaryColorText')">
+                <input type="text" id="primaryColorText" class="form-input"
+                       value="${escapeHtml(primaryColor)}" style="width:100px;"
+                       onchange="syncColorPicker('primaryColorText', 'primaryColorPicker')">
+              </div>
+              <p class="form-hint">Headers, buttons, accents</p>
+            </div>
+
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Accent Color</label>
+              <div style="display:flex;gap:0.5rem;align-items:center;">
+                <input type="color" id="accentColorPicker" name="accentColor" value="${escapeHtml(accentColor)}"
+                       style="width:50px;height:40px;border:1px solid var(--border);border-radius:4px;cursor:pointer;"
+                       onchange="syncColorInput('accentColorPicker', 'accentColorText')">
+                <input type="text" id="accentColorText" class="form-input"
+                       value="${escapeHtml(accentColor)}" style="width:100px;"
+                       onchange="syncColorPicker('accentColorText', 'accentColorPicker')">
+              </div>
+              <p class="form-hint">CTAs and highlights</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Proposal Tagline</label>
+          <input type="text" name="tagline" class="form-input"
+                 value="${escapeHtml(tagline)}"
+                 placeholder="Let's Get You There - Your Adventure Awaits!">
+          <p class="form-hint">Appears below destination on proposals</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Your Title</label>
+          <input type="text" name="agencyTitle" class="form-input"
+                 value="${escapeHtml(agencyTitle)}"
+                 placeholder="Cruise & Tour Specialist">
+          <p class="form-hint">Your professional title (shown in advisor section)</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Agent Photo</label>
+          <div style="display:flex;gap:1rem;align-items:flex-start;">
+            <div id="agentPhotoPreview" style="width:80px;height:80px;border-radius:50%;background:var(--surface);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">
+              ${agentPhoto ? `<img src="${escapeHtml(agentPhoto)}" style="width:100%;height:100%;object-fit:cover;">` : '<span style="color:var(--text-muted);font-size:0.75rem;">No photo</span>'}
+            </div>
+            <div style="flex:1;">
+              <input type="file" id="agentPhotoFile" accept="image/*" style="display:none;"
+                     onchange="uploadImage('agentPhoto', this.files[0])">
+              <button type="button" class="btn btn-sm btn-secondary" onclick="document.getElementById('agentPhotoFile').click()">
+                Upload Photo
+              </button>
+              <input type="hidden" name="agentPhoto" id="agentPhotoInput" value="${escapeHtml(agentPhoto)}">
+              <p class="form-hint" style="margin-top:0.5rem;">A professional headshot for proposals</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Agency Logo</label>
+          <div style="display:flex;gap:1rem;align-items:flex-start;">
+            <div id="agencyLogoPreview" style="width:120px;height:60px;background:var(--surface);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;border-radius:4px;">
+              ${userProfile.agency?.logo ? `<img src="${escapeHtml(userProfile.agency.logo)}" style="max-width:100%;max-height:100%;object-fit:contain;">` : '<span style="color:var(--text-muted);font-size:0.75rem;">No logo</span>'}
+            </div>
+            <div style="flex:1;">
+              <input type="file" id="agencyLogoFile" accept="image/*" style="display:none;"
+                     onchange="uploadImage('agencyLogo', this.files[0])">
+              <button type="button" class="btn btn-sm btn-secondary" onclick="document.getElementById('agencyLogoFile').click()">
+                Upload Logo
+              </button>
+              <input type="hidden" name="agencyLogo" id="agencyLogoInput" value="${escapeHtml(userProfile.agency?.logo || '')}">
+              <p class="form-hint" style="margin-top:0.5rem;">Your agency logo (appears on proposals)</p>
+            </div>
+          </div>
+        </div>
+
+        <script>
+          async function uploadImage(type, file) {
+            if (!file) return;
+
+            const preview = document.getElementById(type + 'Preview');
+            const input = document.getElementById(type + 'Input');
+
+            // Show loading state
+            preview.innerHTML = '<span style="color:var(--text-muted);font-size:0.75rem;">Uploading...</span>';
+
+            try {
+              const formData = new FormData();
+              formData.append('image', file);
+              formData.append('category', 'branding');
+
+              const response = await fetch('/upload?key=${escapeHtml(userProfile.authKey)}', {
+                method: 'POST',
+                body: formData
+              });
+
+              const result = await response.json();
+
+              if (result.success) {
+                input.value = result.url;
+                if (type === 'agentPhoto') {
+                  preview.innerHTML = '<img src="' + result.url + '" style="width:100%;height:100%;object-fit:cover;">';
+                } else {
+                  preview.innerHTML = '<img src="' + result.url + '" style="max-width:100%;max-height:100%;object-fit:contain;">';
+                }
+              } else {
+                alert('Upload failed: ' + (result.error || 'Unknown error'));
+                preview.innerHTML = '<span style="color:var(--text-muted);font-size:0.75rem;">Upload failed</span>';
+              }
+            } catch (err) {
+              alert('Upload failed: ' + err.message);
+              preview.innerHTML = '<span style="color:var(--text-muted);font-size:0.75rem;">Upload failed</span>';
+            }
+          }
+        </script>
+
+        <button type="submit" class="btn btn-primary">Save Branding</button>
+      </form>
+    </div>
 
     <!-- Profile -->
     <div class="card">

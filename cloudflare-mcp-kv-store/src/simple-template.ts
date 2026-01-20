@@ -377,6 +377,16 @@ function processVariable(tagContent: string, ctx: any, parentCtx?: any): string 
     return encodeURIComponent(String(value || ''));
   }
 
+  // {{initials path}} - Get initials from a name (e.g., "Kim Henderson" -> "KH")
+  if (tagContent.startsWith('initials ')) {
+    const path = tagContent.slice(9).trim();
+    let value = getValue(ctx, path);
+    if (value === undefined && parentCtx) value = getValue(parentCtx, path);
+    if (!value) return '??';
+    const name = String(value);
+    return name.split(' ').map(w => w[0]?.toUpperCase()).filter(Boolean).slice(0, 2).join('');
+  }
+
   // {{formatCurrency path}}
   if (tagContent.startsWith('formatCurrency ')) {
     const path = tagContent.slice(15).trim();

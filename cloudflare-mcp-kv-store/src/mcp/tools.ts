@@ -377,5 +377,36 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       },
       required: ["tripId"]
     }
+  },
+  {
+    name: "list_sample_trips",
+    description: "List available sample trips that can be added to the account.",
+    inputSchema: {
+      type: "object",
+      properties: {}
+    }
+  },
+  {
+    name: "accept_sample_trips",
+    description: "Add selected sample trips to user's account. Call when user wants to start with sample trips.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        tripIds: {
+          type: "array",
+          items: { type: "string" },
+          description: "Sample trip IDs to copy: 'europe-romantic-7day', 'caribbean-cruise-family'"
+        }
+      },
+      required: ["tripIds"]
+    }
+  },
+  {
+    name: "decline_sample_trips",
+    description: "Decline sample trips - user wants to start fresh.",
+    inputSchema: {
+      type: "object",
+      properties: {}
+    }
   }
 ];

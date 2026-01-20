@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{meta.clientName}} - {{meta.destination}} | SoMo Travel Specialist</title>
+    <title>{{meta.clientName}} - {{meta.destination}} | {{default _config.agent.agency "Travel Agency"}}</title>
     <style>
         :root {
-            /* Cruise Planners / SoMo Travel Brand Colors */
-            --primary: #1b619c;
-            --primary-dark: #154a78;
-            --secondary: #90c8ed;
-            --secondary-light: #c5e4f7;
-            --accent: #3baf2a;
-            --accent-dark: #2d8a21;
+            /* Dynamic Brand Colors from Agent Profile */
+            --primary: {{default _config.agent.primaryColor "#667eea"}};
+            --primary-dark: color-mix(in srgb, {{default _config.agent.primaryColor "#667eea"}} 80%, black);
+            --secondary: color-mix(in srgb, {{default _config.agent.primaryColor "#667eea"}} 40%, white);
+            --secondary-light: color-mix(in srgb, {{default _config.agent.primaryColor "#667eea"}} 20%, white);
+            --accent: {{default _config.agent.accentColor "#3baf2a"}};
+            --accent-dark: color-mix(in srgb, {{default _config.agent.accentColor "#3baf2a"}} 80%, black);
 
             /* Neutrals */
             --white: #ffffff;
@@ -968,11 +968,11 @@
     <!-- Header Bar -->
     <div class="header-bar">
         <div class="logo-container">
-            <img src="https://voygent.somotravel.workers.dev/media/branding/CPLogoMain.jpg" alt="Cruise Planners" class="header-logo" onerror="this.style.display='none'">
-            <span class="logo-text">SoMo Travel Specialist</span>
+            {{#if _config.agent.logo}}<img src="{{_config.agent.logo}}" alt="{{_config.agent.agency}}" class="header-logo" onerror="this.style.display='none'">{{/if}}
+            <span class="logo-text">{{default _config.agent.agency "Travel Agency"}}</span>
         </div>
         <div class="header-contact">
-            Questions? Call <a href="tel:+12512891505">251-289-1505</a>
+            {{#if _config.agent.phone}}Questions? Call <a href="tel:{{_config.agent.phone}}">{{_config.agent.phone}}</a>{{/if}}
         </div>
     </div>
 
@@ -995,7 +995,7 @@
         <h1>{{meta.clientName}}</h1>
         <div class="destination">{{meta.destination}}</div>
         {{#if meta.dates}}<div class="dates-badge">{{meta.dates}}</div>{{/if}}
-        <div class="tagline">Let's Get You There - Your Adventure Awaits!</div>
+        {{#if _config.agent.tagline}}<div class="tagline">{{_config.agent.tagline}}</div>{{/if}}
     </div>
 
     <!-- Hero Images Gallery (if multiple) -->
@@ -1545,34 +1545,35 @@
             <div class="footer-section advisor-info">
                 <h4>Your Travel Advisor</h4>
                 <div class="advisor-card">
-                    <img src="https://voygent.somotravel.workers.dev/media/branding/kimThumbnail.png"
-                         alt="Kim Henderson"
+                    {{#if _config.agent.agentPhoto}}
+                    <img src="{{_config.agent.agentPhoto}}"
+                         alt="{{_config.agent.name}}"
                          class="advisor-photo"
                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div class="advisor-photo-fallback" style="display:none;">KH</div>
+                    <div class="advisor-photo-fallback" style="display:none;">{{initials _config.agent.name}}</div>
+                    {{else}}
+                    <div class="advisor-photo-fallback" style="display:flex;">{{initials _config.agent.name}}</div>
+                    {{/if}}
                     <div class="advisor-details">
-                        <div class="advisor-name">Kim Henderson</div>
-                        <div class="advisor-title">Cruise & Tour Specialist</div>
-                        <div class="advisor-affiliation">Associate of Susie & Brad Jones</div>
-                        <div class="advisor-franchise">Cruise Planners® Independent Franchise Owner</div>
+                        <div class="advisor-name">{{_config.agent.name}}</div>
+                        {{#if _config.agent.title}}<div class="advisor-title">{{_config.agent.title}}</div>{{/if}}
+                        {{#if _config.agent.franchise}}<div class="advisor-franchise">{{_config.agent.franchise}}</div>{{/if}}
                         <div class="advisor-contact">
-                            <a href="tel:+12512891505" class="contact-link phone">📞 251-289-1505</a>
-                            <a href="mailto:kim.henderson@cruiseplanners.com" class="contact-link email">✉️ kim.henderson@cruiseplanners.com</a>
-                            <a href="https://www.somotravelspecialist.com" target="_blank" class="contact-link web">🌐 somotravelspecialist.com</a>
+                            {{#if _config.agent.phone}}<a href="tel:{{_config.agent.phone}}" class="contact-link phone">📞 {{_config.agent.phone}}</a>{{/if}}
+                            {{#if _config.agent.email}}<a href="mailto:{{_config.agent.email}}" class="contact-link email">✉️ {{_config.agent.email}}</a>{{/if}}
+                            {{#if _config.agent.website}}<a href="{{_config.agent.website}}" target="_blank" class="contact-link web">🌐 {{_config.agent.website}}</a>{{/if}}
                         </div>
                     </div>
                 </div>
             </div>
+            {{#if _config.agent.franchise}}
             <div class="footer-section">
-                <h4>Cruise Planners</h4>
-                <p>
-                    FL ST# 39068 | CA ST# 2034468-50<br>
-                    HI ST# TAR-7058 | WA ST# 603-399-504
-                </p>
+                <h4>{{_config.agent.agency}}</h4>
             </div>
+            {{/if}}
         </div>
         <div class="footer-bottom">
-            <p>Prepared with care by SoMo Travel Specialist, a Cruise Planners Franchise</p>
+            <p>Prepared with care by {{default _config.agent.agency "Your Travel Advisor"}}{{#if _config.agent.franchise}}, {{_config.agent.franchise}}{{/if}}</p>
             <p style="margin-top: 5px;">Generated {{formatDate meta.lastUpdated}}</p>
         </div>
     </div>

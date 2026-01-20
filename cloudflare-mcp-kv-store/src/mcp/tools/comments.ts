@@ -236,7 +236,7 @@ export const handleReplyToComment: McpToolHandler = async (args, env, keyPrefix,
     id: `reply_${Date.now()}`,
     message,
     timestamp: new Date().toISOString(),
-    from: userProfile?.displayName || userProfile?.name || 'Travel Agent'
+    from: userProfile?.name || 'Travel Agent'
   };
 
   if (!targetComment.replies) {

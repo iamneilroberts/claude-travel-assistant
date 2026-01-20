@@ -7,6 +7,7 @@ import type { Env, UserProfile, RouteHandler } from '../../types';
 import { listAllKeys, getKeyPrefix } from '../../lib/kv';
 import { setAuthKeyIndex } from '../../lib/auth';
 import { logAdminAction } from '../../lib/audit';
+import { setSubdomainOwner } from '../../lib/subdomain';
 
 // Generate setup email for new user
 function generateSetupEmail(user: UserProfile): { subject: string; body: string } {
@@ -96,21 +97,35 @@ export const handleCreateUser: RouteHandler = async (request, env, ctx, url, cor
     phone: body.phone,
     agency: {
       name: body.agency.name,
+      title: body.agency.title,
       franchise: body.agency.franchise,
       logo: body.agency.logo,
       website: body.agency.website,
       bookingUrl: body.agency.bookingUrl,
     },
     template: body.template || "default",
-    branding: body.branding,
+    branding: body.branding || {
+      primaryColor: '#667eea',
+      accentColor: '#3baf2a',
+      stylePreset: 'professional'
+    },
     created: new Date().toISOString().split('T')[0],
     lastActive: new Date().toISOString().split('T')[0],
-    status: 'active'
+    status: 'active',
+    subdomain: body.subdomain,
+    onboarding: {
+      welcomeShown: false
+    }
   };
 
   await env.TRIPS.put(`_users/${userId}`, JSON.stringify(user));
   // Set index for O(1) auth key lookups
   await setAuthKeyIndex(env, authKey, userId);
+
+  // Create subdomain mapping if subdomain is set
+  if (user.subdomain) {
+    await setSubdomainOwner(env, user.subdomain, userId);
+  }
 
   // Generate setup email content
   const setupEmail = generateSetupEmail(user);
@@ -163,6 +178,23 @@ export const handleUpdateUser: RouteHandler = async (request, env, ctx, url, cor
     authKey: existing.authKey, // Can't change authKey
     agency: { ...existing.agency, ...updates.agency }
   };
+
+  // Handle subdomain changes
+  if ('subdomain' in updates) {
+    const oldSubdomain = existing.subdomain;
+    const newSubdomain = updates.subdomain;
+
+    if (oldSubdomain && oldSubdomain !== newSubdomain) {
+      // Remove old subdomain mapping
+      await env.TRIPS.delete(`_subdomains/${oldSubdomain}`);
+      await env.TRIPS.delete(`_user-subdomains/${userId}`);
+    }
+
+    if (newSubdomain) {
+      // Create new subdomain mapping
+      await setSubdomainOwner(env, newSubdomain, userId!);
+    }
+  }
 
   await env.TRIPS.put(`_users/${userId}`, JSON.stringify(updated));
 
