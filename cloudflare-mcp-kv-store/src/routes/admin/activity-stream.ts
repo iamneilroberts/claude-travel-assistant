@@ -44,17 +44,32 @@ export const handleActivityStream: RouteHandler = async (request, env, ctx, url,
     }
   }
 
-  // Calculate tool distribution
-  const toolDistribution: Record<string, { count: number; successRate: number; avgMs: number }> = {};
+  // Calculate tool distribution with response sizes
+  const toolDistribution: Record<string, { count: number; successRate: number; avgMs: number; avgBytes: number }> = {};
+  let totalBytes = 0;
+  let totalByteCalls = 0;
   if (dailyMetrics) {
     for (const [tool, stats] of Object.entries(dailyMetrics.tools)) {
       toolDistribution[tool] = {
         count: stats.count,
         successRate: stats.count > 0 ? Math.round((stats.successCount / stats.count) * 100) : 100,
-        avgMs: Math.round(stats.avgDurationMs)
+        avgMs: Math.round(stats.avgDurationMs),
+        avgBytes: stats.avgBytes || 0
       };
+      if (stats.avgBytes > 0) {
+        totalBytes += stats.avgBytes * stats.count;
+        totalByteCalls += stats.count;
+      }
     }
   }
+  const avgBytesPerCall = totalByteCalls > 0 ? Math.round(totalBytes / totalByteCalls) : 0;
+
+  // Get top 5 heaviest tools by response size
+  const heavyTools = Object.entries(toolDistribution)
+    .filter(([_, data]) => data.avgBytes > 0)
+    .sort((a, b) => b[1].avgBytes - a[1].avgBytes)
+    .slice(0, 5)
+    .map(([tool, data]) => ({ tool, avgBytes: data.avgBytes, count: data.count }));
 
   // Format for display with enhanced metadata
   const formatted = activities.map(activity => {
@@ -115,7 +130,10 @@ export const handleActivityStream: RouteHandler = async (request, env, ctx, url,
       toolDistribution,
       hourlyBreakdown: dailyMetrics?.hourlyBreakdown || {},
       totalCallsToday: dailyMetrics?.totalCalls || 0,
-      uniqueUsersToday: dailyMetrics?.uniqueUsers?.length || 0
+      uniqueUsersToday: dailyMetrics?.uniqueUsers?.length || 0,
+      // Response size data
+      avgBytesPerCall,
+      heavyTools
     },
     recentErrors
   }), {
@@ -147,36 +165,43 @@ function formatTime(timestamp: string): string {
 }
 
 /**
- * Format tool name into readable action
+ * Format tool name into readable action (short, title case)
  */
 function formatToolAction(tool: string): string {
   const actions: Record<string, string> = {
-    get_context: 'SESSION START',
-    list_trips: 'LIST TRIPS',
-    read_trip: 'READ TRIP',
-    read_trip_section: 'READ SECTION',
-    save_trip: 'SAVE TRIP',
-    patch_trip: 'UPDATE TRIP',
-    delete_trip: 'DELETE TRIP',
-    list_templates: 'LIST TEMPLATES',
-    preview_publish: 'PREVIEW',
-    publish_trip: 'PUBLISH',
-    validate_trip: 'VALIDATE',
-    import_quote: 'IMPORT QUOTE',
-    analyze_profitability: 'ANALYZE',
-    get_prompt: 'GET PROMPT',
-    get_comments: 'GET COMMENTS',
-    get_all_comments: 'ALL COMMENTS',
-    dismiss_comments: 'DISMISS',
-    submit_support: 'SUPPORT REQ',
-    reply_to_admin: 'USER REPLY',
-    dismiss_admin_message: 'DISMISS MSG',
-    add_trip_image: 'ADD IMAGE',
-    prepare_image_upload: 'PREP UPLOAD',
-    youtube_search: 'YOUTUBE'
+    get_context: 'Session',
+    list_trips: 'List',
+    read_trip: 'Read',
+    read_trip_section: 'Section',
+    save_trip: 'Save',
+    patch_trip: 'Update',
+    delete_trip: 'Delete',
+    list_templates: 'Templates',
+    preview_publish: 'Preview',
+    publish_trip: 'Publish',
+    validate_trip: 'Validate',
+    import_quote: 'Import',
+    analyze_profitability: 'Analyze',
+    get_prompt: 'Prompt',
+    get_comments: 'Comments',
+    get_all_comments: 'Comments',
+    dismiss_comments: 'Dismiss',
+    submit_support: 'Support',
+    reply_to_admin: 'Reply',
+    dismiss_admin_message: 'Dismiss',
+    add_trip_image: 'Image',
+    prepare_image_upload: 'Upload',
+    youtube_search: 'YouTube',
+    get_subscription: 'Subscribe'
   };
 
-  return actions[tool] || tool.toUpperCase().replace(/_/g, ' ');
+  // Return mapped action or format unknown tools nicely
+  if (actions[tool]) return actions[tool];
+
+  // Convert snake_case to Title Case for unknown tools
+  return tool.split('_').map(word =>
+    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+  ).join(' ');
 }
 
 /**
@@ -258,12 +283,19 @@ function formatActionDetail(tool: string, meta: Record<string, any>, errorType?:
       return supportParts.join(' ');
 
     case 'list_trips':
+      return '';
+
     case 'list_templates':
-      return meta.limit ? `Limit: ${meta.limit}` : '';
+      return '';
 
     case 'get_context':
+      return 'New conversation';
+
     case 'get_prompt':
-      return 'System data';
+      return meta.promptName ? meta.promptName : '';
+
+    case 'get_subscription':
+      return '';
 
     default:
       return '';

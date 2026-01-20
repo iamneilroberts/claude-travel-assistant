@@ -100,51 +100,57 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     .toggle input:checked + .toggle-slider { background: #10b981; }
     .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
 
-    /* Activity Table - Clean Design */
-    .arrivals-board { background: #0f172a; border-radius: 12px; padding: 0; overflow: hidden; border: 1px solid #1e293b; }
-    .board-header { display: flex; background: #1e293b; color: #64748b; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; padding: 12px 16px; }
+    /* Activity Table - Mission Control Theme (muted, high-tech, readable) */
+    .arrivals-board { background: #0d1117; border-radius: 6px; padding: 0; overflow: hidden; border: 1px solid #30363d; font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; }
+    .board-header { display: flex; background: #161b22; color: #8b949e; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; padding: 12px 14px; border-bottom: 1px solid #30363d; }
     .board-rows { max-height: 550px; overflow-y: auto; }
-    .board-rows::-webkit-scrollbar { width: 6px; }
-    .board-rows::-webkit-scrollbar-track { background: #0f172a; }
-    .board-rows::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-    .board-row { display: flex; padding: 10px 16px; border-bottom: 1px solid #1e293b; color: #e2e8f0; font-size: 13px; align-items: center; transition: background 0.15s; }
-    .board-row:hover { background: #1e293b; }
-    .board-row.new { animation: slideIn 0.3s ease-out; background: rgba(59, 130, 246, 0.1); }
-    .col-time { width: 70px; color: #64748b; font-size: 12px; font-weight: 500; }
-    .col-user { width: 110px; color: #f1f5f9; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
-    .col-action { width: 95px; font-size: 11px; }
-    .col-action span { display: inline-block; padding: 3px 8px; background: #1e293b; border-radius: 4px; color: #94a3b8; font-weight: 500; }
-    .col-trip { width: 150px; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .col-trip a { color: #60a5fa; text-decoration: none; }
-    .col-trip a:hover { color: #93c5fd; text-decoration: underline; }
-    .col-detail { flex: 1; color: #a78bfa; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 10px; }
-    .col-detail.error { color: #fca5a5; }
-    .col-dur { width: 60px; color: #64748b; font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }
-    .col-status { width: 60px; text-align: right; font-size: 11px; }
-    .status-ok { color: #4ade80; }
-    .status-err { color: #f87171; cursor: pointer; }
-    .status-err:hover { color: #fca5a5; }
+    .board-rows::-webkit-scrollbar { width: 8px; }
+    .board-rows::-webkit-scrollbar-track { background: #0d1117; }
+    .board-rows::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+    .board-row { display: flex; padding: 10px 14px; border-bottom: 1px solid #21262d; color: #c9d1d9; font-size: 13px; align-items: center; transition: background 0.1s; }
+    .board-row:hover { background: #161b22; }
+    .board-row.new { animation: rowHighlight 0.6s ease-out; }
+    .col-time { width: 80px; color: #8b949e; font-size: 12px; font-weight: 500; }
+    .col-user { width: 120px; color: #f0f6fc; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+    .col-action { width: 90px; font-size: 12px; }
+    .col-action span { display: inline-block; padding: 3px 8px; background: #21262d; border: 1px solid #30363d; border-radius: 4px; color: #c9d1d9; font-weight: 500; }
+    .col-trip { width: 180px; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .col-trip a { color: #58a6ff; text-decoration: none; }
+    .col-trip a:hover { color: #79c0ff; text-decoration: underline; }
+    .col-detail { flex: 1; color: #8b949e; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 10px; }
+    .col-detail.error { color: #f85149; background: rgba(248,81,73,0.1); padding: 4px 8px; border-radius: 4px; }
+    .col-dur { width: 65px; color: #8b949e; font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+    .col-status { width: 70px; text-align: right; font-size: 12px; font-weight: 600; }
+    .status-ok { color: #3fb950; }
+    .status-err { color: #f85149; cursor: pointer; }
+    .status-err:hover { color: #ff7b72; }
 
-    /* Age-based row styling - subtle */
-    .board-row.fresh { background: rgba(34, 197, 94, 0.08); }
-    .board-row.fresh .col-time { color: #4ade80; }
+    /* Age-based row styling - subtle fade */
+    .board-row.fresh { background: rgba(46,160,67,0.08); }
+    .board-row.fresh .col-time { color: #3fb950; }
     .board-row.recent { background: transparent; }
-    .board-row.stale { opacity: 0.7; }
-    .board-row.old { opacity: 0.5; }
+    .board-row.stale { }
+    .board-row.stale .col-time { color: #6e7681; }
+    .board-row.old { }
+    .board-row.old .col-time, .board-row.old .col-user { color: #6e7681; }
 
     @keyframes slideIn {
       0% { transform: translateY(-10px); opacity: 0; }
       100% { transform: translateY(0); opacity: 1; }
     }
+    @keyframes rowHighlight {
+      0% { background: rgba(56,139,253,0.15); }
+      100% { background: transparent; }
+    }
 
-    /* Stats Panel - Dark Cards */
+    /* Stats Panel - Mission Control Cards */
     .stats-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 16px; }
-    .stats-panel .stat-card { background: #1e293b; border-radius: 10px; padding: 16px; border: 1px solid #334155; }
-    .stats-panel .stat-card .label { color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; }
-    .stats-panel .stat-card .value { font-size: 26px; font-weight: 700; color: #f1f5f9; margin-top: 6px; }
+    .stats-panel .stat-card { background: #0d1117; border-radius: 6px; padding: 16px; border: 1px solid #30363d; font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; }
+    .stats-panel .stat-card .label { color: #8b949e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; }
+    .stats-panel .stat-card .value { font-size: 28px; font-weight: 700; color: #f0f6fc; margin-top: 6px; }
     .stats-panel .stat-card .change { font-size: 12px; margin-top: 5px; }
-    .stats-panel .stat-card .change.up { color: #4ade80; }
-    .stats-panel .stat-card .change.down { color: #f87171; }
+    .stats-panel .stat-card .change.up { color: #3fb950; }
+    .stats-panel .stat-card .change.down { color: #f85149; }
 
     /* Insights Panel */
     .insights-panel { background: white; border-radius: 12px; padding: 20px; }
@@ -164,77 +170,81 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
     /* Expandable Rows */
     .board-row.expandable { cursor: pointer; }
-    .board-row-details { display: none; padding: 10px 16px; background: #1e293b; border-bottom: 1px solid #334155; font-size: 12px; }
-    .board-row-details.expanded { display: flex; gap: 24px; flex-wrap: wrap; }
-    .board-row-details .detail-item { color: #94a3b8; }
-    .board-row-details .detail-item .label { color: #64748b; margin-right: 6px; }
-    .board-row-details .detail-item .value { color: #e2e8f0; }
-    .expand-indicator { color: #64748b; font-size: 10px; margin-left: 6px; transition: transform 0.2s; }
+    .board-row-details { display: none; padding: 10px 14px; background: #161b22; border-bottom: 1px solid #30363d; font-size: 12px; }
+    .board-row-details.expanded { display: flex; gap: 20px; flex-wrap: wrap; }
+    .board-row-details .detail-item { color: #c9d1d9; }
+    .board-row-details .detail-item .label { color: #8b949e; margin-right: 6px; }
+    .board-row-details .detail-item .value { color: #f0f6fc; }
+    .expand-indicator { color: #8b949e; font-size: 10px; margin-left: 6px; transition: transform 0.2s; }
 
     /* Slow Call Highlighting */
-    .board-row.slow { background: rgba(251, 191, 36, 0.1) !important; }
-    .board-row.slow .col-dur { color: #fbbf24 !important; font-weight: 600; }
-    .slow-badge { display: inline-block; background: #fbbf24; color: #000; font-size: 9px; padding: 2px 5px; border-radius: 3px; margin-left: 6px; font-weight: 700; letter-spacing: 0.5px; }
+    .board-row.slow { background: rgba(210,153,34,0.1) !important; }
+    .board-row.slow .col-dur { color: #d29922 !important; font-weight: 600; }
+    .slow-badge { display: inline-block; background: #d29922; color: #0d1117; font-size: 10px; padding: 2px 6px; border-radius: 3px; margin-left: 6px; font-weight: 600; }
 
     /* Mission Control Grid Layout */
     .mc-grid { display: grid; grid-template-columns: 1fr 280px; gap: 16px; }
     .mc-sidebar { display: flex; flex-direction: column; gap: 12px; }
     @media (max-width: 1200px) { .mc-grid { grid-template-columns: 1fr; } }
 
-    /* Sidebar Panels - Clean Dark */
-    .heatmap-panel, .error-panel, .tool-panel { background: #0f172a; border-radius: 10px; padding: 14px; border: 1px solid #1e293b; }
-    .heatmap-panel h4, .error-panel h4, .tool-panel h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; }
-    .heatmap-panel h4 { color: #4ade80; }
-    .error-panel h4 { color: #f87171; }
-    .tool-panel h4 { color: #60a5fa; }
+    /* Sidebar Panels - Mission Control */
+    .heatmap-panel, .error-panel, .tool-panel, .size-panel { background: #0d1117; border-radius: 6px; padding: 14px; border: 1px solid #30363d; font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; }
+    .heatmap-panel h4, .error-panel h4, .tool-panel h4, .size-panel h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #21262d; display: flex; justify-content: space-between; align-items: center; color: #8b949e; }
+    .heatmap-panel h4 { color: #3fb950; }
+    .error-panel h4 { color: #f85149; }
+    .tool-panel h4 { color: #58a6ff; }
+    .size-panel h4 { color: #a371f7; }
 
     /* Error Breakdown */
-    .error-bar { display: flex; align-items: center; margin-bottom: 8px; }
-    .error-bar .type { width: 85px; font-size: 11px; color: #94a3b8; }
-    .error-bar .bar-container { flex: 1; height: 8px; background: #1e293b; border-radius: 4px; margin: 0 10px; overflow: hidden; }
+    .error-bar { display: flex; align-items: center; margin-bottom: 10px; gap: 8px; }
+    .error-bar .error-info { width: 85px; flex-shrink: 0; }
+    .error-bar .tool-name { display: block; font-size: 12px; color: #f0f6fc; font-weight: 600; line-height: 1.3; }
+    .error-bar .error-type { display: block; font-size: 10px; color: #f85149; line-height: 1.3; text-transform: uppercase; }
+    .error-bar .type { width: 85px; font-size: 11px; color: #8b949e; }
+    .error-bar .bar-container { flex: 1; height: 8px; background: #21262d; border-radius: 4px; overflow: hidden; }
     .error-bar .bar { height: 100%; border-radius: 4px; }
-    .error-bar .bar.validation { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
-    .error-bar .bar.auth { background: linear-gradient(90deg, #ef4444, #f87171); }
-    .error-bar .bar.not_found { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
-    .error-bar .bar.timeout { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
-    .error-bar .bar.rate_limit { background: linear-gradient(90deg, #ec4899, #f472b6); }
-    .error-bar .bar.unknown { background: linear-gradient(90deg, #64748b, #94a3b8); }
-    .error-bar .count { font-size: 11px; color: #e2e8f0; font-weight: 600; min-width: 28px; text-align: right; }
+    .error-bar .bar.validation { background: #d29922; }
+    .error-bar .bar.auth { background: #f85149; }
+    .error-bar .bar.not_found { background: #a371f7; }
+    .error-bar .bar.timeout { background: #58a6ff; }
+    .error-bar .bar.rate_limit { background: #db61a2; }
+    .error-bar .bar.unknown { background: #8b949e; }
+    .error-bar .count { font-size: 13px; color: #f0f6fc; font-weight: 600; min-width: 28px; text-align: right; }
 
     /* Hourly Heatmap */
     .heatmap-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; }
-    .heatmap-cell { aspect-ratio: 1; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; color: #fff; cursor: default; transition: transform 0.15s; }
+    .heatmap-cell { aspect-ratio: 1; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: #f0f6fc; cursor: default; transition: transform 0.15s; }
     .heatmap-cell:hover { transform: scale(1.15); z-index: 1; }
-    .heatmap-cell.level-0 { background: #1e293b; color: #475569; }
-    .heatmap-cell.level-1 { background: #064e3b; }
-    .heatmap-cell.level-2 { background: #047857; }
-    .heatmap-cell.level-3 { background: #059669; }
-    .heatmap-cell.level-4 { background: #10b981; }
-    .heatmap-cell.level-5 { background: #34d399; }
-    .heatmap-labels { display: flex; justify-content: space-between; margin-top: 8px; font-size: 9px; color: #64748b; }
+    .heatmap-cell.level-0 { background: #161b22; color: #484f58; }
+    .heatmap-cell.level-1 { background: #0e4429; }
+    .heatmap-cell.level-2 { background: #006d32; }
+    .heatmap-cell.level-3 { background: #26a641; }
+    .heatmap-cell.level-4 { background: #39d353; }
+    .heatmap-cell.level-5 { background: #39d353; }
+    .heatmap-labels { display: flex; justify-content: space-between; margin-top: 8px; font-size: 10px; color: #8b949e; }
 
     /* Tool Distribution */
-    .tool-bar { display: flex; align-items: center; margin-bottom: 6px; }
-    .tool-bar .name { width: 70px; font-size: 11px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .tool-bar .bar-container { flex: 1; height: 8px; background: #1e293b; border-radius: 4px; margin: 0 8px; overflow: hidden; }
-    .tool-bar .bar { height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa); border-radius: 4px; }
-    .tool-bar .count { font-size: 11px; color: #e2e8f0; font-weight: 500; min-width: 30px; text-align: right; }
+    .tool-bar { display: flex; align-items: center; margin-bottom: 8px; }
+    .tool-bar .name { width: 75px; font-size: 12px; color: #c9d1d9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+    .tool-bar .bar-container { flex: 1; height: 8px; background: #21262d; border-radius: 4px; margin: 0 8px; overflow: hidden; }
+    .tool-bar .bar { height: 100%; background: #58a6ff; border-radius: 4px; }
+    .tool-bar .count { font-size: 12px; color: #f0f6fc; font-weight: 600; min-width: 30px; text-align: right; }
 
     /* Recent Errors Panel */
-    .recent-errors { background: #0f172a; border-radius: 10px; padding: 14px; border: 1px solid #1e293b; max-height: 180px; overflow-y: auto; }
-    .recent-errors h4 { color: #f87171; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; }
-    .recent-errors h4 .count-badge { background: #dc2626; color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 10px; }
-    .error-item { padding: 10px 12px; background: rgba(239, 68, 68, 0.08); border-left: 3px solid #f87171; border-radius: 0 6px 6px 0; margin-bottom: 8px; }
+    .recent-errors { background: #0d1117; border-radius: 6px; padding: 14px; border: 1px solid #30363d; max-height: 180px; overflow-y: auto; font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; }
+    .recent-errors h4 { color: #f85149; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #21262d; display: flex; justify-content: space-between; align-items: center; }
+    .recent-errors h4 .count-badge { background: #f85149; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+    .error-item { padding: 10px 12px; background: rgba(248,81,73,0.08); border-left: 3px solid #f85149; border-radius: 0 4px 4px 0; margin-bottom: 8px; }
     .error-item .error-header { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; }
-    .error-item .error-type { color: #fca5a5; font-weight: 600; }
-    .error-item .error-time { color: #64748b; }
-    .error-item .error-detail { font-size: 11px; color: #94a3b8; }
+    .error-item .error-type { color: #f85149; font-weight: 600; }
+    .error-item .error-time { color: #8b949e; }
+    .error-item .error-detail { font-size: 11px; color: #c9d1d9; }
 
     /* Enhanced Stats Cards */
     .stats-panel .stat-card.has-detail { cursor: pointer; transition: all 0.15s; }
-    .stats-panel .stat-card.has-detail:hover { background: #334155; border-color: #475569; }
-    .stat-card .sub-value { font-size: 11px; color: #64748b; margin-top: 4px; }
-    .stat-card .sub-value.highlight { color: #fbbf24; }
+    .stats-panel .stat-card.has-detail:hover { background: #161b22; border-color: #58a6ff; }
+    .stat-card .sub-value { font-size: 11px; color: #8b949e; margin-top: 4px; }
+    .stat-card .sub-value.highlight { color: #d29922; }
 
     /* ============ RESPONSIVE - TABLET ============ */
     @media (max-width: 1024px) {
@@ -532,6 +542,14 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
               <h4>Tool Usage (Today)</h4>
               <div id="toolDistribution">
                 <div style="color:#6b7280;text-align:center;padding:10px;font-size:11px;">Loading...</div>
+              </div>
+            </div>
+
+            <!-- Response Sizes -->
+            <div class="size-panel">
+              <h4>Response Sizes</h4>
+              <div id="responseSizes">
+                <div style="color:#8b949e;text-align:center;padding:10px;font-size:11px;">Collecting data...</div>
               </div>
             </div>
           </div>
@@ -2500,25 +2518,50 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     }
 
     function renderErrorBreakdown(errorData) {
-      const entries = Object.entries(errorData).sort((a, b) => b[1] - a[1]);
+      // Build richer error data from activity cache - group by tool + error type
+      const errorsByTool = {};
+      activityCache_mc.filter(a => !a.success).forEach(a => {
+        const tool = a.tool || 'unknown';
+        const errType = a.errorType || 'error';
+        const key = tool;
+        if (!errorsByTool[key]) {
+          errorsByTool[key] = { tool, count: 0, types: {}, users: new Set() };
+        }
+        errorsByTool[key].count++;
+        errorsByTool[key].types[errType] = (errorsByTool[key].types[errType] || 0) + 1;
+        errorsByTool[key].users.add(a.userId);
+      });
+
+      const entries = Object.values(errorsByTool).sort((a, b) => b.count - a.count);
+
       if (entries.length === 0) {
-        document.getElementById('errorBreakdown').innerHTML = '<div style="color:#22c55e;text-align:center;padding:10px;font-size:11px;">No errors today</div>';
+        document.getElementById('errorBreakdown').innerHTML = '<div style="color:#22c55e;text-align:center;padding:10px;font-size:11px;">✓ No errors</div>';
         return;
       }
 
-      const maxCount = Math.max(...entries.map(e => e[1]));
-      const html = entries.slice(0, 5).map(([type, count]) => {
-        const barType = type.includes('validation') ? 'validation' :
-                        type.includes('auth') ? 'auth' :
-                        type.includes('not_found') ? 'not_found' :
-                        type.includes('timeout') ? 'timeout' :
-                        type.includes('rate') ? 'rate_limit' : 'unknown';
-        const width = Math.max(5, (count / maxCount) * 100);
+      const toolNames = {
+        get_context: 'Context', list_trips: 'List', read_trip: 'Read', save_trip: 'Save',
+        patch_trip: 'Update', preview_publish: 'Preview', publish_trip: 'Publish',
+        validate_trip: 'Validate', get_comments: 'Comments', read_trip_section: 'Section',
+        get_prompt: 'Prompt', get_subscription: 'Subscribe', youtube_search: 'YouTube'
+      };
+
+      const maxCount = Math.max(...entries.map(e => e.count));
+      const html = entries.slice(0, 5).map(entry => {
+        const width = Math.max(8, (entry.count / maxCount) * 100);
+        const toolName = toolNames[entry.tool] || entry.tool.replace(/_/g, ' ').substring(0, 12);
+        const topError = Object.entries(entry.types).sort((a, b) => b[1] - a[1])[0];
+        const errLabel = topError ? topError[0].replace(/_/g, ' ') : '';
+        const userCount = entry.users.size;
+
         return \`
-          <div class="error-bar">
-            <span class="type">\${escapeHtml(type.replace(/_/g, ' '))}</span>
-            <div class="bar-container"><div class="bar \${barType}" style="width:\${width}%"></div></div>
-            <span class="count">\${count}</span>
+          <div class="error-bar" title="\${entry.tool}: \${entry.count} errors from \${userCount} user(s)\\nTop error: \${errLabel}">
+            <div class="error-info">
+              <span class="tool-name">\${escapeHtml(toolName)}</span>
+              <span class="error-type">\${escapeHtml(errLabel)}</span>
+            </div>
+            <div class="bar-container"><div class="bar not_found" style="width:\${width}%"></div></div>
+            <span class="count">\${entry.count}</span>
           </div>
         \`;
       }).join('');
@@ -2553,6 +2596,44 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
       }).join('');
 
       document.getElementById('toolDistribution').innerHTML = html;
+    }
+
+    function renderResponseSizes(heavyTools, avgBytesPerCall) {
+      if (!heavyTools || heavyTools.length === 0) {
+        document.getElementById('responseSizes').innerHTML = '<div style="color:#8b949e;text-align:center;padding:10px;font-size:11px;">Collecting data...</div>';
+        return;
+      }
+
+      const formatBytes = (bytes) => {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+      };
+
+      const toolNames = {
+        get_context: 'Context', list_trips: 'List', read_trip: 'Read', save_trip: 'Save',
+        patch_trip: 'Update', preview_publish: 'Preview', publish_trip: 'Publish',
+        validate_trip: 'Validate', get_comments: 'Comments', read_trip_section: 'Section',
+        get_prompt: 'Prompt', list_templates: 'Templates'
+      };
+
+      const maxBytes = Math.max(...heavyTools.map(t => t.avgBytes));
+      const html = heavyTools.map(t => {
+        const width = Math.max(5, (t.avgBytes / maxBytes) * 100);
+        const name = toolNames[t.tool] || t.tool.replace(/_/g, ' ').substring(0, 10);
+        const tokens = Math.round(t.avgBytes / 4);
+        return \`
+          <div class="size-bar" title="\${escapeHtml(t.tool)}: ~\${tokens} tokens avg">
+            <span class="name">\${escapeHtml(name)}</span>
+            <div class="bar-container"><div class="bar" style="width:\${width}%"></div></div>
+            <span class="size">\${formatBytes(t.avgBytes)}</span>
+          </div>
+        \`;
+      }).join('');
+
+      const avgDisplay = avgBytesPerCall > 0 ? \`<div style="color:#8b949e;font-size:10px;margin-top:8px;text-align:center;">Avg: \${formatBytes(avgBytesPerCall)}/call (~\${Math.round(avgBytesPerCall/4)} tokens)</div>\` : '';
+
+      document.getElementById('responseSizes').innerHTML = html + avgDisplay;
     }
 
     function renderRecentErrors(errors) {
