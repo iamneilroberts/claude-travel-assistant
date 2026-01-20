@@ -1,0 +1,720 @@
+{
+  "meta": {
+    "tripId": "caribbean-cruise-family",
+    "title": "Caribbean Family Cruise Adventure",
+    "clientName": "Sample Trip - Family Cruise",
+    "destination": "Western Caribbean Cruise from Fort Lauderdale",
+    "dates": "Sample dates - customize for your client",
+    "phase": "proposal",
+    "status": "Sample trip template - ready to customize",
+    "lastModified": "2026-01-15",
+    "isSample": true
+  },
+  "travelers": {
+    "count": 4,
+    "names": ["Adult 1", "Adult 2", "Teen (14)", "Child (9)"],
+    "details": [
+      { "name": "Adult 1", "type": "adult" },
+      { "name": "Adult 2", "type": "adult" },
+      { "name": "Teen", "type": "teen", "age": 14 },
+      { "name": "Child", "type": "child", "age": 9 }
+    ]
+  },
+  "dates": {
+    "start": "2026-07-18",
+    "end": "2026-07-27",
+    "duration": 10,
+    "flexible": true,
+    "notes": "7-night cruise + 2 hotel nights (pre/post). Adjust dates based on sail date availability."
+  },
+  "budget": {
+    "perPerson": 2200,
+    "total": 8800,
+    "notes": "Estimate for family of 4 including flights, cruise, 1 pre-cruise night, shore excursions, and specialty dining.",
+    "lineItems": [
+      { "label": "Flights (4 passengers)", "amount": 2000, "notes": "Round-trip to Fort Lauderdale" },
+      { "label": "Cruise fare (7 nights, balcony cabin)", "amount": 4800, "notes": "Includes meals, entertainment, kids clubs" },
+      { "label": "Pre-cruise hotel (1 night)", "amount": 200, "notes": "Near port for easy embarkation" },
+      { "label": "Shore excursions", "amount": 1200, "notes": "Mix of booked and independent" },
+      { "label": "Onboard extras", "amount": 600, "notes": "Specialty dining, drinks, spa, etc." }
+    ]
+  },
+  "flights": {
+    "outbound": {
+      "date": "2026-07-18",
+      "route": "Home → Fort Lauderdale (FLL)",
+      "notes": "Arrive by early afternoon to enjoy pre-cruise evening",
+      "tips": "Book morning flight to avoid stress if delays occur"
+    },
+    "return": {
+      "date": "2026-07-26",
+      "route": "Fort Lauderdale (FLL) → Home",
+      "notes": "Afternoon flight recommended - ship docks early but debarkation takes time",
+      "tips": "Don't book before 1pm to allow for customs and transport"
+    }
+  },
+  "cruiseInfo": {
+    "cruiseLine": "Sample Cruise Line",
+    "shipName": "Sample Ship Name",
+    "cabin": {
+      "type": "Balcony Stateroom",
+      "category": "Family-friendly with balcony",
+      "notes": "Accommodates 4 guests. Request connecting rooms or larger category for more space."
+    },
+    "embarkation": {
+      "port": "Fort Lauderdale (Port Everglades)",
+      "date": "2026-07-19",
+      "time": "Check-in opens 11:00am, all aboard 4:00pm",
+      "tips": "Priority boarding available with drink packages or suite guests"
+    },
+    "debarkation": {
+      "port": "Fort Lauderdale (Port Everglades)",
+      "date": "2026-07-26",
+      "time": "Ship docks ~7:00am, debarkation 8:00am-10:30am",
+      "tips": "Self-assist debark is fastest if you can carry your own bags"
+    }
+  },
+  "lodging": [
+    {
+      "name": "Pre-Cruise Hotel - Fort Lauderdale",
+      "location": "Fort Lauderdale, FL",
+      "type": "pre-cruise",
+      "nights": 1,
+      "checkIn": "2026-07-18",
+      "checkOut": "2026-07-19",
+      "rate": 200,
+      "total": 200,
+      "map": "Fort Lauderdale, FL near Port Everglades",
+      "notes": "Stay near port for stress-free embarkation. Pool a plus for kids! Options: Hilton Marina, Marriott Harbor Beach, or budget-friendly options further from port.",
+      "confirmed": false,
+      "options": [
+        {
+          "name": "Hilton Fort Lauderdale Marina",
+          "tier": "premium",
+          "rate": 250,
+          "pros": "Walk to port, pool, views",
+          "cons": "Pricier"
+        },
+        {
+          "name": "Hampton Inn Cruise Port",
+          "tier": "value",
+          "rate": 160,
+          "pros": "Free shuttle, breakfast included",
+          "cons": "Basic amenities"
+        }
+      ]
+    },
+    {
+      "name": "Cruise Ship - 7 Nights",
+      "location": "At Sea / Caribbean Ports",
+      "type": "cruise",
+      "nights": 7,
+      "checkIn": "2026-07-19",
+      "checkOut": "2026-07-26",
+      "notes": "All meals included. Balcony cabin recommended for family of 4 - extra space and private outdoor area.",
+      "confirmed": false
+    }
+  ],
+  "itinerary": [
+    {
+      "day": 1,
+      "date": "2026-07-18",
+      "title": "Arrival in Fort Lauderdale",
+      "location": "Fort Lauderdale, FL",
+      "type": "pre-cruise",
+      "activities": [
+        {
+          "time": "Afternoon",
+          "name": "Arrive & Check into Hotel",
+          "description": "Arrive at FLL, transfer to hotel. Relax after flight - pool time for the kids!",
+          "cost": 0
+        },
+        {
+          "time": "Evening",
+          "name": "Las Olas Boulevard Dinner",
+          "description": "Stroll the palm-lined boulevard with shops and restaurants. Great family-friendly options from casual to upscale.",
+          "cost": 120,
+          "optional": true,
+          "map": "Las Olas Boulevard, Fort Lauderdale"
+        }
+      ],
+      "meals": ["Dinner on Las Olas or near hotel"],
+      "tips": ["Pre-cruise option: Everglades airboat tour (book in advance if interested)", "Family tip: Kids will have energy to burn - hotel pool is your friend!"]
+    },
+    {
+      "day": 2,
+      "date": "2026-07-19",
+      "title": "Embarkation Day!",
+      "location": "Fort Lauderdale → At Sea",
+      "type": "embarkation",
+      "activities": [
+        {
+          "time": "Morning",
+          "name": "Pre-Cruise Breakfast & Packing",
+          "description": "Leisurely hotel breakfast. Double-check passports, cruise documents, and carry-on essentials.",
+          "cost": 0
+        },
+        {
+          "time": "Late Morning",
+          "name": "Transfer to Port Everglades",
+          "description": "Short drive/shuttle to cruise terminal. Check-in process typically 30-60 minutes.",
+          "cost": 30,
+          "notes": "Uber/Lyft ~$15, hotel shuttle may be free"
+        },
+        {
+          "time": "Afternoon",
+          "name": "Board the Ship!",
+          "description": "Explore the ship while cabins are being prepared. Hit the buffet for lunch - it's included! Attend muster drill (mandatory safety briefing).",
+          "cost": 0,
+          "highlight": true
+        },
+        {
+          "time": "Afternoon",
+          "name": "Explore & Unpack",
+          "description": "Cabins ready around 1:30pm. Unpack, explore kids' clubs, and find key venues: main dining room, pool deck, guest services.",
+          "cost": 0
+        },
+        {
+          "time": "Evening",
+          "name": "Sail Away Party!",
+          "description": "Don't miss the sail-away from the top deck! Live music, first sunset at sea, and that magical moment when the ship leaves port.",
+          "cost": 0,
+          "highlight": true
+        },
+        {
+          "time": "Evening",
+          "name": "First Dinner & Show",
+          "description": "Main dining room dinner (included) or try a specialty restaurant. Evening show in the main theater - great family entertainment.",
+          "cost": 0
+        }
+      ],
+      "meals": ["Breakfast at hotel", "Lunch buffet on ship", "Dinner in main dining room"],
+      "tips": ["Pro tip: Carry swimsuits in your day bag - pools open at noon before cabins are ready", "Kids club tip: Register the kids on day 1 so they can drop in throughout the cruise"]
+    },
+    {
+      "day": 3,
+      "date": "2026-07-20",
+      "title": "Sea Day - Ship Exploration",
+      "location": "At Sea",
+      "type": "sea-day",
+      "activities": [
+        {
+          "time": "Morning",
+          "name": "Family Pool Time",
+          "description": "Main pool deck, waterslides, and kids' splash areas. Best time: right after breakfast when it's less crowded.",
+          "cost": 0,
+          "forWho": ["all"]
+        },
+        {
+          "time": "Morning",
+          "name": "Teen Zone Check-In",
+          "description": "Let your teen explore the dedicated teen club - video games, movies, and age-appropriate activities with new cruise friends.",
+          "cost": 0,
+          "forWho": ["teen"],
+          "optional": true
+        },
+        {
+          "time": "Midday",
+          "name": "Adventure Activities",
+          "description": "Try the rock climbing wall, FlowRider surf simulator, or mini-golf. Most ships have multiple family-friendly activities.",
+          "cost": 0,
+          "forWho": ["all"]
+        },
+        {
+          "time": "Afternoon",
+          "name": "Adult Escape: Spa or Adults-Only Deck",
+          "description": "While kids are at their clubs: couples massage, thermal suite, or quiet pool time in the adults-only retreat.",
+          "cost": 100,
+          "forWho": ["adults"],
+          "optional": true
+        },
+        {
+          "time": "Afternoon",
+          "name": "Kids Club Programming",
+          "description": "Science experiments, treasure hunts, and themed activities for the 9-year-old. Supervised and free!",
+          "cost": 0,
+          "forWho": ["child"]
+        },
+        {
+          "time": "Evening",
+          "name": "Elegant Night Dinner",
+          "description": "First formal night! Dress up for photos and a special menu in the main dining room.",
+          "cost": 0,
+          "highlight": true
+        },
+        {
+          "time": "Evening",
+          "name": "Family Game Show or Trivia",
+          "description": "Many ships have nightly family activities - game shows, trivia, and deck parties.",
+          "cost": 0,
+          "forWho": ["all"]
+        }
+      ],
+      "meals": ["Breakfast buffet", "Poolside lunch", "Elegant night dinner"],
+      "seaDayTips": {
+        "adults": ["Book spa treatments on sea days - port days are quieter there", "Adults-only areas are perfect during kids club hours"],
+        "teen": ["Teen clubs come alive on sea days - great chance to make cruise friends", "Most ships have teen-only pool parties and movie nights"],
+        "child": ["Kids clubs have the best programming on sea days", "Morning is best for pools before they get crowded"],
+        "family": ["Family trivia competitions are surprisingly fun!", "Order room service for a lazy morning on the balcony"]
+      }
+    },
+    {
+      "day": 4,
+      "date": "2026-07-21",
+      "title": "Cozumel, Mexico",
+      "location": "Cozumel, Mexico",
+      "type": "port-day",
+      "portInfo": {
+        "arrive": "8:00 AM",
+        "depart": "5:00 PM",
+        "allAboard": "4:30 PM",
+        "dockOrTender": "dock",
+        "walkable": true
+      },
+      "activities": [
+        {
+          "time": "Morning",
+          "name": "Early Off - Beat the Crowds",
+          "description": "Be among the first off the ship. Crowds build by 10am as multiple ships disembark.",
+          "cost": 0,
+          "avoidCrowdsTip": true
+        },
+        {
+          "time": "Morning",
+          "name": "OPTION A: Chankanaab National Park",
+          "description": "All-ages adventure: snorkeling in crystal-clear lagoons, sea lion encounters, Dolphin Discovery (additional cost). Beach chairs and clear water.",
+          "cost": 100,
+          "forWho": ["all"],
+          "familyFriendly": true,
+          "duration": "4-5 hours",
+          "bookingRequired": false,
+          "crowdLevel": "moderate",
+          "notes": "Taxi ~$15 each way, or book ship excursion with transport"
+        },
+        {
+          "time": "Morning",
+          "name": "OPTION B: Snorkel Tour (Independent)",
+          "description": "Book a local snorkel tour to Palancar or Colombia reef - among the world's best! More adventurous, great for teens.",
+          "cost": 120,
+          "forWho": ["teen", "adults"],
+          "duration": "3-4 hours",
+          "crowdLevel": "low",
+          "notes": "Book in advance via Viator or local operator"
+        },
+        {
+          "time": "Afternoon",
+          "name": "Downtown Cozumel & Lunch",
+          "description": "Stroll the town square, shop for souvenirs, grab tacos and fresh guacamole. Authentic Mexican food at local prices.",
+          "cost": 60,
+          "optional": true
+        },
+        {
+          "time": "Afternoon",
+          "name": "Return to Ship Early",
+          "description": "Beat the rush back. Pool deck is empty when everyone's ashore - perfect time for the waterslides!",
+          "cost": 0,
+          "avoidCrowdsTip": true
+        }
+      ],
+      "meals": ["Breakfast on ship (early)", "Lunch in town or at beach", "Dinner on ship"],
+      "crowdAvoidance": [
+        "Be first off the ship - 8:15am vs 10am makes a huge difference",
+        "Consider independent excursions that go to different spots than ship tours",
+        "Return to ship by 2pm - empty pools and no tender wait",
+        "Skip the port shopping area right by the ship - walk 10 minutes into town for better prices"
+      ],
+      "map": "Cozumel, Mexico",
+      "tips": ["Money tip: Mexican pesos get better prices, but USD widely accepted", "Don't buy jewelry at port shops - same items on ship duty-free"]
+    },
+    {
+      "day": 5,
+      "date": "2026-07-22",
+      "title": "Grand Cayman",
+      "location": "George Town, Grand Cayman",
+      "type": "port-day",
+      "portInfo": {
+        "arrive": "7:00 AM",
+        "depart": "4:00 PM",
+        "allAboard": "3:30 PM",
+        "dockOrTender": "tender",
+        "walkable": true,
+        "tenderNote": "Tender port - get in line early or late to avoid the crush"
+      },
+      "activities": [
+        {
+          "time": "Early Morning",
+          "name": "First Tender Strategy",
+          "description": "Get tender tickets at 6:30am. First tenders leave around 7:30am. Alternatively, wait until 10am when initial rush clears.",
+          "cost": 0,
+          "avoidCrowdsTip": true
+        },
+        {
+          "time": "Morning",
+          "name": "OPTION A: Stingray City",
+          "description": "World-famous sandbar where you can touch and feed wild stingrays in waist-deep water. Magical family experience!",
+          "cost": 200,
+          "forWho": ["all"],
+          "familyFriendly": true,
+          "highlight": true,
+          "duration": "3 hours",
+          "notes": "Book early - sells out. Ship excursion or independent catamaran tour.",
+          "crowdLevel": "busy but worth it"
+        },
+        {
+          "time": "Morning",
+          "name": "OPTION B: Seven Mile Beach",
+          "description": "Stunning public beach - no excursion needed. Take a taxi ($5-7/person), rent chairs ($15), and enjoy pristine Caribbean water.",
+          "cost": 50,
+          "forWho": ["all"],
+          "duration": "Flexible",
+          "crowdLevel": "spread out - beach is huge"
+        },
+        {
+          "time": "Afternoon",
+          "name": "George Town Walk",
+          "description": "Duty-free shopping and waterfront walk. Margaritaville for lunch or Guy's Burger Joint equivalent on shore.",
+          "cost": 80,
+          "optional": true
+        },
+        {
+          "time": "Afternoon",
+          "name": "Early Return",
+          "description": "Tender lines get long after 2pm. Head back by 1:30pm for quick return.",
+          "cost": 0,
+          "avoidCrowdsTip": true
+        }
+      ],
+      "meals": ["Early breakfast on ship", "Lunch on shore or ship", "Dinner on ship"],
+      "crowdAvoidance": [
+        "Tender ports require strategy - very first or mid-morning is best",
+        "Stingray City: Book first available time slot (less crowded than midday)",
+        "Seven Mile Beach: Taxi drivers know the less crowded sections - ask!",
+        "Return tender by 1:30pm or wait until 3pm (everyone returns 2-2:30pm)"
+      ],
+      "map": "George Town, Grand Cayman",
+      "tips": ["Currency: Cayman dollars or USD (USD widely accepted at slight premium)", "Stingray City: Underwater cameras highly recommended - rentable on excursions"]
+    },
+    {
+      "day": 6,
+      "date": "2026-07-23",
+      "title": "Jamaica - Falmouth",
+      "location": "Falmouth, Jamaica",
+      "type": "port-day",
+      "portInfo": {
+        "arrive": "9:00 AM",
+        "depart": "5:00 PM",
+        "allAboard": "4:30 PM",
+        "dockOrTender": "dock",
+        "walkable": "port area only"
+      },
+      "activities": [
+        {
+          "time": "Morning",
+          "name": "OPTION A: Dunn's River Falls",
+          "description": "Iconic waterfall climb! Terraced falls you climb hand-in-hand as a group. Wet, adventurous, and unforgettable.",
+          "cost": 180,
+          "forWho": ["teen", "adults"],
+          "familyFriendly": true,
+          "highlight": true,
+          "duration": "4-5 hours",
+          "notes": "Ship excursion recommended - includes transport (1 hour drive). Bring water shoes!",
+          "crowdLevel": "busy - major attraction"
+        },
+        {
+          "time": "Morning",
+          "name": "OPTION B: Bamboo Rafting on Martha Brae",
+          "description": "Peaceful 3-mile float down the Martha Brae River on a bamboo raft. Relaxing alternative - great for all ages.",
+          "cost": 160,
+          "forWho": ["all"],
+          "familyFriendly": true,
+          "duration": "3 hours",
+          "crowdLevel": "low - intimate experience"
+        },
+        {
+          "time": "Morning",
+          "name": "OPTION C: Stay on Ship",
+          "description": "Skip this port and enjoy an empty ship! Pool deck, spa, specialty lunch - it's like having the ship to yourselves.",
+          "cost": 0,
+          "forWho": ["all"],
+          "optional": true,
+          "avoidCrowdsTip": true
+        },
+        {
+          "time": "Afternoon",
+          "name": "Falmouth Historic Walk",
+          "description": "If not on excursion, the port area has Georgian architecture and local craft vendors. Stay in the port area for security.",
+          "cost": 20,
+          "optional": true
+        }
+      ],
+      "meals": ["Breakfast on ship", "Lunch at excursion or ship", "Dinner on ship"],
+      "crowdAvoidance": [
+        "Dunn's River Falls: First time slot (usually 9:30am) has shorter wait to climb",
+        "Staying aboard is a legitimate strategy - Jamaican ports are crowded",
+        "If exploring town, Falmouth's port area is contained and walkable"
+      ],
+      "map": "Falmouth, Jamaica",
+      "tips": ["Safety: Stick to excursions or port area. Don't venture independently.", "Water shoes essential for Dunn's River Falls"]
+    },
+    {
+      "day": 7,
+      "date": "2026-07-24",
+      "title": "Sea Day - Family Fun",
+      "location": "At Sea",
+      "type": "sea-day",
+      "activities": [
+        {
+          "time": "Morning",
+          "name": "Sleep In & Room Service",
+          "description": "Order breakfast to the cabin and eat on the balcony. After 3 ports, you've earned it!",
+          "cost": 0,
+          "forWho": ["all"]
+        },
+        {
+          "time": "Morning",
+          "name": "Morning Activities Split",
+          "description": "Adults: fitness center or quiet time. Teen: sports deck or video arcade. Child: morning kids club session.",
+          "cost": 0
+        },
+        {
+          "time": "Midday",
+          "name": "Family Competition Time",
+          "description": "Mini golf tournament, ping pong, or basketball on the sports deck. Many ships have family Olympics events.",
+          "cost": 0,
+          "forWho": ["all"],
+          "familyFriendly": true
+        },
+        {
+          "time": "Afternoon",
+          "name": "Specialty Lunch (Optional)",
+          "description": "Treat yourselves to the specialty burger joint, pizza parlor, or hibachi. Most are included or low-cost.",
+          "cost": 30,
+          "optional": true
+        },
+        {
+          "time": "Afternoon",
+          "name": "Pool & Waterslide Marathon",
+          "description": "Final full day for ship activities! Race down the waterslides, try the FlowRider, or just float in the pool.",
+          "cost": 0,
+          "forWho": ["all"]
+        },
+        {
+          "time": "Evening",
+          "name": "Captain's Farewell Dinner",
+          "description": "Final formal night with special menu. Photos in your finest, baked Alaska parade in the dining room.",
+          "cost": 0,
+          "highlight": true
+        },
+        {
+          "time": "Evening",
+          "name": "Farewell Show & Deck Party",
+          "description": "Final evening entertainment. Many ships do a deck party with dancing under the stars.",
+          "cost": 0,
+          "forWho": ["all"]
+        }
+      ],
+      "meals": ["Room service breakfast", "Specialty lunch", "Captain's farewell dinner"],
+      "seaDayTips": {
+        "adults": ["Final spa treatments at discount - check for last-day specials", "Pack tonight to avoid morning rush"],
+        "teen": ["Teen club often has late-night party on final sea day", "Exchange contact info with cruise friends"],
+        "child": ["Kids club farewell party - supervised so adults can enjoy dinner", "Start packing early, leave out tomorrow's outfit"],
+        "family": ["Take final ship photos today - tomorrow is hectic", "Settle onboard accounts tonight at guest services"]
+      },
+      "notes": "Pack tonight! Leave out one outfit for tomorrow. Settlement of shipboard account happens automatically unless you have questions."
+    },
+    {
+      "day": 8,
+      "date": "2026-07-25",
+      "title": "Private Island Day",
+      "location": "Cruise Line's Private Island",
+      "type": "port-day",
+      "portInfo": {
+        "arrive": "8:00 AM",
+        "depart": "4:00 PM",
+        "allAboard": "3:30 PM",
+        "dockOrTender": "tender usually",
+        "walkable": true
+      },
+      "activities": [
+        {
+          "time": "Morning",
+          "name": "First Tender to Island",
+          "description": "Private island days are crowded by 10am. First tender gets best beach chairs!",
+          "cost": 0,
+          "avoidCrowdsTip": true
+        },
+        {
+          "time": "Morning",
+          "name": "Beach Day!",
+          "description": "Crystal clear water, BBQ lunch (included), and family beach time. This is why you came to the Caribbean!",
+          "cost": 0,
+          "forWho": ["all"],
+          "highlight": true
+        },
+        {
+          "time": "Midday",
+          "name": "Snorkel Rental or Water Sports",
+          "description": "Kayaks, paddleboards, snorkel gear available for rent. Some activities included with cruise fare.",
+          "cost": 50,
+          "optional": true
+        },
+        {
+          "time": "Afternoon",
+          "name": "Island Exploration",
+          "description": "Walking trails, nature areas, and often a splash pad/water park for kids. Take the family photo with the island backdrop!",
+          "cost": 0,
+          "forWho": ["all"]
+        },
+        {
+          "time": "Afternoon",
+          "name": "Final Ship Return",
+          "description": "Return by 2pm for smooth tender experience. Final sunset sail-away from your balcony.",
+          "cost": 0,
+          "avoidCrowdsTip": true
+        },
+        {
+          "time": "Evening",
+          "name": "Final Dinner & Shows",
+          "description": "Last night aboard! Enjoy dinner and catch any shows you missed. Many ships have a final farewell performance.",
+          "cost": 0
+        }
+      ],
+      "meals": ["Breakfast on ship", "BBQ lunch on island (included)", "Final dinner on ship"],
+      "crowdAvoidance": [
+        "First tender: arrive at tender meeting spot 30 minutes early",
+        "Walk past the first beach area - further beaches are less packed",
+        "Return to ship for lunch instead of island BBQ (empty ship!)",
+        "Last tender has long waits - leave island by 2:30pm"
+      ],
+      "map": "Cruise line private island, Bahamas",
+      "tips": ["Bring towels from ship (or they provide at island)", "Waterproof phone case essential for beach photos", "Apply sunscreen liberally - island sun is intense"]
+    },
+    {
+      "day": 9,
+      "date": "2026-07-26",
+      "title": "Debarkation Day",
+      "location": "Fort Lauderdale, FL",
+      "type": "debarkation",
+      "activities": [
+        {
+          "time": "Early Morning",
+          "name": "Wake Up & Final Breakfast",
+          "description": "Ship docks ~7am. Enjoy final breakfast in dining room or grab-and-go from buffet.",
+          "cost": 0
+        },
+        {
+          "time": "Morning",
+          "name": "Debarkation",
+          "description": "Self-assist debark (carry your own bags) exits first ~8am. Otherwise, wait for your color group to be called (8:30-10:30am).",
+          "cost": 0,
+          "notes": "Have passports ready, settle any outstanding charges night before"
+        },
+        {
+          "time": "Morning",
+          "name": "Transfer to Airport",
+          "description": "Taxi, Uber, or shuttle to FLL airport. ~15 minutes from port. Arrive 2 hours before domestic flight.",
+          "cost": 30
+        },
+        {
+          "time": "Afternoon",
+          "name": "Flight Home",
+          "description": "Afternoon flight recommended. Don't book before 1pm - debarkation can run late!",
+          "cost": 0
+        }
+      ],
+      "meals": ["Breakfast on ship"],
+      "tips": ["Pro tip: Self-assist debark if you can carry all your bags - you'll be off 1-2 hours earlier", "Customs is usually quick (30 min) but budget extra time", "Don't book early flights - 1pm+ is safest"]
+    }
+  ],
+  "tiers": {
+    "value": {
+      "name": "Family Value",
+      "description": "Great cruise experience with smart savings",
+      "includes": [
+        "Economy flights",
+        "Inside cabin (larger category for family)",
+        "1 ship excursion (Stingray City or Dunn's River)",
+        "Main dining and buffet (included)",
+        "Kids club and teen activities (included)"
+      ],
+      "perPerson": 1600,
+      "estimatedTotal": 6400
+    },
+    "premium": {
+      "name": "Family Adventure",
+      "description": "Our recommendation - balcony cabin and key excursions",
+      "includes": [
+        "Economy or Economy Plus flights",
+        "Balcony cabin",
+        "Pre-cruise hotel night",
+        "2-3 shore excursions (Stingray City, Dunn's River, Beach Day)",
+        "Specialty dining package",
+        "Drink package (adults) / soda package (kids)"
+      ],
+      "perPerson": 2200,
+      "estimatedTotal": 8800,
+      "recommended": true
+    },
+    "luxury": {
+      "name": "Ultimate Family Cruise",
+      "description": "Suite life with all the extras",
+      "includes": [
+        "Premium Economy or Business flights",
+        "Suite with concierge service",
+        "2 nights pre-cruise at luxury hotel",
+        "All port excursions (private tours)",
+        "Ultimate beverage package",
+        "Specialty dining at will",
+        "WiFi package",
+        "Priority everything"
+      ],
+      "perPerson": 4500,
+      "estimatedTotal": 18000
+    },
+    "notes": "Cruise pricing varies dramatically by sail date, cabin availability, and booking timing. Early booking and repositioning cruises offer best value."
+  },
+  "featuredLinks": [
+    {
+      "title": "Cruise Line Official Site",
+      "url": "#",
+      "description": "Replace with actual cruise line when booked"
+    },
+    {
+      "title": "Port Everglades Parking",
+      "url": "https://www.porteverglades.net/cruise/parking/",
+      "description": "If driving to port"
+    }
+  ],
+  "cruiseSpecificTips": {
+    "seaDays": {
+      "overview": "Sea days are when the ship's activities shine. Don't try to do everything - pick a few highlights and relax.",
+      "byAge": {
+        "adults": ["Spa & thermal suite", "Wine tasting", "Cooking demo", "Adults-only pool", "Fitness classes"],
+        "teens": ["Teen club hangout", "Sports tournaments", "Video arcade", "FlowRider/waterslides", "Teen pool parties"],
+        "children": ["Kids club programs", "Splash pad", "Mini golf", "Character meet & greets", "Scavenger hunts"]
+      }
+    },
+    "portDays": {
+      "overview": "Crowds follow the herd. Be first off OR last off, never middle. Return to ship mid-afternoon for empty pool.",
+      "strategies": [
+        "Early risers: First tender/walkoff, finish excursion by noon, lunch on empty ship",
+        "Late starters: Skip morning rush, depart 10am, enjoy less crowded port, stay until all-aboard",
+        "Ship day: Stay aboard when others leave - it's like having a private cruise ship"
+      ]
+    },
+    "dining": {
+      "included": ["Main dining room", "Buffet", "Pool deck grill", "Pizza/casual spots", "Room service (most items)"],
+      "specialty": ["Steakhouse", "Italian", "Sushi/Asian", "Chef's table"],
+      "familyTip": "Main dining room anytime dining works best for families - no set time commitment"
+    },
+    "packing": {
+      "mustHave": ["Passports (check expiration dates!)", "Motion sickness meds (just in case)", "Reef-safe sunscreen", "Water shoes for Dunn's River", "Formal outfit for elegant nights"],
+      "skip": ["Beach towels (ship provides)", "Shampoo/soap (ship provides)", "Hair dryer (in cabin)"]
+    }
+  },
+  "notes": {
+    "customization": "This is a sample cruise trip showing the system's capabilities. Customize cruise line, ship, dates, and activities to match your client's preferences.",
+    "bookingReminder": "Cruise cabins sell out - book early for best selection, especially balconies and suites.",
+    "familyTip": "Connecting cabins or larger family staterooms make a huge difference with kids. Worth the upgrade!"
+  }
+}

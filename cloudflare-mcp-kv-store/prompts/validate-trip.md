@@ -24,6 +24,15 @@ Analyze this trip for issues and report findings clearly.
 - Malformed URLs
 - Outdated information
 
+### Reference Data Alignment
+If the trip has reference data (confirmed bookings), call `validate_reference(tripId)` to check:
+- Dates match the confirmed booking
+- Port/city names match the official itinerary
+- Traveler names match exactly
+- Any drift between itinerary and source of truth
+
+**Critical:** If reference data exists and the itinerary doesn't match, flag this as a **Critical Issue**. The reference is authoritative—the itinerary needs fixing, not the reference.
+
 ### Seasonal & Practical
 - Weather appropriateness for dates
 - Major holidays affecting availability

@@ -100,7 +100,7 @@ export const handleGetPrompt: McpToolHandler = async (args, env, keyPrefix, user
   const promptContent = await env.TRIPS.get(promptKey, "text");
 
   if (!promptContent) {
-    throw new Error(`Prompt '${promptName}' not found. Available prompts: cruise-instructions, handle-changes, research-destination, validate-trip, import-quote, analyze-profitability`);
+    throw new Error(`Prompt '${promptName}' not found. Available prompts: system-prompt, validate-trip, import-quote, analyze-profitability, cruise-instructions, handle-changes, flight-search, research-destination, trip-schema, admin-system-prompt`);
   }
 
   const result = {

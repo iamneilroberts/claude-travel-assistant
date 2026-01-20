@@ -46,12 +46,28 @@ Compare against existing plan:
 - Price changes from estimates
 - Different room/cabin than planned
 
-### 5. Report Summary
+### 5. Set Reference Data (Source of Truth)
+
+**For confirmed bookings**, call `set_reference` to establish the source of truth:
+
+```
+set_reference(tripId, {
+  source: { type: "cruise_confirmation", provider: "Royal Caribbean", reference: "ABC123" },
+  travelers: [{ name: "John Doe", dob: "1980-05-15" }],
+  dates: { tripStart: "2026-03-15", tripEnd: "2026-03-22" },
+  // Include ports, flights, hotels as confirmed
+})
+```
+
+**Why this matters:** The reference is authoritative. Future trip modifications should be validated against this data. If dates in the itinerary drift from the reference, the itinerary needs fixing—not the reference.
+
+### 6. Report Summary
 
 Tell the user:
 - What was imported
 - What was updated
 - Any discrepancies found
+- Whether reference data was set (for confirmed bookings)
 - Action items (e.g., "Final payment due Aug 15")
 
 ---

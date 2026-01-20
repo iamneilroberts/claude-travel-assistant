@@ -72,6 +72,19 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     .icon { font-size: 14px; margin-right: 5px; }
     @media (max-width: 768px) { .detail-grid { grid-template-columns: 1fr; } }
 
+    /* Action Dropdown Menu */
+    .action-menu { position: relative; display: inline-block; }
+    .action-menu-btn { background: #eee; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 4px; }
+    .action-menu-btn:hover { background: #ddd; }
+    .action-menu-content { display: none; position: absolute; right: 0; top: 100%; background: white; min-width: 180px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 8px; z-index: 100; overflow: hidden; margin-top: 4px; }
+    .action-menu.open .action-menu-content { display: block; }
+    .action-menu-item { display: block; width: 100%; padding: 10px 14px; border: none; background: none; text-align: left; font-size: 13px; cursor: pointer; color: #333; }
+    .action-menu-item:hover { background: #f5f5f5; }
+    .action-menu-item.danger { color: #dc2626; }
+    .action-menu-item.danger:hover { background: #fef2f2; }
+    .action-menu-divider { height: 1px; background: #eee; margin: 4px 0; }
+    .action-menu-header { padding: 8px 14px; font-size: 10px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+
     /* Mission Control - Clean Dark Theme */
     .mission-control-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
     .mode-tabs { display: flex; gap: 4px; background: #1e293b; padding: 4px; border-radius: 8px; }
@@ -797,6 +810,22 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     </div>
   </div>
 
+  <!-- Setup Instructions Modal -->
+  <div id="setupModal" class="modal">
+    <div class="modal-content wide">
+      <h3>Setup Instructions for <span id="setupUserName"></span></h3>
+      <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+        <button class="btn btn-secondary btn-small" onclick="showSetupTab('chatgpt')" id="tabChatGPT">ChatGPT</button>
+        <button class="btn btn-secondary btn-small" onclick="showSetupTab('claude')" id="tabClaude">Claude Desktop</button>
+      </div>
+      <div id="setupContent" class="email-preview" style="max-height: 400px;"></div>
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button class="btn btn-primary" onclick="copySetupInstructions()">Copy to Clipboard</button>
+        <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Trip Detail Modal -->
   <div id="tripDetailModal" class="modal">
     <div class="modal-content wide">
@@ -1076,13 +1105,29 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <tbody>
               \${data.users.map(u => \`
                 <tr>
-                  <td>\${escapeHtml(u.name)}<span class="user-id">\${escapeHtml(u.userId)}</span></td>
+                  <td>\${escapeHtml(u.name)}<br><small style="color:#666">\${escapeHtml(u.userId)}</small></td>
                   <td>\${escapeHtml(u.agency.name)}\${u.agency.franchise ? '<br><small style="color:#666">' + escapeHtml(u.agency.franchise) + '</small>' : ''}</td>
                   <td>\${escapeHtml(u.email)}\${u.phone ? '<br><small style="color:#666">' + escapeHtml(u.phone) + '</small>' : ''}</td>
                   <td><span class="status-badge status-\${escapeHtml(u.status)}">\${escapeHtml(u.status)}</span></td>
                   <td><code style="font-size:11px">\${escapeHtml(u.authKey)}</code></td>
-                  <td class="actions">
+                  <td class="actions" style="display: flex; gap: 4px;">
                     <button class="btn btn-secondary btn-small" data-action="edit-user" data-user-id="\${escapeHtml(u.userId)}">Edit</button>
+                    <div class="action-menu" data-user-id="\${escapeHtml(u.userId)}">
+                      <button class="action-menu-btn" onclick="toggleUserMenu('\${escapeHtml(u.userId)}')">Tools ▾</button>
+                      <div class="action-menu-content">
+                        <div class="action-menu-header">Quick Actions</div>
+                        <button class="action-menu-item" onclick="showSetupInstructions('\${escapeHtml(u.userId)}')">Setup Instructions</button>
+                        <button class="action-menu-item" onclick="userTool('\${escapeHtml(u.userId)}', 'add-samples')">Add Sample Trips</button>
+                        <button class="action-menu-item" onclick="userTool('\${escapeHtml(u.userId)}', 'reset-new-user')">Reset to New User</button>
+                        <button class="action-menu-item" onclick="userTool('\${escapeHtml(u.userId)}', 'reset-branding')">Reset Branding</button>
+                        <div class="action-menu-divider"></div>
+                        <div class="action-menu-header">Delete Data</div>
+                        <button class="action-menu-item danger" onclick="userTool('\${escapeHtml(u.userId)}', 'clear-messages')">Clear Messages</button>
+                        <button class="action-menu-item danger" onclick="userTool('\${escapeHtml(u.userId)}', 'clear-trips')">Delete All Trips</button>
+                        <div class="action-menu-divider"></div>
+                        <button class="action-menu-item danger" onclick="userTool('\${escapeHtml(u.userId)}', 'reset-account')">Full Account Reset</button>
+                      </div>
+                    </div>
                   </td>
                 </tr>
               \`).join('')}
@@ -1236,6 +1281,190 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
       document.getElementById('editUserStatus').value = user.status || 'active';
 
       document.getElementById('editUserModal').classList.add('active');
+    }
+
+    // User Tools dropdown functions
+    function toggleUserMenu(userId) {
+      // Close all other menus first
+      document.querySelectorAll('.action-menu.open').forEach(m => {
+        if (m.dataset.userId !== userId) m.classList.remove('open');
+      });
+      // Toggle this menu
+      const menu = document.querySelector(\`.action-menu[data-user-id="\${userId}"]\`);
+      if (menu) menu.classList.toggle('open');
+    }
+
+    // Close menus when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.action-menu')) {
+        document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));
+      }
+    });
+
+    async function userTool(userId, action) {
+      const user = usersCache.find(u => u.userId === userId);
+      const userName = user ? user.name : userId;
+
+      // Confirmation messages for destructive actions
+      const confirmMessages = {
+        'clear-messages': \`Delete ALL messages and comments for \${userName}?\`,
+        'clear-trips': \`Delete ALL trips for \${userName}? This cannot be undone.\`,
+        'reset-account': \`Fully reset \${userName}'s account? This will delete ALL trips, messages, and reset settings to defaults. This cannot be undone.\`
+      };
+
+      if (confirmMessages[action] && !confirm(confirmMessages[action])) {
+        return;
+      }
+
+      // Close the menu
+      document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));
+
+      try {
+        let endpoint, method;
+
+        switch (action) {
+          case 'add-samples':
+            endpoint = \`/admin/users/\${userId}/add-samples\`;
+            method = 'POST';
+            break;
+          case 'reset-new-user':
+            endpoint = \`/admin/users/\${userId}/reset-new-user\`;
+            method = 'POST';
+            break;
+          case 'reset-branding':
+            endpoint = \`/admin/users/\${userId}/reset-branding\`;
+            method = 'POST';
+            break;
+          case 'clear-messages':
+            endpoint = \`/admin/users/\${userId}/data/messages\`;
+            method = 'DELETE';
+            break;
+          case 'clear-trips':
+            endpoint = \`/admin/users/\${userId}/data/trips\`;
+            method = 'DELETE';
+            break;
+          case 'reset-account':
+            endpoint = \`/admin/users/\${userId}/reset-account\`;
+            method = 'POST';
+            break;
+          default:
+            alert('Unknown action: ' + action);
+            return;
+        }
+
+        const result = await api(endpoint, { method });
+        alert(result.message || 'Action completed successfully');
+
+        // Refresh data after successful action
+        loadUsers();
+        loadTrips();
+        loadActivity();
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    // Setup Instructions functions
+    let currentSetupUser = null;
+    let currentSetupTab = 'chatgpt';
+
+    function showSetupInstructions(userId) {
+      const user = usersCache.find(u => u.userId === userId);
+      if (!user) { alert('User not found'); return; }
+
+      currentSetupUser = user;
+      document.getElementById('setupUserName').textContent = user.name;
+
+      // Close the dropdown
+      document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));
+
+      showSetupTab('chatgpt');
+      document.getElementById('setupModal').classList.add('active');
+    }
+
+    function showSetupTab(tab) {
+      currentSetupTab = tab;
+      const user = currentSetupUser;
+      if (!user) return;
+
+      // Update tab styling
+      document.getElementById('tabChatGPT').classList.toggle('btn-primary', tab === 'chatgpt');
+      document.getElementById('tabChatGPT').classList.toggle('btn-secondary', tab !== 'chatgpt');
+      document.getElementById('tabClaude').classList.toggle('btn-primary', tab === 'claude');
+      document.getElementById('tabClaude').classList.toggle('btn-secondary', tab !== 'claude');
+
+      const mcpUrl = \`https://voygent.somotravel.workers.dev/sse?key=\${user.authKey}\`;
+
+      let content = '';
+      if (tab === 'chatgpt') {
+        content = \`== ChatGPT Web Setup ==
+
+1. Go to ChatGPT Settings > Apps > Advanced settings > Create app
+
+2. Fill in the form:
+   - Name: Voygent
+   - Description: Voygent AI powered travel assistant
+   - MCP Server URL: \${mcpUrl}
+   - Authentication: No Auth
+
+3. Check "I understand and want to continue"
+
+4. Click Create
+
+5. Start a new conversation and say:
+   "use voygent, list trips"
+
+== Your Auth Key ==
+\${user.authKey}
+
+== MCP URL ==
+\${mcpUrl}\`;
+      } else {
+        content = \`== Claude Desktop Setup ==
+
+1. Open your Claude Desktop config file:
+   - Mac: ~/Library/Application Support/Claude/claude_desktop_config.json
+   - Windows: %APPDATA%/Claude/claude_desktop_config.json
+   - Linux: ~/.config/Claude/claude_desktop_config.json
+
+2. Add this to the "mcpServers" section:
+
+{
+  "voygent": {
+    "command": "npx",
+    "args": ["-y", "mcp-remote", "\${mcpUrl}"]
+  }
+}
+
+3. Save the file and restart Claude Desktop
+
+4. Start a new conversation and say:
+   "use voygent, list trips"
+
+== Your Auth Key ==
+\${user.authKey}
+
+== MCP URL ==
+\${mcpUrl}\`;
+      }
+
+      document.getElementById('setupContent').textContent = content;
+    }
+
+    function copySetupInstructions() {
+      const content = document.getElementById('setupContent').textContent;
+      navigator.clipboard.writeText(content).then(() => {
+        alert('Copied to clipboard!');
+      }).catch(() => {
+        // Fallback for older browsers
+        const ta = document.createElement('textarea');
+        ta.value = content;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        alert('Copied to clipboard!');
+      });
     }
 
     document.getElementById('addUserForm').addEventListener('submit', async (e) => {

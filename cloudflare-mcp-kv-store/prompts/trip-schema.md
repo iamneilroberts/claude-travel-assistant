@@ -168,3 +168,218 @@ Three options for proposals:
 
 ### bookings
 Track confirmed reservations with confirmation numbers.
+
+---
+
+## Cruise Trip Addendum
+
+When building cruise trips, use these additional fields alongside the standard schema. See `cruise-instructions.md` for cruise planning best practices.
+
+### cruiseInfo (Ship Details)
+
+Top-level object for cruise-specific information:
+
+```json
+{
+  "cruiseInfo": {
+    "cruiseLine": "Royal Caribbean",
+    "shipName": "Wonder of the Seas",
+    "cabin": {
+      "type": "Balcony Stateroom",
+      "category": "Family-friendly with balcony",
+      "deck": 9,
+      "stateroom": "9421",
+      "notes": "Accommodates 4 guests"
+    },
+    "embarkation": {
+      "port": "Fort Lauderdale (Port Everglades)",
+      "date": "2026-07-19",
+      "time": "Check-in opens 11:00am, all aboard 4:00pm",
+      "tips": "Priority boarding available with drink packages"
+    },
+    "debarkation": {
+      "port": "Fort Lauderdale (Port Everglades)",
+      "date": "2026-07-26",
+      "time": "Ship docks ~7:00am, debarkation 8:00am-10:30am",
+      "tips": "Self-assist debark is fastest"
+    }
+  }
+}
+```
+
+### Cruise-Specific Lodging Fields
+
+Add these fields to `lodging[]` entries for cruise trips:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | string | `"pre-cruise"`, `"cruise"`, or `"post-cruise"` |
+| `checkIn` | string | ISO date (e.g., `"2026-07-18"`) |
+| `checkOut` | string | ISO date (e.g., `"2026-07-19"`) |
+| `options` | array | Alternative hotel options (see below) |
+
+**Lodging options array** for pre/post cruise hotels:
+
+```json
+{
+  "options": [
+    {
+      "name": "Hilton Fort Lauderdale Marina",
+      "tier": "premium",
+      "rate": 250,
+      "pros": "Walk to port, pool, views",
+      "cons": "Pricier"
+    },
+    {
+      "name": "Hampton Inn Cruise Port",
+      "tier": "value",
+      "rate": 160,
+      "pros": "Free shuttle, breakfast included",
+      "cons": "Basic amenities"
+    }
+  ]
+}
+```
+
+### Cruise-Specific Itinerary Fields
+
+Add these fields to `itinerary[]` entries:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | string | `"pre-cruise"`, `"embarkation"`, `"sea-day"`, `"port-day"`, or `"debarkation"` |
+| `portInfo` | object | Port arrival/departure details (port days only) |
+| `seaDayTips` | object | Tips organized by audience (sea days only) |
+| `crowdAvoidance` | array | Strategies for avoiding crowds |
+
+**portInfo object** (for port days):
+
+```json
+{
+  "portInfo": {
+    "arrive": "8:00 AM",
+    "depart": "5:00 PM",
+    "allAboard": "4:30 PM",
+    "dockOrTender": "dock",
+    "walkable": true,
+    "tenderNote": "Tender port - get in line early or late to avoid the crush"
+  }
+}
+```
+
+- `dockOrTender`: `"dock"`, `"tender"`, or `"tender usually"`
+- `walkable`: `true`, `false`, or `"port area only"`
+
+**seaDayTips object** (for sea days):
+
+```json
+{
+  "seaDayTips": {
+    "adults": ["Book spa treatments on sea days", "Adults-only areas during kids club hours"],
+    "teen": ["Teen clubs come alive on sea days", "Most ships have teen-only pool parties"],
+    "child": ["Kids clubs have the best programming", "Morning is best for pools"],
+    "family": ["Family trivia competitions are fun!", "Order room service for lazy mornings"]
+  }
+}
+```
+
+### Activity Flags
+
+Add these fields to activities within `itinerary[].activities[]`:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `forWho` | array | Target audience (strict enum): `"all"`, `"adults"`, `"teen"`, `"child"` - use combinations like `["teen", "adults"]` |
+| `familyFriendly` | boolean | Suitable for all ages |
+| `highlight` | boolean | Standout activity - don't miss |
+| `duration` | string | Time required (e.g., `"3-4 hours"`) |
+| `bookingRequired` | boolean | Must book in advance |
+| `crowdLevel` | string | `"low"`, `"moderate"`, `"busy"`, or descriptive |
+| `avoidCrowdsTip` | boolean | Marks crowd-beating advice |
+| `included` | boolean | Part of cruise package (shows green badge) |
+| `optional` | boolean | Available if time permits (shows amber badge) |
+
+**Example activity with cruise flags:**
+
+```json
+{
+  "time": "Morning",
+  "name": "Stingray City",
+  "description": "World-famous sandbar where you can touch and feed wild stingrays",
+  "cost": 200,
+  "forWho": ["all"],
+  "familyFriendly": true,
+  "highlight": true,
+  "duration": "3 hours",
+  "bookingRequired": true,
+  "crowdLevel": "busy but worth it",
+  "notes": "Book early - sells out"
+}
+```
+
+### cruiseSpecificTips (Top-Level)
+
+General cruise advice organized by category:
+
+```json
+{
+  "cruiseSpecificTips": {
+    "seaDays": {
+      "overview": "Sea days are when the ship's activities shine.",
+      "byAge": {
+        "adults": ["Spa & thermal suite", "Wine tasting", "Adults-only pool"],
+        "teens": ["Teen club hangout", "Sports tournaments", "FlowRider"],
+        "children": ["Kids club programs", "Splash pad", "Mini golf"]
+      }
+    },
+    "portDays": {
+      "overview": "Crowds follow the herd. Be first off OR last off, never middle.",
+      "strategies": [
+        "Early risers: First tender/walkoff, finish by noon",
+        "Late starters: Skip morning rush, depart 10am",
+        "Ship day: Stay aboard when others leave"
+      ]
+    },
+    "dining": {
+      "included": ["Main dining room", "Buffet", "Room service"],
+      "specialty": ["Steakhouse", "Italian", "Sushi"],
+      "familyTip": "Anytime dining works best for families"
+    },
+    "packing": {
+      "mustHave": ["Passports", "Motion sickness meds", "Reef-safe sunscreen"],
+      "skip": ["Beach towels (ship provides)", "Hair dryer (in cabin)"]
+    }
+  }
+}
+```
+
+### Enhanced travelers.details
+
+For cruise trips with mixed age groups, include traveler type:
+
+```json
+{
+  "travelers": {
+    "count": 4,
+    "names": ["Adult 1", "Adult 2", "Teen (14)", "Child (9)"],
+    "details": [
+      { "name": "Adult 1", "type": "adult" },
+      { "name": "Adult 2", "type": "adult" },
+      { "name": "Teen", "type": "teen", "age": 14 },
+      { "name": "Child", "type": "child", "age": 9 }
+    ]
+  }
+}
+```
+
+Type values: `"adult"`, `"teen"`, `"child"`
+
+### Field Notes for Cruise Trips
+
+- **Use `type` fields** to distinguish itinerary day types and lodging phases
+- **Port info in itinerary**, not separate `ports[]` array - keeps all daily info together (note: `ports[]` is deprecated; use `itinerary[].portInfo` instead)
+- **Use `cruiseLine`/`shipName`** (not `line`/`ship`) to match template expectations
+- **`forWho` enables filtering** - templates can show age-appropriate activities
+- **`included` vs `optional`** - critical for cruise packages with pre-booked excursions
+- **`highlight` activities** - templates can feature these prominently
+- **Sea day tips** - helps families split up and maximize ship time

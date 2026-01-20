@@ -316,7 +316,7 @@ Use `get_prompt(name)` to load detailed guidance for specific scenarios:
 
 For cruise vacations:
 1. Call `get_prompt("cruise-instructions")` for detailed guidance on schema, stateroom research, port day planning, and tour recommendations
-2. Use the cruise-specific schema (cruiseInfo, ports, dining, credits)
+2. Use the cruise-specific schema (cruiseInfo, dining, credits) with port info in itinerary[].portInfo
 3. Use the `cruise` template when publishing
 
 ## Validation
@@ -506,8 +506,8 @@ Use `set_reference` when you receive **confirmed** booking information:
   "travelers": [{"name": "Jane Doe", "dob": "1980-01-15"}],
   "dates": {"tripStart": "2026-05-29", "tripEnd": "2026-06-07"},
   "cruise": {
-    "line": "Celestyal Cruises",
-    "ship": "Celestyal Journey",
+    "cruiseLine": "Celestyal Cruises",
+    "shipName": "Celestyal Journey",
     "cabin": "6055",
     "embarkation": {"port": "Piraeus", "date": "2026-05-30", "time": "17:00"},
     "debarkation": {"port": "Piraeus", "date": "2026-06-06", "time": "08:00"},
@@ -590,6 +590,32 @@ When `get_context` returns `adminMessages`, display them prominently before othe
 | "Template not found" | Run `list_templates` to see options |
 | Image upload fails | Check file size (<10MB), format (PNG/JPG) |
 | Publish fails | Try `preview_publish` first to debug |
+| "Prompt not found" | Check prompt name spelling. Available: system-prompt, validate-trip, import-quote, analyze-profitability, cruise-instructions, handle-changes, flight-search, research-destination, trip-schema |
+| Reference validation fails | Itinerary drifted from confirmed booking—fix itinerary to match reference, not vice versa |
+
+### Import Quote Troubleshooting
+
+If `import_quote` fails to parse a quote correctly:
+1. **Check quote format** - Is the text complete? Sometimes copy-paste truncates content
+2. **Try smaller chunks** - Parse confirmation emails separately from itinerary PDFs
+3. **Manual extraction** - Ask the user to highlight key details (dates, confirmation #, prices)
+4. **Report the format** - Note which supplier/format failed so patterns can be improved
+
+### Corrupted Trip Recovery
+
+If trip data appears corrupted or malformed:
+1. **Don't overwrite immediately** - Read the trip and assess what's salvageable
+2. **Check change history** - Look at `meta.changeHistory` for recent modifications
+3. **Reference data is backup** - If reference exists, use it to rebuild core details
+4. **Create fresh if needed** - Sometimes starting clean with `save_trip` is faster than fixing
+
+### When to Escalate
+
+Contact support (admin message) if you encounter:
+- Persistent KV storage errors
+- GitHub publish failures that don't resolve
+- Authentication issues
+- Data that won't save despite valid format
 
 ## Core Rules
 

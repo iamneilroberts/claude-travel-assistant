@@ -1,0 +1,425 @@
+{
+  "meta": {
+    "tripId": "europe-romantic-7day",
+    "title": "Paris & Rome Romantic Getaway",
+    "clientName": "Sample Trip - European Romance",
+    "destination": "Paris, France & Rome, Italy",
+    "dates": "Sample dates - customize for your client",
+    "phase": "proposal",
+    "status": "Sample trip template - ready to customize",
+    "lastModified": "2026-01-15",
+    "isSample": true
+  },
+  "travelers": {
+    "count": 2,
+    "names": ["Traveler 1", "Traveler 2"],
+    "details": [
+      { "name": "Traveler 1", "type": "adult" },
+      { "name": "Traveler 2", "type": "adult" }
+    ]
+  },
+  "dates": {
+    "start": "2026-06-01",
+    "end": "2026-06-07",
+    "duration": 7,
+    "flexible": true,
+    "notes": "Sample dates - adjust based on client availability"
+  },
+  "budget": {
+    "perPerson": 3500,
+    "total": 7000,
+    "notes": "Mid-range estimate including flights, hotels, activities, and meals. Can be adjusted based on tier selection.",
+    "lineItems": [
+      { "label": "Flights (roundtrip)", "amount": 2400, "notes": "Economy from major US hub" },
+      { "label": "Hotels (6 nights)", "amount": 1800, "notes": "4-star boutique hotels" },
+      { "label": "Tours & Activities", "amount": 800, "notes": "Guided tours and skip-the-line entries" },
+      { "label": "Meals & Misc", "amount": 2000, "notes": "Mix of casual and fine dining" }
+    ]
+  },
+  "flights": {
+    "outbound": {
+      "date": "2026-06-01",
+      "route": "Home → Paris (CDG)",
+      "notes": "Direct or 1-stop options available"
+    },
+    "intraTrip": {
+      "date": "2026-06-04",
+      "route": "Paris (CDG) → Rome (FCO)",
+      "notes": "Short 2-hour flight"
+    },
+    "return": {
+      "date": "2026-06-07",
+      "route": "Rome (FCO) → Home",
+      "notes": "Direct or 1-stop options available"
+    }
+  },
+  "lodging": [
+    {
+      "name": "Boutique Hotel - Le Marais District",
+      "location": "Paris, France",
+      "nights": 3,
+      "rate": 220,
+      "total": 660,
+      "map": "Le Marais, Paris, France",
+      "notes": "Walking distance to Notre-Dame, Centre Pompidou, and charming cafes",
+      "confirmed": false
+    },
+    {
+      "name": "Boutique Hotel - Trastevere",
+      "location": "Rome, Italy",
+      "nights": 3,
+      "rate": 180,
+      "total": 540,
+      "map": "Trastevere, Rome, Italy",
+      "notes": "Authentic Roman neighborhood with excellent restaurants and nightlife",
+      "confirmed": false
+    }
+  ],
+  "itinerary": [
+    {
+      "day": 1,
+      "date": "2026-06-01",
+      "title": "Arrival in Paris",
+      "location": "Paris, France",
+      "activities": [
+        {
+          "time": "Afternoon",
+          "name": "Arrive & Check-in",
+          "description": "Settle into your Le Marais hotel. Take a leisurely stroll through the neighborhood to shake off jet lag.",
+          "cost": 0
+        },
+        {
+          "time": "Evening",
+          "name": "Seine River Walk",
+          "description": "Walk along the Seine as the sun sets. Cross to Île de la Cité to see Notre-Dame's exterior restoration.",
+          "cost": 0,
+          "optional": true
+        },
+        {
+          "time": "Evening",
+          "name": "Welcome Dinner",
+          "description": "Classic French bistro in Le Marais. Try the duck confit or steak frites paired with local wine.",
+          "cost": 120,
+          "notes": "Reservation recommended"
+        }
+      ],
+      "meals": ["Dinner at local bistro"],
+      "map": "Le Marais, Paris",
+      "tips": ["Free: Window shop along Rue des Francs-Bourgeois for vintage finds", "Free: Peek into hidden courtyards - many Le Marais buildings have beautiful interior gardens"]
+    },
+    {
+      "day": 2,
+      "date": "2026-06-02",
+      "title": "Iconic Paris",
+      "location": "Paris, France",
+      "activities": [
+        {
+          "time": "Morning",
+          "name": "Eiffel Tower - Skip the Line",
+          "description": "Beat the crowds with an early morning timed entry. Summit access for panoramic views of the city.",
+          "cost": 70,
+          "duration": "2 hours",
+          "bookingRequired": true
+        },
+        {
+          "time": "Late Morning",
+          "name": "Trocadéro Gardens",
+          "description": "Cross to Trocadéro for the classic Eiffel Tower photo op. Lovely gardens to explore.",
+          "cost": 0
+        },
+        {
+          "time": "Afternoon",
+          "name": "Louvre Museum - Guided Highlights Tour",
+          "description": "2-hour guided tour hitting the must-sees: Mona Lisa, Venus de Milo, Winged Victory. Skip-the-line entry included.",
+          "cost": 140,
+          "duration": "2-3 hours",
+          "tour": true
+        },
+        {
+          "time": "Evening",
+          "name": "Dinner in Saint-Germain-des-Prés",
+          "description": "Cross to the Left Bank for dinner in the literary quarter. Café de Flore or Les Deux Magots for atmosphere.",
+          "cost": 150,
+          "optional": true
+        }
+      ],
+      "meals": ["Lunch near Louvre", "Dinner in Saint-Germain"],
+      "map": "Central Paris attractions",
+      "tips": ["Free: Walk through the Tuileries Garden between Louvre and Place de la Concorde", "Free: Browse the bouquinistes (book stalls) along the Seine"]
+    },
+    {
+      "day": 3,
+      "date": "2026-06-03",
+      "title": "Hidden Paris & Food Tour",
+      "location": "Paris, France",
+      "activities": [
+        {
+          "time": "Morning",
+          "name": "Montmartre Food & Wine Tour",
+          "description": "3-hour walking tour through the artistic Montmartre neighborhood. Visit local cheese shops, bakeries, chocolate makers, and wine bars. Includes tastings at 6-8 stops.",
+          "cost": 180,
+          "duration": "3 hours",
+          "tour": true,
+          "highlight": true
+        },
+        {
+          "time": "Afternoon",
+          "name": "Sacré-Cœur Basilica",
+          "description": "Free entry to the stunning white-domed basilica. Climb to the dome for city views or relax on the steps watching street performers.",
+          "cost": 0
+        },
+        {
+          "time": "Afternoon",
+          "name": "Artist Square (Place du Tertre)",
+          "description": "Browse local artists at work. Fun spot for a caricature or small painting souvenir.",
+          "cost": 0,
+          "optional": true
+        },
+        {
+          "time": "Evening",
+          "name": "Final Paris Evening",
+          "description": "Farewell dinner at a Michelin-recommended bistro, or keep it casual with wine and cheese in the hotel neighborhood.",
+          "cost": 200
+        }
+      ],
+      "meals": ["Food tour brunch/lunch", "Farewell dinner"],
+      "map": "Montmartre, Paris",
+      "tips": ["Free: Walk through the Montmartre vineyard, one of the last working vineyards in Paris", "Free: Explore the quiet streets behind Sacré-Cœur - charming village feel away from tourists"]
+    },
+    {
+      "day": 4,
+      "date": "2026-06-04",
+      "title": "Paris to Rome",
+      "location": "Paris → Rome",
+      "activities": [
+        {
+          "time": "Morning",
+          "name": "Leisurely Departure",
+          "description": "Enjoy a final Parisian breakfast. Coffee and croissant at a neighborhood café.",
+          "cost": 20
+        },
+        {
+          "time": "Midday",
+          "name": "Flight to Rome",
+          "description": "Short 2-hour flight from Paris CDG to Rome FCO.",
+          "cost": 0,
+          "notes": "Flight cost included in trip total"
+        },
+        {
+          "time": "Afternoon",
+          "name": "Arrive in Rome & Check-in",
+          "description": "Transfer to your Trastevere hotel. This charming neighborhood feels like the 'real Rome' with cobblestone streets and local trattorias.",
+          "cost": 45,
+          "notes": "Private transfer from airport"
+        },
+        {
+          "time": "Evening",
+          "name": "Trastevere Evening Stroll",
+          "description": "Get lost in the atmospheric streets. End at Piazza di Santa Maria for people-watching.",
+          "cost": 0
+        },
+        {
+          "time": "Evening",
+          "name": "Roman Dinner",
+          "description": "Authentic Roman cuisine: cacio e pepe, carbonara, or amatriciana. Book a table at a local trattoria.",
+          "cost": 80
+        }
+      ],
+      "meals": ["Breakfast in Paris", "Dinner in Trastevere"],
+      "map": "Trastevere, Rome",
+      "tips": ["Free: The Trastevere neighborhood is beautiful for evening walks - every corner is photogenic", "Free: Santa Maria in Trastevere church has stunning Byzantine mosaics (free entry)"]
+    },
+    {
+      "day": 5,
+      "date": "2026-06-05",
+      "title": "Ancient Rome",
+      "location": "Rome, Italy",
+      "activities": [
+        {
+          "time": "Morning",
+          "name": "Colosseum, Forum & Palatine - Priority Access",
+          "description": "Comprehensive guided tour of Ancient Rome's heart. Underground Colosseum access to see gladiator tunnels (premium tier). Skip all lines.",
+          "cost": 120,
+          "duration": "3.5 hours",
+          "tour": true,
+          "highlight": true
+        },
+        {
+          "time": "Afternoon",
+          "name": "Lunch Near Campo de' Fiori",
+          "description": "Walk to this lively market square for fresh produce, flowers, and casual lunch options.",
+          "cost": 40
+        },
+        {
+          "time": "Afternoon",
+          "name": "Trevi Fountain & Spanish Steps",
+          "description": "Hit the iconic spots. Toss a coin in Trevi (guarantees your return to Rome!). Walk up the Spanish Steps.",
+          "cost": 0
+        },
+        {
+          "time": "Evening",
+          "name": "Aperitivo Hour",
+          "description": "Experience the Roman tradition of pre-dinner drinks with complimentary snacks. The hotel neighborhood or Piazza Navona area both excellent.",
+          "cost": 30,
+          "optional": true
+        }
+      ],
+      "meals": ["Lunch at Campo de' Fiori", "Dinner (optional - flexible evening)"],
+      "map": "Ancient Rome to Centro Storico",
+      "tips": ["Free: The Pantheon is free to enter - arrive early or late to avoid peak crowds", "Free: Window shop along Via del Corso and Via Condotti (luxury designer row)"]
+    },
+    {
+      "day": 6,
+      "date": "2026-06-06",
+      "title": "Vatican & Farewell",
+      "location": "Rome, Italy",
+      "activities": [
+        {
+          "time": "Early Morning",
+          "name": "Vatican Museums & Sistine Chapel - Early Entry",
+          "description": "Special early access before crowds. Guided tour through the museums culminating in the Sistine Chapel. St. Peter's Basilica entry included.",
+          "cost": 160,
+          "duration": "4 hours",
+          "tour": true,
+          "highlight": true,
+          "bookingRequired": true
+        },
+        {
+          "time": "Afternoon",
+          "name": "Castel Sant'Angelo (Optional)",
+          "description": "Former papal fortress with excellent views from the rooftop terrace. Skip if museum'd out.",
+          "cost": 22,
+          "optional": true
+        },
+        {
+          "time": "Afternoon",
+          "name": "Gelato Quest",
+          "description": "Sample Rome's famous gelato. Favorites: Giolitti (classic), Fatamorgana (creative flavors), Come Il Latte (pure ingredients).",
+          "cost": 10
+        },
+        {
+          "time": "Evening",
+          "name": "Farewell Dinner with a View",
+          "description": "Special last-night dinner. Rooftop restaurant with view of the dome of St. Peter's, or intimate Trastevere gem.",
+          "cost": 180,
+          "highlight": true
+        }
+      ],
+      "meals": ["Lunch near Vatican", "Farewell dinner"],
+      "map": "Vatican City and surroundings",
+      "tips": ["Free: St. Peter's Square is stunning at any time but magical at sunset", "Free: Walk across Ponte Sant'Angelo - the bridge with Bernini's angels"]
+    },
+    {
+      "day": 7,
+      "date": "2026-06-07",
+      "title": "Departure",
+      "location": "Rome, Italy",
+      "activities": [
+        {
+          "time": "Morning",
+          "name": "Final Morning in Rome",
+          "description": "Depending on flight time: sleep in, final neighborhood wander, or quick visit to any missed spots.",
+          "cost": 0
+        },
+        {
+          "time": "Varies",
+          "name": "Airport Transfer & Flight Home",
+          "description": "Private transfer to FCO airport. Arrivederci, Roma!",
+          "cost": 45
+        }
+      ],
+      "meals": ["Breakfast at hotel"],
+      "map": "Rome FCO Airport"
+    }
+  ],
+  "tours": [
+    {
+      "name": "Montmartre Food & Wine Tour",
+      "day": 3,
+      "duration": "3 hours",
+      "includes": "Guided walk, 6-8 tastings, wine",
+      "price": 90
+    },
+    {
+      "name": "Louvre Highlights Tour",
+      "day": 2,
+      "duration": "2 hours",
+      "includes": "Skip-the-line, expert guide",
+      "price": 70
+    },
+    {
+      "name": "Ancient Rome Tour",
+      "day": 5,
+      "duration": "3.5 hours",
+      "includes": "Colosseum, Forum, Palatine, skip-the-line",
+      "price": 60
+    },
+    {
+      "name": "Vatican Early Entry Tour",
+      "day": 6,
+      "duration": "4 hours",
+      "includes": "Early access, museums, Sistine Chapel, St. Peter's",
+      "price": 80
+    }
+  ],
+  "tiers": {
+    "value": {
+      "name": "Essential Romance",
+      "description": "All the highlights with smart savings",
+      "includes": [
+        "Economy flights",
+        "3-star boutique hotels in great locations",
+        "Skip-the-line entries (self-guided)",
+        "Public transport passes",
+        "Restaurant recommendations"
+      ],
+      "perPerson": 2800,
+      "estimatedTotal": 5600
+    },
+    "premium": {
+      "name": "Romantic Getaway",
+      "description": "Our recommended experience - guided tours and premium touches",
+      "includes": [
+        "Economy Plus or Premium Economy flights",
+        "4-star boutique hotels",
+        "All guided tours as described",
+        "Private airport transfers",
+        "Dedicated trip support"
+      ],
+      "perPerson": 3500,
+      "estimatedTotal": 7000,
+      "recommended": true
+    },
+    "luxury": {
+      "name": "Ultimate Romance",
+      "description": "First-class treatment throughout",
+      "includes": [
+        "Business class flights",
+        "5-star luxury hotels",
+        "Private guided tours",
+        "Private car service throughout",
+        "Special experiences: private museum viewing, chef's table dinners",
+        "24/7 concierge support"
+      ],
+      "perPerson": 7500,
+      "estimatedTotal": 15000
+    },
+    "notes": "Prices are estimates and vary based on travel dates, availability, and current rates. Final quote provided after date selection."
+  },
+  "featuredLinks": [
+    {
+      "title": "Paris Metro Guide",
+      "url": "https://www.ratp.fr/en",
+      "description": "Official Paris public transport"
+    },
+    {
+      "title": "Rome Public Transport",
+      "url": "https://www.atac.roma.it/en",
+      "description": "Metro, bus, and tram in Rome"
+    }
+  ],
+  "notes": {
+    "customization": "This is a sample trip showcasing the system's capabilities. Customize destinations, dates, activities, and budget to match your client's preferences.",
+    "bookingReminder": "All tours and timed entries require advance booking, especially in high season (May-September)."
+  }
+}

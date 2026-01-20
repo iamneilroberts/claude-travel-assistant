@@ -9,7 +9,7 @@ Use the `cruise` template for trips where:
 - Client needs ship info, port details, and shore excursions displayed
 - Cruise-specific pricing breakdown is relevant (cruise fare, gratuities, port fees)
 
-Use `cruise-planners` (general Cruise Planners branded) for non-cruise trips.
+Use `default` (general Cruise Planners branded) for non-cruise trips.
 
 ## Cruise Data Schema
 
@@ -40,7 +40,9 @@ Use `cruise-planners` (general Cruise Planners branded) for non-cruise trips.
 }
 ```
 
-### ports (Ports of Call)
+### ports (Ports of Call) - DEPRECATED
+
+> **Note:** The `ports[]` array is deprecated. Use `itinerary[].portInfo` instead to keep port schedule data with the daily itinerary. See `trip-schema.md` for the recommended structure.
 
 ```json
 {

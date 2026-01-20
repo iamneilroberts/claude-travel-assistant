@@ -6,6 +6,7 @@
 import type { Env, UserProfile } from '../../types';
 import {
   createSession,
+  getSession,
   validateSessionCookie,
   deleteSession,
   createSessionCookie,
@@ -68,13 +69,43 @@ export async function handleUserDashboard(
 
   // === Protected routes (require session) ===
 
-  const session = await validateSessionCookie(request, env);
+  // DEV BYPASS: Test accounts that skip magic link auth
+  const testUserIds = ['neil_38ecccf5', 'kim_d63b7658'];
+
+  let session = await validateSessionCookie(request, env);
+  let sessionToken: string | null = null;
 
   // Check session validity and ownership
   if (!session || session.userId !== userProfile.userId) {
-    // Redirect to login
-    return Response.redirect(`https://${subdomain}.voygent.ai/admin/login`, 302);
+    // Auto-login for test accounts
+    if (testUserIds.includes(userProfile.userId)) {
+      // Create a session automatically for testing (createSession returns token string)
+      sessionToken = await createSession(env, userProfile.userId, userProfile.email, subdomain);
+      session = await getSession(env, sessionToken);
+    } else {
+      // Redirect to login
+      return Response.redirect(`https://${subdomain}.voygent.ai/admin/login`, 302);
+    }
   }
+
+  // Get session cookie header for test accounts (set on every request to keep session alive)
+  const sessionCookieHeader = (testUserIds.includes(userProfile.userId) && sessionToken)
+    ? { 'Set-Cookie': createSessionCookie(sessionToken, subdomain) }
+    : {};
+
+  // Helper to add session cookie to response for test accounts
+  const addSessionCookie = (response: Response | null): Response | null => {
+    if (!response || Object.keys(sessionCookieHeader).length === 0) return response;
+    const newHeaders = new Headers(response.headers);
+    if (sessionCookieHeader['Set-Cookie']) {
+      newHeaders.set('Set-Cookie', sessionCookieHeader['Set-Cookie']);
+    }
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: newHeaders
+    });
+  };
 
   // Handle logout
   if (path === '/admin/logout' && method === 'POST') {
@@ -83,32 +114,32 @@ export async function handleUserDashboard(
 
   // Dashboard home
   if (path === '/admin' || path === '/admin/') {
-    return handleDashboardHome(request, env, ctx, userProfile, session, subdomain, corsHeaders);
+    return addSessionCookie(await handleDashboardHome(request, env, ctx, userProfile, session, subdomain, corsHeaders));
   }
 
   // Trips page
   if (path === '/admin/trips') {
-    return handleTripsPage(request, env, ctx, userProfile, session, subdomain, corsHeaders);
+    return addSessionCookie(await handleTripsPage(request, env, ctx, userProfile, session, subdomain, corsHeaders));
   }
 
   // Comments page
   if (path === '/admin/comments') {
-    return handleCommentsPage(request, env, ctx, userProfile, session, subdomain, corsHeaders);
+    return addSessionCookie(await handleCommentsPage(request, env, ctx, userProfile, session, subdomain, corsHeaders));
   }
 
   // Settings page
   if (path === '/admin/settings' && method === 'GET') {
-    return handleSettingsPage(request, env, url, userProfile, session, subdomain, corsHeaders);
+    return addSessionCookie(await handleSettingsPage(request, env, url, userProfile, session, subdomain, corsHeaders));
   }
 
   // Settings form submission (profile)
   if (path === '/admin/settings' && method === 'POST') {
-    return handleSettingsUpdate(request, env, userProfile, session, subdomain, corsHeaders);
+    return addSessionCookie(await handleSettingsUpdate(request, env, userProfile, session, subdomain, corsHeaders));
   }
 
   // Branding settings form submission
   if (path === '/admin/settings/branding' && method === 'POST') {
-    return handleBrandingUpdate(request, env, userProfile, session, subdomain, corsHeaders);
+    return addSessionCookie(await handleBrandingUpdate(request, env, userProfile, session, subdomain, corsHeaders));
   }
 
   // Unknown admin route

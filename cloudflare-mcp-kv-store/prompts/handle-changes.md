@@ -50,6 +50,13 @@ read_trip(tripId)
 
 Look for `bookings` array entries with `status: "confirmed"`.
 
+**Check reference data** if the trip has confirmed bookings:
+```
+get_reference(tripId)
+```
+
+If reference data exists, changes to dates, ports, or traveler info must align with what's actually booked. You can't just change the itinerary if it conflicts with the confirmed booking—the booking is the source of truth.
+
 ### Step 3: Present Options
 
 Always give choices when there are tradeoffs:
@@ -98,6 +105,16 @@ patch_trip(tripId, {
   "meta.lastModified": "2026-01-14"
 })
 ```
+
+**If the booking itself changed** (e.g., supplier confirmed new dates), update the reference data:
+```
+set_reference(tripId, {
+  source: { type: "hotel_modification", provider: "Marriott", reference: "MOD-456" },
+  dates: { checkIn: "2026-03-15", checkOut: "2026-03-22" }
+})
+```
+
+Reference data is additive—new data merges with existing records.
 
 ### Step 5: Validate After Major Changes
 

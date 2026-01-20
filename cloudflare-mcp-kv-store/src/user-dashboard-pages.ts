@@ -126,7 +126,7 @@ function getCommonHead(title: string, branding: DashboardBranding = { primaryCol
       table { width: 100%; border-collapse: collapse; }
       th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
       th { font-weight: 600; color: var(--text-muted); font-size: 0.85rem; }
-      tr:hover td { background: #f8f9fa; }
+      tr:hover td { background: var(--surface); }
 
       /* Forms */
       .form-group { margin-bottom: 1.25rem; }
@@ -137,6 +137,8 @@ function getCommonHead(title: string, branding: DashboardBranding = { primaryCol
         border: 1px solid var(--border);
         border-radius: 8px;
         font-size: 1rem;
+        background: var(--surface);
+        color: var(--text);
         transition: border-color 0.2s, box-shadow 0.2s;
       }
       .form-input:focus {
@@ -206,13 +208,15 @@ function getCommonHead(title: string, branding: DashboardBranding = { primaryCol
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        background: #f0f0f0;
+        background: var(--surface);
+        color: var(--text);
         border-radius: 8px;
         padding: 0.75rem 1rem;
         font-family: monospace;
         font-size: 0.85rem;
         word-break: break-all;
       }
+      .copy-box a { color: var(--primary); }
       .copy-box-btn {
         flex-shrink: 0;
         padding: 0.5rem 0.75rem;

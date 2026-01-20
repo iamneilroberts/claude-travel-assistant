@@ -6,6 +6,15 @@
 import type { Env, RouteHandler } from '../../types';
 import { ADMIN_DASHBOARD_HTML } from '../../admin-dashboard';
 import { handleListUsers, handleCreateUser, handleGetUser, handleUpdateUser } from './users';
+import {
+  handleResetNewUser,
+  handleResetBranding,
+  handleClearMessages,
+  handleClearTrips,
+  handleResetAccount,
+  handleGetDataSummary,
+  handleAddSampleTrips
+} from './user-tools';
 import { handleGetActivity } from './activity';
 import { handleGetStats, handleGetBillingStats } from './stats';
 import { handleListTrips, handleRebuildSummaries, handleGetTrip } from './trips';
@@ -39,6 +48,14 @@ const adminHandlers: RouteHandler[] = [
   handleCreateUser,
   handleGetUser,
   handleUpdateUser,
+  // User Tools
+  handleResetNewUser,
+  handleResetBranding,
+  handleClearMessages,
+  handleClearTrips,
+  handleResetAccount,
+  handleGetDataSummary,
+  handleAddSampleTrips,
   // Activity
   handleGetActivity,
   // Stats
@@ -112,6 +129,13 @@ export {
   handleCreateUser,
   handleGetUser,
   handleUpdateUser,
+  handleResetNewUser,
+  handleResetBranding,
+  handleClearMessages,
+  handleClearTrips,
+  handleResetAccount,
+  handleGetDataSummary,
+  handleAddSampleTrips,
   handleGetActivity,
   handleGetStats,
   handleGetBillingStats,
