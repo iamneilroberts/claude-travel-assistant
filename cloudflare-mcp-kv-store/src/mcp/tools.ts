@@ -28,6 +28,7 @@ export type ToolCategory =
   | 'media'              // add_trip_image, prepare_image_upload
   | 'samples'            // list_sample_trips, accept_sample_trips, decline_sample_trips, clear_sample_trips
   | 'reference'          // set_reference, get_reference, validate_reference
+  | 'knowledge'          // propose_solution
   | 'advanced';          // import_quote, analyze_profitability, youtube_search
 
 /**
@@ -148,7 +149,11 @@ export const CORE_TOOLS: ToolDefinition[] = [
         name: {
           type: "string",
           description: "Guide name",
-          enum: ["cruise-instructions", "handle-changes", "research-destination", "flight-search", "validate-trip", "import-quote", "analyze-profitability", "trip-schema"]
+          enum: ["cruise-instructions", "handle-changes", "research-destination", "flight-search", "validate-trip", "import-quote", "analyze-profitability", "trip-schema", "troubleshooting", "faq"]
+        },
+        context: {
+          type: "string",
+          description: "Optional context for filtering relevant knowledge base entries"
         }
       },
       required: ["name"]
@@ -501,6 +506,37 @@ export const EXTENDED_TOOLS: Record<ToolCategory, ToolDefinition[]> = {
           tripId: { type: "string", description: "Trip ID" }
         },
         required: ["tripId"]
+      }
+    }
+  ],
+
+  // Knowledge Base
+  knowledge: [
+    {
+      name: "propose_solution",
+      description: "Propose a solution for the knowledge base after resolving a non-obvious issue. Only use for genuinely useful knowledge that would help future users. Admin review required before solutions are added. Limit: 10/day.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          category: {
+            type: "string",
+            enum: ["troubleshooting", "faq"],
+            description: "Type of knowledge: troubleshooting for problem/fix, faq for how-to/info"
+          },
+          problem: {
+            type: "string",
+            description: "Clear description of the problem or question (20-500 chars)"
+          },
+          solution: {
+            type: "string",
+            description: "How to fix it or the answer (20-500 chars)"
+          },
+          context: {
+            type: "string",
+            description: "Optional: what the user was trying to do"
+          }
+        },
+        required: ["category", "problem", "solution"]
       }
     }
   ],
