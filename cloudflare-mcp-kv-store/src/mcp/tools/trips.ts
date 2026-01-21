@@ -347,8 +347,19 @@ export const handlePatchTrip: McpToolHandler = async (args, env, keyPrefix, user
   const updates = args.updates as Record<string, any>;
   const updatedFields: string[] = [];
 
+  // Security limits to prevent DoS
+  const MAX_UPDATES = 100;
+  const MAX_PATH_DEPTH = 10;
+  const MAX_ARRAY_INDEX = 10000;
+
   // Keys that could cause prototype pollution - must be blocked
   const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+  // Validate update count
+  const updateEntries = Object.entries(updates);
+  if (updateEntries.length > MAX_UPDATES) {
+    throw new Error(`Too many updates: ${updateEntries.length} exceeds limit of ${MAX_UPDATES}`);
+  }
 
   // Parse path into parts, handling array notation
   const parsePath = (path: string): (string | number)[] => {
@@ -358,15 +369,24 @@ export const handlePatchTrip: McpToolHandler = async (args, env, keyPrefix, user
     for (const segment of segments) {
       if (!segment) continue; // Skip empty segments from leading/trailing dots
 
-      // Check for array notation: "itinerary[0]" -> ["itinerary", 0]
-      const bracketMatch = segment.match(/^([^\[]+)\[(\d+)\]$/);
-      if (bracketMatch) {
+      // Reject segments with unmatched or invalid bracket syntax
+      if (segment.includes('[') || segment.includes(']')) {
+        // Must match pattern: "key[123]" - anything else is invalid
+        const bracketMatch = segment.match(/^([^\[\]]+)\[(\d+)\]$/);
+        if (!bracketMatch) {
+          throw new Error(`Invalid path syntax: '${segment}' - brackets must be in format 'key[index]'`);
+        }
         const key = bracketMatch[1];
         if (FORBIDDEN_KEYS.has(key)) {
           throw new Error(`Invalid path: forbidden key '${key}'`);
         }
+        const index = parseInt(bracketMatch[2], 10);
+        // Validate index bounds
+        if (!Number.isSafeInteger(index) || index < 0 || index > MAX_ARRAY_INDEX) {
+          throw new Error(`Invalid array index: ${index} - must be 0-${MAX_ARRAY_INDEX}`);
+        }
         parts.push(key);
-        parts.push(parseInt(bracketMatch[2], 10));
+        parts.push(index);
       } else {
         if (FORBIDDEN_KEYS.has(segment)) {
           throw new Error(`Invalid path: forbidden key '${segment}'`);
@@ -374,10 +394,16 @@ export const handlePatchTrip: McpToolHandler = async (args, env, keyPrefix, user
         parts.push(segment);
       }
     }
+
+    // Validate path depth
+    if (parts.length > MAX_PATH_DEPTH) {
+      throw new Error(`Path too deep: ${parts.length} exceeds limit of ${MAX_PATH_DEPTH}`);
+    }
+
     return parts;
   };
 
-  for (const [path, value] of Object.entries(updates)) {
+  for (const [path, value] of updateEntries) {
     const parts = parsePath(path);
     if (parts.length === 0) continue; // Skip empty paths
 

@@ -111,14 +111,13 @@ See tool descriptions for usage details.`;
 
 async function getAllUsers(env: Env): Promise<UserProfile[]> {
   const list = await env.TRIPS.list({ prefix: '_profile/' });
-  const users: UserProfile[] = [];
 
-  for (const key of list.keys) {
-    const profile = await env.TRIPS.get(key.name, 'json') as UserProfile | null;
-    if (profile) users.push(profile);
-  }
+  // Fetch all profiles in parallel to avoid N+1 query pattern
+  const profiles = await Promise.all(
+    list.keys.map(key => env.TRIPS.get(key.name, 'json') as Promise<UserProfile | null>)
+  );
 
-  return users;
+  return profiles.filter((p): p is UserProfile => p !== null);
 }
 
 // ============ Read Tool Handlers ============

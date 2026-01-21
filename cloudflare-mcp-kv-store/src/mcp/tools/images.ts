@@ -92,6 +92,12 @@ export const handleAddTripImage: McpToolHandler = async (args, env, keyPrefix, u
     const matchedName = findBestMatch(itemName, tripData.lodging);
     if (matchedName) {
       actualItemName = matchedName;
+    } else if (!tripData.lodging || !Array.isArray(tripData.lodging) || tripData.lodging.length === 0) {
+      throw new Error(`Cannot attach lodging image: no lodging data found in trip. Add lodging first, then attach images.`);
+    } else {
+      // No match found - list available lodging to help debugging
+      const availableNames = tripData.lodging.map((l: any) => l.name).filter(Boolean).join(', ');
+      throw new Error(`Lodging '${itemName}' not found in trip. Available lodging: ${availableNames || '(none with names)'}`);
     }
 
     // Store in images object (legacy)
@@ -99,12 +105,10 @@ export const handleAddTripImage: McpToolHandler = async (args, env, keyPrefix, u
     tripData.images.lodging[actualItemName].push(imageEntry);
 
     // Also store directly on the lodging item for template rendering
-    if (tripData.lodging && Array.isArray(tripData.lodging)) {
-      const lodgingItem = tripData.lodging.find((l: any) => l.name === actualItemName);
-      if (lodgingItem) {
-        if (!lodgingItem.images) lodgingItem.images = [];
-        lodgingItem.images.push(imageEntry);
-      }
+    const lodgingItem = tripData.lodging.find((l: any) => l.name === actualItemName);
+    if (lodgingItem) {
+      if (!lodgingItem.images) lodgingItem.images = [];
+      lodgingItem.images.push(imageEntry);
     }
   } else if (target === "activity") {
     if (!itemName) throw new Error("itemName required for activity images (activity name)");
@@ -114,6 +118,12 @@ export const handleAddTripImage: McpToolHandler = async (args, env, keyPrefix, u
     const matchedName = findBestMatch(itemName, allActivities);
     if (matchedName) {
       actualItemName = matchedName;
+    } else if (allActivities.length === 0) {
+      throw new Error(`Cannot attach activity image: no activities found in trip. Add itinerary first, then attach images.`);
+    } else {
+      // No match found - list available activities to help debugging
+      const availableNames = allActivities.map((a: any) => a.name).filter(Boolean).slice(0, 10).join(', ');
+      throw new Error(`Activity '${itemName}' not found in trip. Available activities: ${availableNames || '(none with names)'}${allActivities.length > 10 ? '...' : ''}`);
     }
 
     // Store in images object (legacy)

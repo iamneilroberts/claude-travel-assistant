@@ -8,6 +8,26 @@ import type { Env } from '../types';
 const SITE_BASE_URL = 'https://somotravel.us';
 
 /**
+ * Sanitize error messages to prevent credential leakage
+ * Removes auth tokens, keys, and other sensitive data from error responses
+ */
+function sanitizeErrorMessage(rawError: string): string {
+  // Remove potential auth tokens (Bearer, ghp_, etc.)
+  let sanitized = rawError.replace(/Bearer\s+[A-Za-z0-9_-]+/gi, 'Bearer [REDACTED]');
+  sanitized = sanitized.replace(/ghp_[A-Za-z0-9_]+/g, '[GITHUB_TOKEN_REDACTED]');
+  sanitized = sanitized.replace(/gho_[A-Za-z0-9_]+/g, '[GITHUB_OAUTH_REDACTED]');
+  // Remove authorization headers in JSON
+  sanitized = sanitized.replace(/"authorization"\s*:\s*"[^"]+"/gi, '"authorization": "[REDACTED]"');
+  // Remove any token= query params
+  sanitized = sanitized.replace(/token=[A-Za-z0-9_-]+/gi, 'token=[REDACTED]');
+  // Truncate very long error messages (likely contain full response body)
+  if (sanitized.length > 500) {
+    sanitized = sanitized.substring(0, 500) + '... [truncated]';
+  }
+  return sanitized;
+}
+
+/**
  * Retry configuration for transient failures
  */
 interface RetryOptions {
@@ -117,7 +137,7 @@ export async function publishToGitHub(
 
   if (!htmlResponse.ok) {
     const error = await htmlResponse.text();
-    throw new Error(`Failed to upload HTML ${filename} (sha: ${htmlSha || 'none'}): ${error}`);
+    throw new Error(`Failed to upload HTML ${filename} (sha: ${htmlSha || 'none'}): ${sanitizeErrorMessage(error)}`);
   }
 
   // 3. Get current trips.json
@@ -198,7 +218,7 @@ export async function publishToGitHub(
       // Still throw the original error
     }
 
-    throw new Error(`Failed to update trips.json (sha: ${tripsSha || 'none'}): ${error}. HTML file was rolled back.`);
+    throw new Error(`Failed to update trips.json (sha: ${tripsSha || 'none'}): ${sanitizeErrorMessage(error)}. HTML file was rolled back.`);
   }
 
   // Return public URL
@@ -249,7 +269,7 @@ export async function publishDraftToGitHub(
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`Failed to upload draft: ${error}`);
+    throw new Error(`Failed to upload draft: ${sanitizeErrorMessage(error)}`);
   }
 
   // Return public URL
