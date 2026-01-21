@@ -10,7 +10,13 @@ export type AuditAction =
   | 'delete_user'
   | 'create_promo'
   | 'delete_promo'
-  | 'update_support';
+  | 'update_support'
+  | 'reset_new_user'
+  | 'reset_branding'
+  | 'clear_messages'
+  | 'clear_trips'
+  | 'reset_account'
+  | 'add_sample_trips';
 
 export interface AuditEntry {
   id: string;
@@ -80,7 +86,13 @@ export function formatAuditAction(action: AuditAction): string {
     delete_user: 'Deleted user',
     create_promo: 'Created promo code',
     delete_promo: 'Deleted promo code',
-    update_support: 'Updated support ticket'
+    update_support: 'Updated support ticket',
+    reset_new_user: 'Reset to new user state',
+    reset_branding: 'Reset branding settings',
+    clear_messages: 'Cleared messages',
+    clear_trips: 'Cleared all trips',
+    reset_account: 'Full account reset',
+    add_sample_trips: 'Added sample trips'
   };
   return actionMap[action] || action;
 }

@@ -88,6 +88,11 @@ export async function handleUserDashboard(
     }
   }
 
+  // At this point session must be valid (non-test users redirected, test users have new session)
+  if (!session) {
+    return Response.redirect(`https://${subdomain}.voygent.ai/admin/login`, 302);
+  }
+
   // Get session cookie header for test accounts (set on every request to keep session alive)
   const sessionCookieHeader = (testUserIds.includes(userProfile.userId) && sessionToken)
     ? { 'Set-Cookie': createSessionCookie(sessionToken, subdomain) }
