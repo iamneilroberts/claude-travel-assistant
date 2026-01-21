@@ -16,7 +16,7 @@ const SAMPLE_TRIPS = [
 ];
 
 /**
- * Reset user to "new user" state - clears onboarding flags
+ * Reset user to "new user" state - clears onboarding flags AND sample trips
  * POST /admin/users/:id/reset-new-user
  */
 export const handleResetNewUser: RouteHandler = async (request, env, ctx, url, corsHeaders) => {
@@ -33,6 +33,30 @@ export const handleResetNewUser: RouteHandler = async (request, env, ctx, url, c
     });
   }
 
+  // Get the user's key prefix
+  const keyPrefix = getKeyPrefix(user.authKey);
+
+  // Clear sample trips from user's account
+  const tripIndex = await env.TRIPS.get(`${keyPrefix}_trip-index`, "json") as string[] | null;
+  const deletedSamples: string[] = [];
+
+  if (tripIndex) {
+    const sampleTrips = tripIndex.filter(id => id.startsWith('sample-'));
+    for (const tripId of sampleTrips) {
+      try {
+        await env.TRIPS.delete(`${keyPrefix}${tripId}`);
+        await env.TRIPS.delete(`${keyPrefix}_summaries/${tripId}`);
+        deletedSamples.push(tripId);
+      } catch (err) {
+        console.error(`Failed to delete sample trip ${tripId}:`, err);
+      }
+    }
+
+    // Update trip index to remove sample trips
+    const remainingTrips = tripIndex.filter(id => !id.startsWith('sample-'));
+    await env.TRIPS.put(`${keyPrefix}_trip-index`, JSON.stringify(remainingTrips));
+  }
+
   // Reset onboarding and sample trips flags
   const updated: UserProfile = {
     ...user,
@@ -46,12 +70,12 @@ export const handleResetNewUser: RouteHandler = async (request, env, ctx, url, c
 
   // Log the action
   const adminKey = request.headers.get('X-Admin-Key') || '';
-  await logAdminAction(env, 'reset_new_user', userId, { resetFields: ['sampleTripsOffered', 'onboarding'] }, adminKey, ctx);
+  await logAdminAction(env, 'reset_new_user', userId, { resetFields: ['sampleTripsOffered', 'onboarding'], deletedSamples }, adminKey, ctx);
 
   return new Response(JSON.stringify({
     success: true,
-    message: 'User reset to new user state',
-    changes: ['sampleTripsOffered: false', 'onboarding.welcomeShown: false']
+    message: `User reset to new user state. ${deletedSamples.length} sample trip(s) cleared.`,
+    changes: ['sampleTripsOffered: false', 'onboarding.welcomeShown: false', `Deleted samples: ${deletedSamples.join(', ') || 'none'}`]
   }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" }
   });

@@ -8,7 +8,7 @@ import { listAllKeys } from '../../lib/kv';
 import { publishToGitHub, publishDraftToGitHub } from '../../lib/github';
 import { getMonthlyUsage, incrementPublishCount } from '../../lib/usage';
 import { renderTripHtml, listAvailableTemplates, resolveTemplateName } from '../../template-renderer';
-import { savePublishedTrip } from '../../lib/published';
+import { savePublishedTrip, saveDraftTrip } from '../../lib/published';
 import { validateTripId, validateFilename } from '../../lib/validation';
 import { analyzeOpenSlots } from '../../lib/slot-analysis';
 
@@ -47,10 +47,6 @@ export const handlePreviewPublish: McpToolHandler = async (args, env, keyPrefix,
   // Security: Validate trip ID to prevent path traversal
   validateTripId(tripId);
 
-  // Check GitHub config
-  if (!env.GITHUB_TOKEN) throw new Error("GitHub token not configured. Run: wrangler secret put GITHUB_TOKEN");
-  if (!env.GITHUB_REPO) throw new Error("GitHub repo not configured in wrangler.toml");
-
   // Read trip data
   const fullKey = keyPrefix + tripId;
   const tripData = await env.TRIPS.get(fullKey, "json");
@@ -59,36 +55,75 @@ export const handlePreviewPublish: McpToolHandler = async (args, env, keyPrefix,
   // Render using shared template renderer (resolves user default, checks user templates first)
   const html = await renderTripHtml(env, tripData, template, userProfile, fullKey, keyPrefix);
 
-  // Publish to drafts/ folder for preview
-  const draftFilename = `drafts/${tripId}.html`;
-  const previewUrl = await publishDraftToGitHub(env, draftFilename, html);
+  // Determine URLs based on whether user has a subdomain
+  const userId = keyPrefix.replace(/\/$/, '');
+  let previewUrl: string;
+  let legacyUrl: string | null = null;
+
+  // Always try to save to R2 for subdomain serving
+  if (userProfile?.subdomain) {
+    // Save to R2 drafts folder for subdomain serving
+    await saveDraftTrip(env, userId, tripId, html);
+    previewUrl = `https://${userProfile.subdomain}.voygent.ai/drafts/${tripId}.html`;
+
+    // Also publish to GitHub as backup (non-blocking)
+    if (env.GITHUB_TOKEN && env.GITHUB_REPO) {
+      try {
+        const draftFilename = `drafts/${tripId}.html`;
+        legacyUrl = await publishDraftToGitHub(env, draftFilename, html);
+      } catch (err) {
+        console.error('Failed to publish to GitHub (non-blocking):', err);
+      }
+    }
+  } else {
+    // No subdomain - use GitHub as primary
+    if (!env.GITHUB_TOKEN) throw new Error("GitHub token not configured. Run: wrangler secret put GITHUB_TOKEN");
+    if (!env.GITHUB_REPO) throw new Error("GitHub repo not configured in wrangler.toml");
+
+    const draftFilename = `drafts/${tripId}.html`;
+    previewUrl = await publishDraftToGitHub(env, draftFilename, html);
+
+    // Also save to R2 in case user sets up subdomain later
+    try {
+      await saveDraftTrip(env, userId, tripId, html);
+    } catch (err) {
+      console.error('Failed to save to R2 (non-blocking):', err);
+    }
+  }
 
   // Analyze open slots for profitability opportunities
   const openSlotAnalysis = analyzeOpenSlots(tripData, tripId);
 
-  const result = {
+  const result: any = {
     previewUrl,
     tripId,
     template,
     message: `Preview ready! View at ${previewUrl}`,
     note: "This is a draft preview. When ready, use publish_trip to publish to the main site.",
-    cacheNote: "GitHub Pages may take up to 1 minute to update. If you don't see the latest changes, use hard refresh (Ctrl+Shift+R or Cmd+Shift+R).",
-    // Include open slot analysis for profitability check
-    openSlotAnalysis: {
-      summary: openSlotAnalysis.summary,
-      daysWithOpportunity: openSlotAnalysis.daysWithOpportunity,
-      days: openSlotAnalysis.days.filter(d => d.opportunity !== 'none').map(d => ({
-        day: d.day,
-        date: d.date,
-        location: d.location,
-        dayType: d.dayType,
-        portHours: d.portHours,
-        availableHours: d.availableHours,
-        bookedCount: d.bookedActivities.length,
-        opportunity: d.opportunity,
-        suggestion: d.suggestion
-      }))
-    }
+    cacheWarning: "If you don't see the latest changes, it may take up to 1 minute for updates to appear. Use Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac) to hard refresh your browser.",
+    _displayToUser: "IMPORTANT: Always tell the user about the potential 1-minute delay and how to hard refresh (Ctrl+Shift+R or Cmd+Shift+R) if they don't see the latest changes."
+  };
+
+  // Add legacy URL if different from primary
+  if (legacyUrl && legacyUrl !== previewUrl) {
+    result.legacyUrl = legacyUrl;
+  }
+
+  // Include open slot analysis for profitability check
+  result.openSlotAnalysis = {
+    summary: openSlotAnalysis.summary,
+    daysWithOpportunity: openSlotAnalysis.daysWithOpportunity,
+    days: openSlotAnalysis.days.filter(d => d.opportunity !== 'none').map(d => ({
+      day: d.day,
+      date: d.date,
+      location: d.location,
+      dayType: d.dayType,
+      portHours: d.portHours,
+      availableHours: d.availableHours,
+      bookedCount: d.bookedActivities.length,
+      opportunity: d.opportunity,
+      suggestion: d.suggestion
+    }))
   };
 
   return {

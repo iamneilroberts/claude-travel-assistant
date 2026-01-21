@@ -1,0 +1,84 @@
+{
+  "tripId": "europe-romantic-7day",
+  "file": "samples/europe-romantic-7day.json",
+  "timestamp": "2026-01-21T04:18:05.542Z",
+  "summary": {
+    "total": 7,
+    "ok": 1,
+    "broken": 6,
+    "guessed": 5,
+    "error": 0
+  },
+  "urls": [
+    {
+      "path": "lodging[0].url",
+      "url": "https://www.tripadvisor.com/Hotels-Paris-Le_Marais",
+      "context": "Boutique Hotel - Le Marais District",
+      "status": "broken",
+      "httpCode": 403,
+      "error": "HTTP 403",
+      "likelyGuessed": true,
+      "guessReason": "Matches guessed URL pattern"
+    },
+    {
+      "path": "lodging[1].url",
+      "url": "https://www.tripadvisor.com/Hotels-Rome-Trastevere",
+      "context": "Boutique Hotel - Trastevere",
+      "status": "broken",
+      "httpCode": 403,
+      "error": "HTTP 403",
+      "likelyGuessed": true,
+      "guessReason": "Matches guessed URL pattern"
+    },
+    {
+      "path": "itinerary[0].activities[1].url",
+      "url": "https://www.tripadvisor.com/Attraction_Review-Paris-Seine_River.html",
+      "context": "Seine River Walk",
+      "status": "broken",
+      "httpCode": 403,
+      "error": "HTTP 403",
+      "likelyGuessed": true,
+      "guessReason": "Matches guessed URL pattern"
+    },
+    {
+      "path": "itinerary[0].dining.recommendations[0].url",
+      "url": "https://www.tripadvisor.com/Restaurant_Review-Paris-Chez_Janou.html",
+      "context": "Chez Janou",
+      "status": "broken",
+      "httpCode": 403,
+      "error": "HTTP 403",
+      "likelyGuessed": true,
+      "guessReason": "Matches guessed URL pattern"
+    },
+    {
+      "path": "itinerary[0].dining.recommendations[1].url",
+      "url": "https://www.tripadvisor.com/Restaurant_Review-Paris-Le_Petit_Cler.html",
+      "context": "Le Petit Cler",
+      "status": "broken",
+      "httpCode": 403,
+      "error": "HTTP 403",
+      "likelyGuessed": true,
+      "guessReason": "Matches guessed URL pattern"
+    },
+    {
+      "path": "featuredLinks[0].url",
+      "url": "https://www.ratp.fr/en",
+      "context": "Paris Metro Guide",
+      "status": "broken",
+      "httpCode": 403,
+      "error": "HTTP 403",
+      "likelyGuessed": false,
+      "guessReason": null
+    },
+    {
+      "path": "featuredLinks[1].url",
+      "url": "https://www.atac.roma.it/en",
+      "context": "Rome Public Transport",
+      "status": "ok",
+      "httpCode": 302,
+      "error": null,
+      "likelyGuessed": false,
+      "guessReason": null
+    }
+  ]
+}

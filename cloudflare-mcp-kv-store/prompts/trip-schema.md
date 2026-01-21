@@ -16,8 +16,36 @@ Use this reference when creating or significantly restructuring a trip. The sche
   "travelers": {
     "count": 2,
     "names": ["John Smith", "Jane Smith"],
-    "details": [{ "name": "John Smith", "age": 45 }]
+    "details": [
+      {
+        "name": "John Smith",
+        "firstName": "John",
+        "lastInitial": "S",
+        "type": "adult",
+        "age": 45,
+        "mobilityIssues": false,
+        "mobility": null,
+        "documentsNeeded": ["passport"],
+        "docsComplete": true
+      },
+      {
+        "name": "Jane Smith",
+        "firstName": "Jane",
+        "lastInitial": "S",
+        "type": "adult",
+        "age": 42,
+        "mobilityIssues": false,
+        "documentsNeeded": ["passport"],
+        "docsComplete": true
+      }
+    ],
+    "notes": "Anniversary trip"
   },
+  "maps": [
+    { "location": "Rome, Italy", "label": "Rome Overview" },
+    { "location": "Florence, Italy", "label": "Florence Area" }
+  ],
+  "notes": ["Anniversary trip", "Prefer boutique hotels", "Allergic to shellfish"],
   "dates": {
     "start": "2026-03-15",
     "end": "2026-03-22",
@@ -62,8 +90,18 @@ Use this reference when creating or significantly restructuring a trip. The sche
       "rate": 250,
       "total": 750,
       "url": "https://...",
-      "map": "Rome, Italy",
-      "confirmed": false
+      "map": "Via Veneto, Rome, Italy",
+      "status": "confirmed",
+      "confirmed": true
+    },
+    {
+      "name": "Alternative Option Hotel",
+      "location": "Rome",
+      "dates": "Mar 15-18",
+      "nights": 3,
+      "rate": 180,
+      "url": "https://...",
+      "status": "option"
     }
   ],
   "itinerary": [
@@ -72,16 +110,71 @@ Use this reference when creating or significantly restructuring a trip. The sche
       "date": "2026-03-15",
       "title": "Arrival in Rome",
       "location": "Rome",
+      "transport": {
+        "mode": "shuttle",
+        "details": "Private airport transfer",
+        "departureTime": "11:30",
+        "arrivalTime": "12:30",
+        "confirmation": "TRF-12345",
+        "notes": "Driver will meet at arrivals with name sign"
+      },
+      "lodging": {
+        "name": "Hotel Excelsior",
+        "arrival": true,
+        "nightNumber": 1,
+        "notes": "Early check-in requested"
+      },
       "activities": [
         {
           "time": "Evening",
           "name": "Check into hotel",
-          "description": "Settle in and rest after flight"
+          "description": "Settle in and rest after flight",
+          "url": "https://hotelexcelsior.com",
+          "image": "https://..."
         }
       ],
+      "dining": {
+        "recommendations": [
+          {
+            "name": "Da Enzo al 29",
+            "priceLevel": "$$",
+            "description": "Authentic Roman trattoria in Trastevere",
+            "url": "https://tripadvisor.com/...",
+            "cuisine": "Italian",
+            "image": "https://..."
+          }
+        ]
+      },
       "meals": ["Dinner at hotel"],
       "map": "Rome historic center",
       "media": []
+    },
+    {
+      "day": 2,
+      "date": "2026-03-16",
+      "title": "Road Trip to Tuscany",
+      "location": "Tuscany",
+      "driving": {
+        "distance": "180 miles",
+        "duration": "3 hours",
+        "suggestedBreaks": [
+          { "location": "Orvieto", "reason": "Scenic hilltop town, great espresso" },
+          { "location": "Montepulciano", "reason": "Wine tasting opportunity" }
+        ],
+        "tips": ["Take the scenic SS71 route", "Fill up before leaving Rome"]
+      },
+      "lodging": {
+        "name": "Tuscan Villa",
+        "arrival": true,
+        "nightNumber": 1
+      },
+      "activities": [
+        {
+          "time": "Afternoon",
+          "name": "Wine tasting",
+          "description": "Sample local Brunello wines"
+        }
+      ]
     }
   ],
   "tiers": {
@@ -168,6 +261,68 @@ Three options for proposals:
 
 ### bookings
 Track confirmed reservations with confirmation numbers.
+
+### travelers.details[] (Enhanced)
+For detailed traveler information:
+- `firstName`, `lastInitial`: For PII-protected display (e.g., "John S.")
+- `type`: "adult", "teen", or "child"
+- `mobilityIssues`: boolean - flag if traveler has mobility considerations
+- `mobility`: string - details about mobility needs
+- `documentsNeeded`: array of required documents (e.g., ["passport", "visa"])
+- `docsComplete`: boolean - true if all documents are ready
+
+### maps[] (Top-level)
+Trip-level maps array for overview maps:
+- `location`: Address or place name for Google Maps embed
+- `label`: Display label for the map
+
+### notes (Top-level)
+Catch-all for important trip notes. Can be a string or array of strings:
+- `"Anniversary trip"` or `["Anniversary trip", "Allergic to shellfish"]`
+
+### lodging[].status
+Status values for lodging:
+- `"confirmed"`: Booked and paid
+- `"selected"`: Chosen but not yet booked
+- `"option"`: Alternative being considered
+
+### itinerary[].transport
+Per-day transport details:
+- `mode`: "train", "ferry", "shuttle", "air", "transit", "walking"
+- `details`: Description of the transport
+- `departureTime`, `arrivalTime`: Times in HH:MM format
+- `confirmation`: Booking confirmation number
+- `notes`: Additional information
+
+### itinerary[].driving
+For road trip days:
+- `distance`: e.g., "120 miles"
+- `duration`: e.g., "2.5 hours"
+- `suggestedBreaks`: Array of `{ location, reason }` objects
+- `tips`: Array of driving tips
+
+### itinerary[].lodging
+Daily lodging indicator:
+- `name`: Hotel name
+- `arrival`: true if checking in this day
+- `departure`: true if checking out this day
+- `nightNumber`: Which night of stay (e.g., 2 for second night)
+- `notes`: Check-in/check-out details
+
+### itinerary[].dining.recommendations[]
+Restaurant suggestions per day:
+- `name`: Restaurant name
+- `priceLevel`: "$$" format or number 1-4
+- `description`: Brief description
+- `url`: Link to TripAdvisor or official site
+- `cuisine`: Type of cuisine
+- `image`: Optional photo URL
+
+### itinerary[].activities[].url
+Direct link to activity info (official site, TripAdvisor, Viator). When populated, activity name becomes clickable.
+
+### itinerary[].activities[].image
+Optional thumbnail photo for the activity.
 
 ---
 

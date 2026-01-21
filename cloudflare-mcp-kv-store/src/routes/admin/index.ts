@@ -89,7 +89,7 @@ export const handleAdminRoutes: RouteHandler = async (request, env, ctx, url, co
   if (!url.pathname.startsWith("/admin")) return null;
 
   // Serve dashboard HTML without auth (JS handles auth for API calls)
-  if (url.pathname === "/admin/dashboard" && request.method === "GET") {
+  if ((url.pathname === "/admin" || url.pathname === "/admin/" || url.pathname === "/admin/dashboard") && request.method === "GET") {
     return new Response(ADMIN_DASHBOARD_HTML, {
       headers: { "Content-Type": "text/html" }
     });

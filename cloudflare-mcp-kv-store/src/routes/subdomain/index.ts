@@ -6,7 +6,7 @@
 import type { Env, UserProfile } from '../../types';
 import { extractSubdomain, getSubdomainOwner } from '../../lib/subdomain';
 import { handleUserDashboard } from './dashboard';
-import { handlePublishedTrip, handleSubdomainHome } from './published';
+import { handlePublishedTrip, handleSubdomainHome, handleDraftTrip } from './published';
 import { handleUpload } from '../upload';
 
 /**
@@ -67,6 +67,11 @@ export async function handleSubdomainRoutes(
   if (path === '/upload') {
     const uploadResponse = await handleUpload(request, env, ctx, url, corsHeaders);
     if (uploadResponse) return uploadResponse;
+  }
+
+  // Draft/preview trip routes: /drafts/*
+  if (path.startsWith('/drafts/')) {
+    return handleDraftTrip(request, env, ctx, url, userProfile, corsHeaders);
   }
 
   // Published trip routes: /trips/*, /*.html

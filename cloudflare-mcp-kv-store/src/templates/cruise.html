@@ -4161,7 +4161,7 @@
                         {{#if nights}}<div class="card-detail"><span class="label">Nights</span><span class="value">{{nights}}</span></div>{{/if}}
                         {{#if checkIn}}<div class="card-detail"><span class="label">Check-in</span><span class="value">{{formatTime checkIn}}</span></div>{{/if}}
                         {{#if checkOut}}<div class="card-detail"><span class="label">Check-out</span><span class="value">{{formatTime checkOut}}</span></div>{{/if}}
-                        {{#if dates}}<div class="card-detail"><span class="label">Dates</span><span class="value">{{dates}}</span></div>{{/if}}
+                        {{#if this.dates}}<div class="card-detail"><span class="label">Dates</span><span class="value">{{this.dates}}</span></div>{{/if}}
                         {{#if rate}}<div class="card-detail"><span class="label">Rate</span><span class="value">{{formatCurrency rate}}/night</span></div>{{/if}}
                         {{#if status}}
                         <div class="card-detail">
@@ -4810,6 +4810,137 @@
             </div>
         </div>
         {{/if}}
+        {{/if}}
+
+        <!-- Hidden Gems Section (Array version) -->
+        {{#if hiddenGems}}
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon">💎</div>
+                <h2>Hidden Gems</h2>
+                <button class="comment-trigger" data-comment-section="Hidden Gems">Ask a question</button>
+            </div>
+            <div class="cards-grid">
+                {{#each hiddenGems}}
+                <div class="card" style="border-top: 4px solid #f5a623;">
+                    <div class="card-body">
+                        <h4 style="color: #c7880a; margin-bottom: 10px;">🌟 {{name}}</h4>
+                        {{#if location}}<p style="font-size: 0.9em; color: var(--text-light); margin-bottom: 8px;">📍 {{location}}</p>{{/if}}
+                        <p style="color: var(--text);">{{description}}</p>
+                        {{#if tip}}<p style="margin-top: 10px;"><strong>Pro Tip:</strong> {{tip}}</p>{{/if}}
+                        {{#if url}}<a href="{{url}}" class="card-link" target="_blank" rel="noopener noreferrer">Learn More →</a>{{/if}}
+                    </div>
+                </div>
+                {{/each}}
+            </div>
+        </div>
+        {{/if}}
+
+        <!-- Local Customs Section (Port-specific) -->
+        {{#if localCustoms}}
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon">🌍</div>
+                <h2>Local Customs & Etiquette</h2>
+                <button class="comment-trigger" data-comment-section="Local Customs">Ask a question</button>
+            </div>
+            <div class="content-box">
+                <p style="margin-bottom: 15px; color: var(--text-light); font-style: italic;">Know before you go - each port has its own culture!</p>
+                <div class="cards-grid" style="grid-template-columns: 1fr;">
+                    {{#each localCustoms}}
+                    <div style="padding: 15px; background: var(--bg-light); border-radius: 8px; border-left: 4px solid var(--port);">
+                        <h4 style="color: var(--port-dark); margin-bottom: 8px;">{{#if port}}📍 {{port}} - {{/if}}{{title}}</h4>
+                        <p style="color: var(--text);">{{description}}</p>
+                        {{#if doThis}}<p style="margin-top: 8px; color: var(--accent-dark);"><strong>✓ Do:</strong> {{doThis}}</p>{{/if}}
+                        {{#if avoidThis}}<p style="margin-top: 4px; color: #d32f2f;"><strong>✗ Avoid:</strong> {{avoidThis}}</p>{{/if}}
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+        </div>
+        {{/if}}
+
+        <!-- Free Things to Do Section (Onboard & Ports) -->
+        {{#if freeActivities}}
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon">🎁</div>
+                <h2>Free Things to Do</h2>
+                <button class="comment-trigger" data-comment-section="Free Activities">Ask a question</button>
+            </div>
+            <div class="content-box" style="background: linear-gradient(135deg, #e8f5e9 0%, #fff 100%); border-color: #4caf50;">
+                <p style="margin-bottom: 15px; color: var(--text-light); font-style: italic;">Already included with your cruise - no extra cost!</p>
+                <div class="cards-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+                    {{#each freeActivities}}
+                    <div style="padding: 15px; background: var(--white); border-radius: 8px; border: 1px solid #c8e6c9;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <span style="background: #4caf50; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 600;">{{#if onboard}}INCLUDED{{else}}FREE{{/if}}</span>
+                            <h4 style="color: var(--text); font-size: 1em;">{{name}}</h4>
+                        </div>
+                        {{#if location}}<p style="font-size: 0.85em; color: var(--text-light); margin-bottom: 6px;">📍 {{location}}</p>{{/if}}
+                        <p style="font-size: 0.95em; color: var(--text);">{{description}}</p>
+                        {{#if bestTime}}<p style="margin-top: 8px; font-size: 0.85em; color: var(--primary);"><strong>Best time:</strong> {{bestTime}}</p>{{/if}}
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+        </div>
+        {{/if}}
+
+        <!-- Packing Tips Section -->
+        {{#if packingTips}}
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon">🧳</div>
+                <h2>Cruise Packing Tips</h2>
+                <button class="comment-trigger" data-comment-section="Packing Tips">Ask a question</button>
+            </div>
+            <div class="content-box">
+                {{#if packingTips.essentials}}
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">✓ Must-Have Essentials</h4>
+                    <ul style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+                        {{#each packingTips.essentials}}
+                        <li style="list-style: none; padding: 8px 12px; background: var(--bg-light); border-radius: 6px;">{{this}}</li>
+                        {{/each}}
+                    </ul>
+                </div>
+                {{/if}}
+                {{#if packingTips.recommended}}
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--accent); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">👍 Recommended</h4>
+                    <ul style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+                        {{#each packingTips.recommended}}
+                        <li style="list-style: none; padding: 8px 12px; background: var(--accent-light); border-radius: 6px;">{{this}}</li>
+                        {{/each}}
+                    </ul>
+                </div>
+                {{/if}}
+                {{#if packingTips.skip}}
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: #d32f2f; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">✗ Leave at Home</h4>
+                    <p style="font-size: 0.9em; color: var(--text-light); margin-bottom: 10px;">The ship provides these, or they take up unnecessary space:</p>
+                    <ul style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+                        {{#each packingTips.skip}}
+                        <li style="list-style: none; padding: 8px 12px; background: #ffebee; border-radius: 6px; color: #c62828;">{{this}}</li>
+                        {{/each}}
+                    </ul>
+                </div>
+                {{/if}}
+                {{#if packingTips.formalNights}}
+                <div class="highlight-box" style="margin-top: 15px; background: var(--secondary-light);">
+                    <h4>👔 Formal Night Attire</h4>
+                    <p>{{packingTips.formalNights}}</p>
+                </div>
+                {{/if}}
+                {{#if packingTips.portDays}}
+                <div class="highlight-box" style="margin-top: 15px; background: var(--port-light);">
+                    <h4>🏝️ Shore Excursion Gear</h4>
+                    <p>{{packingTips.portDays}}</p>
+                </div>
+                {{/if}}
+            </div>
+        </div>
         {{/if}}
 
         <!-- Featured Links Section -->

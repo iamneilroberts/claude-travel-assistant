@@ -52,7 +52,8 @@ import {
 import {
   handleListSampleTrips,
   handleAcceptSampleTrips,
-  handleDeclineSampleTrips
+  handleDeclineSampleTrips,
+  handleClearSampleTrips
 } from './sample-trips';
 
 // Tool name to handler mapping - all wrapped with metrics
@@ -86,7 +87,8 @@ export const toolHandlers: Record<string, McpToolHandler> = {
   validate_reference: withMetrics('validate_reference', validateReference),
   list_sample_trips: withMetrics('list_sample_trips', handleListSampleTrips),
   accept_sample_trips: withMetrics('accept_sample_trips', handleAcceptSampleTrips),
-  decline_sample_trips: withMetrics('decline_sample_trips', handleDeclineSampleTrips)
+  decline_sample_trips: withMetrics('decline_sample_trips', handleDeclineSampleTrips),
+  clear_sample_trips: withMetrics('clear_sample_trips', handleClearSampleTrips)
 };
 
 // Re-export all handlers for direct imports if needed
@@ -117,5 +119,6 @@ export {
   handleYoutubeSearch,
   handleListSampleTrips,
   handleAcceptSampleTrips,
-  handleDeclineSampleTrips
+  handleDeclineSampleTrips,
+  handleClearSampleTrips
 };

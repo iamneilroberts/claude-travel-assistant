@@ -271,3 +271,51 @@ export async function incrementPublishedTripViews(
     await env.TRIPS.put(metaKey, JSON.stringify(metadata));
   }
 }
+
+/**
+ * Save a draft/preview trip to R2 (separate from published trips)
+ * Drafts are stored in drafts/ subfolder and not indexed in the published list
+ */
+export async function saveDraftTrip(
+  env: Env,
+  userId: string,
+  tripId: string,
+  html: string
+): Promise<string> {
+  const filename = `${tripId}.html`;
+
+  // Save HTML to R2 in drafts folder
+  const r2Key = `drafts/${userId}/${filename}`;
+  await env.MEDIA.put(r2Key, html, {
+    httpMetadata: {
+      contentType: 'text/html; charset=utf-8',
+      cacheControl: 'public, max-age=60' // 1 minute cache for drafts
+    },
+    customMetadata: {
+      tripId,
+      userId,
+      savedAt: new Date().toISOString(),
+      isDraft: 'true'
+    }
+  });
+
+  return filename;
+}
+
+/**
+ * Get a draft trip HTML from R2
+ */
+export async function getDraftTrip(
+  env: Env,
+  userId: string,
+  filename: string
+): Promise<string | null> {
+  const r2Key = `drafts/${userId}/${filename}`;
+  const object = await env.MEDIA.get(r2Key);
+
+  if (!object) {
+    return null;
+  }
+
+  return await object.text();
+}

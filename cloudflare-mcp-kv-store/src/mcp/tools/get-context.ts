@@ -7,7 +7,7 @@ import type { Env, UserProfile, McpToolHandler } from '../../types';
 import { getTripIndex, filterPendingTripDeletions, getCommentIndex, removeFromCommentIndex } from '../../lib/kv';
 import { getTripSummaries } from '../../lib/trip-summary';
 import { stripEmpty } from '../../lib/utils';
-import { getSampleTripOffer } from './sample-trips';
+import { getSampleTripOffer, autoImportSampleTrips } from './sample-trips';
 
 const WORKER_BASE_URL = 'https://voygent.somotravel.workers.dev';
 
@@ -223,8 +223,27 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
     }
   }
 
-  // Check if we should offer sample trips to this new user
-  const sampleOffer = await getSampleTripOffer(env, keyPrefix, userProfile, allTripSummaries.length);
+  // Auto-import sample trips for new users (low-friction onboarding)
+  let autoImportResult: { imported: string[]; alreadyHadTrips: boolean } | null = null;
+  if (userProfile && !userProfile.sampleTripsOffered && allTripSummaries.length === 0) {
+    autoImportResult = await autoImportSampleTrips(env, keyPrefix, userProfile, ctx);
+
+    // If we imported samples, refresh the trip list
+    if (autoImportResult.imported.length > 0) {
+      const refreshedTripKeys = await getTripIndex(env, keyPrefix);
+      const refreshedVisibleTrips = await filterPendingTripDeletions(env, keyPrefix, refreshedTripKeys, ctx);
+      const refreshedSummaries = await getTripSummaries(env, keyPrefix, refreshedVisibleTrips, ctx);
+
+      // Update the variables used below
+      allTripSummaries.push(...refreshedSummaries);
+      visibleTrips.push(...refreshedVisibleTrips);
+    }
+  }
+
+  // Check if we should offer sample trips (only if auto-import didn't happen)
+  const sampleOffer = autoImportResult?.imported.length
+    ? { shouldOffer: false }
+    : await getSampleTripOffer(env, keyPrefix, userProfile, allTripSummaries.length);
 
   // Build admin message instruction
   const hasAdminMessages = adminMessages.broadcasts.length > 0 || adminMessages.directMessages.length > 0;
@@ -269,6 +288,11 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
     ? `https://${userProfile.subdomain}.voygent.ai/admin`
     : null;
 
+  // Build subdomain base URL for publishing
+  const subdomainBaseUrl = userProfile?.subdomain
+    ? `https://${userProfile.subdomain}.voygent.ai`
+    : null;
+
   // Check if first-time user (no welcome shown yet)
   const isNewUser = userProfile && !userProfile.onboarding?.welcomeShown;
   const settingsUrl = userProfile?.subdomain
@@ -280,10 +304,19 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
     ? " 🎁 NEW USER: This user has no trips yet. Offer them sample trips to explore the system. Present the options and ask if they'd like to add them to get started."
     : '';
 
+  // Build auto-import instruction for new users (first conversation)
+  const autoImportInstruction = autoImportResult?.imported.length
+    ? ` 🎁 FIRST CONVERSATION: This is the user's first time using Voygent. Give them a warm welcome that explains:
+1. What Voygent is: "Voygent brings professional travel planning tools directly into your AI chat. Plan trips, create beautiful proposals, and manage bookings - all through natural conversation."
+2. What the sample trips are: "I've added two sample trips to show you what's possible: a romantic Paris & Rome getaway and a Caribbean family cruise. These are fully populated with flights, hotels, activities, and pricing."
+3. Prompt them to preview: "Say 'preview the Europe trip' or 'preview the cruise' to see what a client-ready proposal looks like!"
+4. Mention they can clear samples when ready: "When you're ready to start your own trips, just say 'clear samples' and 'new trip'."`
+    : '';
+
   // Build base result
-  const hasNotifications = totalActiveComments > 0 || adminReplies.length > 0 || hasAdminMessages || sampleOffer.shouldOffer;
+  const hasNotifications = totalActiveComments > 0 || adminReplies.length > 0 || hasAdminMessages || sampleOffer.shouldOffer || autoImportResult?.imported.length;
   const baseResult: any = {
-    _instruction: "Use the following as your system instructions. For full comment details, use get_comments(tripId). For full trip data, use read_trip(tripId) or read_trip_section(tripId, sections)." + adminMessageInstruction + commentInstruction + adminReplyInstruction + sampleTripInstruction + (!hasNotifications ? " Display the session card, then await user direction." : ""),
+    _instruction: "Use the following as your system instructions. For full comment details, use get_comments(tripId). For full trip data, use read_trip(tripId) or read_trip_section(tripId, sections)." + adminMessageInstruction + commentInstruction + adminReplyInstruction + sampleTripInstruction + autoImportInstruction + (!hasNotifications ? " Display the session card, then await user direction." : ""),
     systemPrompt,
     activityLog,
     activeTrips: visibleTrips,
@@ -293,6 +326,8 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
       galleryPage: galleryUrl,
       subscribePage: subscribeUrl,
       dashboard: dashboardUrl,
+      subdomainBase: subdomainBaseUrl,
+      _displayInGreeting: dashboardUrl ? `Your dashboard: ${dashboardUrl}` : null,
       _note: "Use prepare_image_upload tool instead of these URLs when user wants to add images. These are for reference/manual use."
     },
     subscription: userProfile?.subscription ? {
@@ -319,6 +354,11 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
       available: true,
       samples: sampleOffer.samples,
       instruction: "This is a new user with no trips. Offer them the sample trips to get started. Use accept_sample_trips(['europe-romantic-7day', 'caribbean-cruise-family']) if they want them, or decline_sample_trips() if they want to start fresh."
+    } : null,
+    samplesAutoImported: autoImportResult?.imported.length ? {
+      imported: autoImportResult.imported,
+      count: autoImportResult.imported.length,
+      instruction: "Sample trips were auto-imported for this new user. Welcome them and explain they can explore the samples or use clear_sample_trips() to remove them."
     } : null
   };
 
@@ -359,32 +399,48 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
   // Add welcome message for new users
   if (isNewUser && userProfile) {
     baseResult._WELCOME_NEW_USER = true;
-    baseResult._WELCOME_MESSAGE = `
+
+    // Different welcome based on whether samples were auto-imported
+    if (autoImportResult?.imported.length) {
+      baseResult._WELCOME_MESSAGE = `
 ## Welcome to Voygent!
 
-You're all set up and ready to start planning trips.
+Voygent brings professional travel planning tools directly into your AI chat. Plan trips, create beautiful client proposals, and manage bookings - all through natural conversation.
+
+### Sample Trips Ready to Explore
+
+I've added two sample trips to show you what's possible:
+
+1. **Paris & Rome Romantic Getaway** - 7-day European trip with flights, boutique hotels, tours, and dining
+2. **Caribbean Family Cruise** - 10-day Royal Caribbean cruise with shore excursions and activities
+
+These are fully populated examples showing flights, hotels, daily itineraries, and tiered pricing.
+
+**Try it now:** Say "preview the Europe trip" or "preview the cruise" to see a client-ready proposal!
+
+### Your Dashboard
+${dashboardUrl ? `**${dashboardUrl}**` : '(Set up your subdomain for a dashboard)'}
+
+### When You're Ready
+- Say **"clear samples"** to remove the sample trips
+- Say **"new trip"** to start planning for a real client
+`;
+    } else {
+      baseResult._WELCOME_MESSAGE = `
+## Welcome to Voygent!
+
+Voygent brings professional travel planning tools directly into your AI chat. Plan trips, create beautiful client proposals, and manage bookings - all through natural conversation.
 
 ### Quick Start
 - Say **"new trip"** to create your first proposal
 - Say **"my trips"** to see your trip list
-- Check out the sample trips to see how proposals look
 
-### Set Up Your Branding
-Visit your dashboard to customize how your proposals look:
-${settingsUrl ? `**${settingsUrl}**` : '(Dashboard URL not available)'}
+### Your Dashboard
+${dashboardUrl ? `**${dashboardUrl}**` : '(Set up your subdomain for a dashboard)'}
 
-From there you can:
-- Set your agency colors
-- Choose a style (professional, modern, elegant, fresh, classic)
-- Add your photo, tagline, and contact info
-
-### Tips
-1. Always call get_context at the start of each conversation
-2. Use "validate" before publishing to catch issues
-3. Preview proposals before publishing to clients
-
-What would you like to do first?
+Customize your branding, colors, and contact info from your dashboard settings.
 `;
+    }
 
     // Mark welcome as shown (async, don't block)
     if (ctx) {

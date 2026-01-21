@@ -16,7 +16,7 @@ export interface ToolDefinition {
 export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "get_context",
-    description: "Load system instructions, trips, and activity log. Call first.",
+    description: "REQUIRED FIRST CALL: Invoke immediately when user says 'voygent', 'use voygent', 'travel', 'trip planning', or any travel-related request. Loads your system instructions, user's trips, and activity log. You MUST call this before using any other Voygent tool - it provides essential context for the conversation.",
     inputSchema: { type: "object", properties: {} }
   },
   {
@@ -325,7 +325,17 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
           },
           required: ["type", "provider"]
         },
-        travelers: { type: "array", description: "Confirmed travelers [{name, dob?}]" },
+        travelers: {
+          type: "array",
+          description: "Confirmed travelers",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              dob: { type: "string", description: "Date of birth (YYYY-MM-DD)" }
+            }
+          }
+        },
         dates: {
           type: "object",
           description: "Confirmed dates",
@@ -346,11 +356,49 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
             bookingNumber: { type: "string" },
             embarkation: { type: "object", properties: { port: { type: "string" }, date: { type: "string" }, time: { type: "string" } } },
             debarkation: { type: "object", properties: { port: { type: "string" }, date: { type: "string" }, time: { type: "string" } } },
-            ports: { type: "array", description: "Port schedule [{date, port, arrive?, depart?}]" }
+            ports: {
+              type: "array",
+              description: "Port schedule",
+              items: {
+                type: "object",
+                properties: {
+                  date: { type: "string" },
+                  port: { type: "string" },
+                  arrive: { type: "string" },
+                  depart: { type: "string" }
+                }
+              }
+            }
           }
         },
-        lodging: { type: "array", description: "Confirmed lodging [{type, name, checkIn, checkOut, confirmation?}]" },
-        flights: { type: "array", description: "Confirmed flights [{type, date, from, to, confirmation?}]" },
+        lodging: {
+          type: "array",
+          description: "Confirmed lodging",
+          items: {
+            type: "object",
+            properties: {
+              type: { type: "string" },
+              name: { type: "string" },
+              checkIn: { type: "string" },
+              checkOut: { type: "string" },
+              confirmation: { type: "string" }
+            }
+          }
+        },
+        flights: {
+          type: "array",
+          description: "Confirmed flights",
+          items: {
+            type: "object",
+            properties: {
+              type: { type: "string" },
+              date: { type: "string" },
+              from: { type: "string" },
+              to: { type: "string" },
+              confirmation: { type: "string" }
+            }
+          }
+        },
         replace: { type: "boolean", description: "Replace existing reference instead of merging" }
       },
       required: ["tripId", "source"]
@@ -404,6 +452,14 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "decline_sample_trips",
     description: "Decline sample trips - user wants to start fresh.",
+    inputSchema: {
+      type: "object",
+      properties: {}
+    }
+  },
+  {
+    name: "clear_sample_trips",
+    description: "Remove all sample trips from user's account. Use when user says 'clear samples', 'remove samples', or wants to start fresh after exploring samples.",
     inputSchema: {
       type: "object",
       properties: {}

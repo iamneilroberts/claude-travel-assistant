@@ -248,3 +248,163 @@ export async function getSampleTripOffer(
     samples: SAMPLE_TRIPS
   };
 }
+
+/**
+ * Auto-import sample trips for a new user
+ * This is called during get_context for brand new users
+ */
+export async function autoImportSampleTrips(
+  env: Env,
+  keyPrefix: string,
+  userProfile: UserProfile | null,
+  ctx?: ExecutionContext
+): Promise<{ imported: string[]; alreadyHadTrips: boolean }> {
+  // Check if user already has trips
+  const tripIndex = await env.TRIPS.get(`${keyPrefix}_trip-index`, "json") as string[] | null;
+  if (tripIndex && tripIndex.length > 0) {
+    return { imported: [], alreadyHadTrips: true };
+  }
+
+  // Check if samples were already offered/imported
+  if (userProfile?.sampleTripsOffered) {
+    return { imported: [], alreadyHadTrips: false };
+  }
+
+  const imported: string[] = [];
+  const now = new Date().toISOString();
+
+  for (const sample of SAMPLE_TRIPS) {
+    try {
+      const sampleData = await env.TRIPS.get(`_samples/${sample.id}`, "json") as any;
+      if (!sampleData) continue;
+
+      const userTripId = `sample-${sample.id}`;
+      const tripCopy = {
+        ...sampleData,
+        meta: {
+          ...sampleData.meta,
+          tripId: userTripId,
+          copiedFromSample: sample.id,
+          copiedAt: now,
+          lastModified: now,
+          status: "Sample trip - view to explore, or delete and start your own!"
+        }
+      };
+
+      // Save to user's space
+      await env.TRIPS.put(keyPrefix + userTripId, JSON.stringify(tripCopy));
+
+      // Update trip index
+      await addToTripIndex(env, keyPrefix, userTripId);
+
+      // Compute and store summary
+      const summary = await computeTripSummary(userTripId, tripCopy);
+      await writeTripSummary(env, keyPrefix, userTripId, summary, ctx);
+
+      imported.push(userTripId);
+    } catch (err) {
+      console.error(`Failed to auto-import sample ${sample.id}:`, err);
+    }
+  }
+
+  // Mark samples as offered
+  if (userProfile) {
+    const userId = userProfile.userId;
+    const updatedProfile = {
+      ...userProfile,
+      sampleTripsOffered: true,
+      onboarding: {
+        ...userProfile.onboarding,
+        samplesAutoImported: true,
+        samplesImportedAt: now
+      }
+    };
+    await env.TRIPS.put(`_users/${userId}`, JSON.stringify(updatedProfile));
+  }
+
+  return { imported, alreadyHadTrips: false };
+}
+
+/**
+ * Clear/delete sample trips from a user's account
+ */
+export const handleClearSampleTrips: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
+  // Get trip index
+  const tripIndex = await env.TRIPS.get(`${keyPrefix}_trip-index`, "json") as string[] | null;
+  if (!tripIndex || tripIndex.length === 0) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: true,
+          message: "No trips to clear. You're ready to start fresh!",
+          deletedCount: 0
+        }, null, 2)
+      }]
+    };
+  }
+
+  // Find and delete sample trips (those starting with "sample-")
+  const sampleTrips = tripIndex.filter(id => id.startsWith('sample-'));
+  const deletedTrips: string[] = [];
+
+  for (const tripId of sampleTrips) {
+    try {
+      // Delete trip data
+      await env.TRIPS.delete(`${keyPrefix}${tripId}`);
+
+      // Delete summary
+      await env.TRIPS.delete(`${keyPrefix}_summaries/${tripId}`);
+
+      deletedTrips.push(tripId);
+    } catch (err) {
+      console.error(`Failed to delete sample trip ${tripId}:`, err);
+    }
+  }
+
+  // Update trip index
+  const remainingTrips = tripIndex.filter(id => !id.startsWith('sample-'));
+  await env.TRIPS.put(`${keyPrefix}_trip-index`, JSON.stringify(remainingTrips));
+
+  // Update activity log
+  const activityLogKey = keyPrefix + "_activity-log";
+  const activityLog = await env.TRIPS.get(activityLogKey, "json") as any || {
+    lastSession: null,
+    recentChanges: [],
+    openItems: [],
+    tripsActive: []
+  };
+
+  activityLog.recentChanges.unshift({
+    tripId: null,
+    tripName: "Sample trips cleared",
+    change: `Removed ${deletedTrips.length} sample trip(s)`,
+    timestamp: new Date().toISOString()
+  });
+
+  // Remove sample trips from active list
+  activityLog.tripsActive = activityLog.tripsActive.filter((id: string) => !id.startsWith('sample-'));
+
+  if (activityLog.recentChanges.length > 20) {
+    activityLog.recentChanges = activityLog.recentChanges.slice(0, 20);
+  }
+  activityLog.lastSession = new Date().toISOString();
+  await env.TRIPS.put(activityLogKey, JSON.stringify(activityLog));
+
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: true,
+        message: `Cleared ${deletedTrips.length} sample trip(s). You're ready to start fresh!`,
+        deletedCount: deletedTrips.length,
+        deletedTrips,
+        remainingTrips: remainingTrips.length,
+        nextSteps: [
+          "Say 'new trip' to create your first real trip",
+          "Say 'my trips' to see your trip list"
+        ]
+      }, null, 2)
+    }]
+  };
+};

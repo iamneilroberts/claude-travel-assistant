@@ -4,8 +4,97 @@
  */
 
 import type { Env, UserProfile } from '../../types';
-import { getPublishedTrip, listPublishedTrips } from '../../lib/published';
+import { getPublishedTrip, listPublishedTrips, getDraftTrip } from '../../lib/published';
 import { trackPageView } from '../../lib/stats';
+
+/**
+ * Handle requests for draft/preview trips
+ * Routes: /drafts/{filename}.html
+ */
+export async function handleDraftTrip(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+  url: URL,
+  userProfile: UserProfile,
+  corsHeaders: Record<string, string>
+): Promise<Response | null> {
+  const path = url.pathname;
+
+  // Extract filename from path
+  let filename = path.slice(8); // Remove '/drafts/'
+
+  // Ensure .html extension
+  if (!filename.endsWith('.html')) {
+    filename += '.html';
+  }
+
+  // Get the HTML from R2 drafts folder
+  const html = await getDraftTrip(env, userProfile.userId, filename);
+
+  if (!html) {
+    return new Response(getDraftNotFoundHtml(filename), {
+      status: 404,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        ...corsHeaders
+      }
+    });
+  }
+
+  // Return the HTML with short caching for drafts
+  return new Response(html, {
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'public, max-age=60, stale-while-revalidate=30',
+      ...corsHeaders
+    }
+  });
+}
+
+/**
+ * HTML for draft not found page
+ */
+function getDraftNotFoundHtml(filename: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Draft Not Found</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #333;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+      max-width: 500px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    h1 { font-size: 2rem; margin-bottom: 1rem; color: #f59e0b; }
+    p { font-size: 1rem; margin-bottom: 1rem; color: #666; }
+    .filename { font-family: monospace; background: #f0f0f0; padding: 0.2rem 0.5rem; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Draft Not Found</h1>
+    <p>The draft <span class="filename">${filename}</span> could not be found.</p>
+    <p>Drafts expire after a short time. Generate a new preview to view this trip.</p>
+  </div>
+</body>
+</html>`;
+}
 
 /**
  * Handle requests for published trips
