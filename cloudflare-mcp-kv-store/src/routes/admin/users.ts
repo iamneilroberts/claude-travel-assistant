@@ -20,14 +20,26 @@ function generateSetupEmail(user: UserProfile): { subject: string; body: string 
 
 Welcome to Voygent! Your travel planning assistant is ready to use.
 
-== YOUR SETUP KEY ==
-${user.authKey}
+== YOUR MCP SERVER URL ==
+${mcpUrl}
 
 == SETUP INSTRUCTIONS ==
 
---- ChatGPT Setup ---
+--- Claude (claude.ai) ---
+1. Go to claude.ai and sign in
+2. Click your profile icon > Settings > Connectors
+3. Scroll down and click "Add custom connector"
+4. Fill in:
+   - Name: Voygent
+   - Remote MCP server URL: ${mcpUrl}
+5. Click "Add"
+6. Start a new conversation and say "list my trips"
+
+Note: Once you add Voygent in the web browser, it will also work in the Claude iOS and Android mobile apps automatically.
+
+--- ChatGPT (chatgpt.com) ---
 1. Go to ChatGPT Settings > Apps > Advanced settings > Create app
-2. Fill in the form:
+2. Fill in:
    - Name: Voygent
    - Description: Voygent AI powered travel assistant
    - MCP Server URL: ${mcpUrl}
@@ -36,24 +48,18 @@ ${user.authKey}
 4. Click Create
 5. Start a new conversation and say "use voygent, list trips"
 
---- Claude Desktop Setup ---
-1. Open your Claude Desktop config file:
-   - Mac: ~/Library/Application Support/Claude/claude_desktop_config.json
-   - Windows: %APPDATA%/Claude/claude_desktop_config.json
-   - Linux: ~/.config/Claude/claude_desktop_config.json
-
-2. Add this to the "mcpServers" section:
-{
-  "voygent": {
-    "command": "npx",
-    "args": ["-y", "mcp-remote", "${mcpUrl}"]
-  }
-}
-
-3. Restart Claude Desktop
-
 Best regards,
 The Voygent Team`
+  };
+}
+
+// Extended user profile with stats for admin dashboard
+interface UserWithStats extends UserProfile {
+  stats: {
+    tripCount: number;
+    activityCount: number;
+    firstActivity: string | null;  // First activity timestamp
+    lastActivity: string | null;   // Most recent activity timestamp
   };
 }
 
@@ -61,11 +67,47 @@ export const handleListUsers: RouteHandler = async (request, env, ctx, url, cors
   if (url.pathname !== "/admin/users" || request.method !== "GET") return null;
 
   const userKeys = await listAllKeys(env, { prefix: "_users/" });
-  const users: UserProfile[] = [];
+  const users: UserWithStats[] = [];
 
   for (const key of userKeys) {
     const user = await env.TRIPS.get(key.name, "json") as UserProfile;
-    if (user) users.push(user);
+    if (!user) continue;
+
+    // Get trip count from trip index
+    const keyPrefix = getKeyPrefix(user.authKey);
+    const tripIndex = await env.TRIPS.get(`${keyPrefix}_trip-index`, "json") as string[] | null;
+    const tripCount = tripIndex?.length || 0;
+
+    // Get activity log for activity stats
+    const activityLog = await env.TRIPS.get(`${keyPrefix}_activity-log`, "json") as {
+      recentChanges?: Array<{ timestamp: string; change: string }>;
+    } | null;
+
+    const recentChanges = activityLog?.recentChanges || [];
+    const activityCount = recentChanges.length;
+
+    // Find first and last activity timestamps (only from actual usage, not account creation)
+    let firstActivity: string | null = null;
+    let lastActivity: string | null = null;
+
+    if (recentChanges.length > 0) {
+      // recentChanges are typically newest first, so last item is oldest
+      const timestamps = recentChanges.map(c => c.timestamp).filter(Boolean).sort();
+      if (timestamps.length > 0) {
+        firstActivity = timestamps[0];
+        lastActivity = timestamps[timestamps.length - 1];
+      }
+    }
+
+    users.push({
+      ...user,
+      stats: {
+        tripCount,
+        activityCount,
+        firstActivity,
+        lastActivity
+      }
+    });
   }
 
   return new Response(JSON.stringify({ users }), {

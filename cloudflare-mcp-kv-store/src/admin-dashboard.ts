@@ -471,6 +471,8 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
       <button class="nav-tab" onclick="showTab('users')">Users</button>
       <button class="nav-tab" onclick="showTab('billing')">Billing</button>
       <button class="nav-tab" onclick="showTab('messages')">Messages</button>
+      <button class="nav-tab" onclick="showTab('knowledge')">Knowledge</button>
+      <button class="nav-tab" onclick="showTab('maintenance')">Maintenance</button>
     </div>
   </div>
 
@@ -813,6 +815,66 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
           </select>
         </div>
         <div id="threadsTable"><div class="loading">Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- KNOWLEDGE BASE TAB -->
+    <div id="tab-knowledge" class="tab-content">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="label">Pending Proposals</div><div class="value" id="kbPendingCount">-</div></div>
+        <div class="stat-card"><div class="label">Troubleshooting</div><div class="value" id="kbTroubleshootingCount">-</div></div>
+        <div class="stat-card"><div class="label">FAQ Entries</div><div class="value" id="kbFaqCount">-</div></div>
+        <div class="stat-card"><div class="label">Total Approved</div><div class="value" id="kbTotalApproved">-</div></div>
+      </div>
+
+      <div class="section">
+        <h2>Pending Proposals <span id="kbPendingBadge" class="badge badge-blue" style="margin-left:8px;">0</span></h2>
+        <p style="color:#8b949e;font-size:13px;margin-bottom:15px;">Review solutions proposed by AI sessions. Approved items are added to the knowledge base and shown to future sessions.</p>
+        <div id="kbPendingList"><div class="loading">Loading...</div></div>
+      </div>
+
+      <div class="section">
+        <h2>Approved Knowledge</h2>
+        <div class="filter-row">
+          <select id="kbCategoryFilter" onchange="loadApprovedKnowledge()">
+            <option value="">All Categories</option>
+            <option value="troubleshooting">Troubleshooting</option>
+            <option value="faq">FAQ</option>
+          </select>
+          <input type="text" id="kbSearch" placeholder="Search..." oninput="filterApprovedKnowledge()">
+        </div>
+        <div id="kbApprovedList"><div class="loading">Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- MAINTENANCE TAB -->
+    <div id="tab-maintenance" class="tab-content">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="label">Last Run</div><div class="value" id="maintLastRun">-</div></div>
+        <div class="stat-card"><div class="label">Duration</div><div class="value" id="maintDuration">-</div></div>
+        <div class="stat-card"><div class="label">Total Users</div><div class="value" id="maintTotalUsers">-</div></div>
+        <div class="stat-card"><div class="label">Total Trips</div><div class="value" id="maintTotalTrips">-</div></div>
+      </div>
+
+      <div class="section">
+        <h2>Cron Job Status</h2>
+        <p style="color:#8b949e;font-size:13px;margin-bottom:15px;">Maintenance runs every 15 minutes. Tasks include cleanup, index validation, and stats refresh.</p>
+        <button class="btn btn-primary" onclick="runMaintenanceNow()" id="runMaintBtn">Run Maintenance Now</button>
+        <span id="maintRunStatus" style="margin-left:10px;color:#8b949e;"></span>
+      </div>
+
+      <div class="section">
+        <h2>Last Run Details</h2>
+        <div id="maintDetails" style="background:#161b22;border-radius:8px;padding:15px;font-family:monospace;font-size:13px;">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Recent History</h2>
+        <div id="maintHistory" style="max-height:400px;overflow-y:auto;">
+          <div class="loading">Loading...</div>
+        </div>
       </div>
     </div>
   </div>
@@ -1166,49 +1228,119 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
       }
     }
 
+    let userSort = { field: 'lastActivity', dir: 'desc' };
+
     async function loadUsers() {
       try {
         const data = await api('/admin/users');
         usersCache = data.users;
-        const html = data.users.length ? \`
-          <table>
-            <thead><tr><th>Name</th><th>Agency</th><th>Email</th><th>Status</th><th>Auth Key</th><th>Actions</th></tr></thead>
-            <tbody>
-              \${data.users.map(u => \`
-                <tr>
-                  <td>\${escapeHtml(u.name)}<br><small style="color:#666">\${escapeHtml(u.userId)}</small></td>
-                  <td>\${escapeHtml(u.agency.name)}\${u.agency.franchise ? '<br><small style="color:#666">' + escapeHtml(u.agency.franchise) + '</small>' : ''}</td>
-                  <td>\${escapeHtml(u.email)}\${u.phone ? '<br><small style="color:#666">' + escapeHtml(u.phone) + '</small>' : ''}</td>
-                  <td><span class="status-badge status-\${escapeHtml(u.status)}">\${escapeHtml(u.status)}</span></td>
-                  <td><code style="font-size:11px">\${escapeHtml(u.authKey)}</code></td>
-                  <td class="actions" style="display: flex; gap: 4px;">
-                    <button class="btn btn-secondary btn-small" data-action="edit-user" data-user-id="\${escapeHtml(u.userId)}">Edit</button>
-                    <div class="action-menu" data-user-id="\${escapeHtml(u.userId)}">
-                      <button class="action-menu-btn" onclick="toggleUserMenu('\${escapeHtml(u.userId)}')">Tools ▾</button>
-                      <div class="action-menu-content">
-                        <div class="action-menu-header">Quick Actions</div>
-                        <button class="action-menu-item" onclick="showSetupInstructions('\${escapeHtml(u.userId)}')">Setup Instructions</button>
-                        <button class="action-menu-item" onclick="userTool('\${escapeHtml(u.userId)}', 'add-samples')">Add Sample Trips</button>
-                        <button class="action-menu-item" onclick="userTool('\${escapeHtml(u.userId)}', 'reset-new-user')">Reset to New User</button>
-                        <button class="action-menu-item" onclick="userTool('\${escapeHtml(u.userId)}', 'reset-branding')">Reset Branding</button>
-                        <div class="action-menu-divider"></div>
-                        <div class="action-menu-header">Delete Data</div>
-                        <button class="action-menu-item danger" onclick="userTool('\${escapeHtml(u.userId)}', 'clear-messages')">Clear Messages</button>
-                        <button class="action-menu-item danger" onclick="userTool('\${escapeHtml(u.userId)}', 'clear-trips')">Delete All Trips</button>
-                        <div class="action-menu-divider"></div>
-                        <button class="action-menu-item danger" onclick="userTool('\${escapeHtml(u.userId)}', 'reset-account')">Full Account Reset</button>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              \`).join('')}
-            </tbody>
-          </table>
-        \` : '<p>No users yet. Click "Add User" to create one.</p>';
-        document.getElementById('usersTable').innerHTML = html;
+        renderUsersTable();
       } catch (e) {
         document.getElementById('usersTable').innerHTML = '<p class="error">' + e.message + '</p>';
       }
+    }
+
+    function sortUsers(field) {
+      if (userSort.field === field) {
+        userSort.dir = userSort.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        userSort.field = field;
+        userSort.dir = field === 'name' ? 'asc' : 'desc';
+      }
+      renderUsersTable();
+    }
+
+    function getSortValue(user, field) {
+      switch (field) {
+        case 'name': return (user.name || '').toLowerCase();
+        case 'trips': return user.stats?.tripCount || 0;
+        case 'activity': return user.stats?.activityCount || 0;
+        case 'created': return user.created || '';
+        case 'firstActivity': return user.stats?.firstActivity || '';
+        case 'lastActivity': return user.stats?.lastActivity || '';
+        default: return '';
+      }
+    }
+
+    function formatUserDate(dateStr) {
+      if (!dateStr) return '<span style="color:#666">Never</span>';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '<span style="color:#666">Never</span>';
+      const now = new Date();
+      const diff = now.getTime() - d.getTime();
+      const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+      if (days === 0) return '<span style="color:#3baf2a">Today</span>';
+      if (days === 1) return 'Yesterday';
+      if (days < 7) return days + 'd ago';
+      if (days < 30) return Math.floor(days / 7) + 'w ago';
+      if (days < 365) return Math.floor(days / 30) + 'mo ago';
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
+    }
+
+    function renderUsersTable() {
+      const sorted = [...usersCache].sort((a, b) => {
+        const aVal = getSortValue(a, userSort.field);
+        const bVal = getSortValue(b, userSort.field);
+        const cmp = typeof aVal === 'number' ? aVal - bVal : String(aVal).localeCompare(String(bVal));
+        return userSort.dir === 'asc' ? cmp : -cmp;
+      });
+
+      const sortIcon = (field) => userSort.field === field ? (userSort.dir === 'asc' ? ' ▲' : ' ▼') : '';
+
+      const html = sorted.length ? \`
+        <table>
+          <thead>
+            <tr>
+              <th style="cursor:pointer" onclick="sortUsers('name')">Name\${sortIcon('name')}</th>
+              <th>Agency</th>
+              <th style="cursor:pointer;text-align:center;width:60px" onclick="sortUsers('trips')">Trips\${sortIcon('trips')}</th>
+              <th style="cursor:pointer;text-align:center;width:70px" onclick="sortUsers('activity')">Actions\${sortIcon('activity')}</th>
+              <th style="cursor:pointer;width:80px" onclick="sortUsers('created')">Created\${sortIcon('created')}</th>
+              <th style="cursor:pointer;width:80px" onclick="sortUsers('firstActivity')">First Use\${sortIcon('firstActivity')}</th>
+              <th style="cursor:pointer;width:80px" onclick="sortUsers('lastActivity')">Last Use\${sortIcon('lastActivity')}</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            \${sorted.map(u => \`
+              <tr>
+                <td>
+                  \${escapeHtml(u.name)}<br>
+                  <small style="color:#666">\${escapeHtml(u.email)}</small>
+                </td>
+                <td>\${escapeHtml(u.agency.name)}\${u.agency.franchise ? '<br><small style="color:#666">' + escapeHtml(u.agency.franchise) + '</small>' : ''}</td>
+                <td style="text-align:center">\${u.stats?.tripCount || 0}</td>
+                <td style="text-align:center">\${u.stats?.activityCount || 0}</td>
+                <td>\${formatUserDate(u.created)}</td>
+                <td>\${formatUserDate(u.stats?.firstActivity)}</td>
+                <td>\${formatUserDate(u.stats?.lastActivity)}</td>
+                <td><span class="status-badge status-\${escapeHtml(u.status)}">\${escapeHtml(u.status)}</span></td>
+                <td class="actions" style="display: flex; gap: 4px;">
+                  <button class="btn btn-secondary btn-small" data-action="edit-user" data-user-id="\${escapeHtml(u.userId)}">Edit</button>
+                  <div class="action-menu" data-user-id="\${escapeHtml(u.userId)}">
+                    <button class="action-menu-btn" onclick="toggleUserMenu('\${escapeHtml(u.userId)}')">Tools ▾</button>
+                    <div class="action-menu-content">
+                      <div class="action-menu-header">Quick Actions</div>
+                      <button class="action-menu-item" onclick="showSetupInstructions('\${escapeHtml(u.userId)}')">Setup Instructions</button>
+                      <button class="action-menu-item" onclick="userTool('\${escapeHtml(u.userId)}', 'add-samples')">Add Sample Trips</button>
+                      <button class="action-menu-item" onclick="userTool('\${escapeHtml(u.userId)}', 'reset-new-user')">Reset to New User</button>
+                      <button class="action-menu-item" onclick="userTool('\${escapeHtml(u.userId)}', 'reset-branding')">Reset Branding</button>
+                      <div class="action-menu-divider"></div>
+                      <div class="action-menu-header">Delete Data</div>
+                      <button class="action-menu-item danger" onclick="userTool('\${escapeHtml(u.userId)}', 'clear-messages')">Clear Messages</button>
+                      <button class="action-menu-item danger" onclick="userTool('\${escapeHtml(u.userId)}', 'clear-trips')">Delete All Trips</button>
+                      <div class="action-menu-divider"></div>
+                      <button class="action-menu-item danger" onclick="userTool('\${escapeHtml(u.userId)}', 'reset-account')">Full Account Reset</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            \`).join('')}
+          </tbody>
+        </table>
+      \` : '<p>No users yet. Click "Add User" to create one.</p>';
+      document.getElementById('usersTable').innerHTML = html;
     }
 
     let activityFilters = { users: [], trips: [] };
@@ -2414,6 +2546,317 @@ Note: Also works on Claude iOS app (same steps in Settings)
       }
     }
 
+    // ========== KNOWLEDGE BASE ==========
+    let approvedKnowledgeCache = { troubleshooting: [], faq: [] };
+
+    async function loadKnowledgeStats() {
+      try {
+        const stats = await api('/admin/knowledge/stats');
+        document.getElementById('kbPendingCount').textContent = stats.pending || 0;
+        document.getElementById('kbPendingBadge').textContent = stats.pending || 0;
+        document.getElementById('kbTroubleshootingCount').textContent = stats.approved?.troubleshooting || 0;
+        document.getElementById('kbFaqCount').textContent = stats.approved?.faq || 0;
+        document.getElementById('kbTotalApproved').textContent = stats.approved?.total || 0;
+      } catch (e) {
+        console.error('Error loading knowledge stats:', e);
+      }
+    }
+
+    async function loadPendingProposals() {
+      try {
+        const data = await api('/admin/knowledge/pending');
+        const proposals = data.proposals || [];
+
+        if (proposals.length === 0) {
+          document.getElementById('kbPendingList').innerHTML = '<p style="color:#8b949e;text-align:center;padding:20px;">No pending proposals</p>';
+          return;
+        }
+
+        const html = proposals.map(p => \`
+          <div class="comment-box" style="margin-bottom:15px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+              <span class="badge badge-blue">\${escapeHtml(p.category)}</span>
+              <span style="font-size:11px;color:#8b949e;">by \${escapeHtml(p.proposedByName)} on \${new Date(p.proposedAt).toLocaleDateString()}</span>
+            </div>
+            <h4 style="margin-bottom:8px;color:#f0f6fc;">\${escapeHtml(p.problem)}</h4>
+            <p style="color:#c9d1d9;margin-bottom:8px;">\${escapeHtml(p.solution)}</p>
+            \${p.context ? \`<p style="font-size:12px;color:#8b949e;font-style:italic;">Context: \${escapeHtml(p.context)}</p>\` : ''}
+            <div style="margin-top:12px;display:flex;gap:8px;">
+              <button class="btn btn-primary btn-small" onclick="approveProposal('\${escapeJsString(p.id)}')">Approve</button>
+              <button class="btn btn-secondary btn-small" onclick="editAndApproveProposal('\${escapeJsString(p.id)}', '\${escapeJsString(p.problem)}', '\${escapeJsString(p.solution)}')">Edit & Approve</button>
+              <button class="btn btn-secondary btn-small" onclick="rejectProposal('\${escapeJsString(p.id)}')">Reject</button>
+            </div>
+          </div>
+        \`).join('');
+
+        document.getElementById('kbPendingList').innerHTML = html;
+      } catch (e) {
+        document.getElementById('kbPendingList').innerHTML = '<p class="error">Error loading proposals: ' + escapeHtml(e.message) + '</p>';
+      }
+    }
+
+    async function approveProposal(proposalId) {
+      if (!confirm('Approve this solution? It will be added to the knowledge base.')) return;
+      try {
+        await api('/admin/knowledge/review/' + proposalId, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'approve' })
+        });
+        loadPendingProposals();
+        loadKnowledgeStats();
+        loadApprovedKnowledge();
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    function editAndApproveProposal(proposalId, problem, solution) {
+      const newProblem = prompt('Edit problem description:', problem);
+      if (newProblem === null) return;
+      const newSolution = prompt('Edit solution:', solution);
+      if (newSolution === null) return;
+
+      approveWithEdits(proposalId, newProblem, newSolution);
+    }
+
+    async function approveWithEdits(proposalId, problem, solution) {
+      try {
+        await api('/admin/knowledge/review/' + proposalId, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'approve',
+            edits: { problem, solution }
+          })
+        });
+        loadPendingProposals();
+        loadKnowledgeStats();
+        loadApprovedKnowledge();
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    async function rejectProposal(proposalId) {
+      if (!confirm('Reject this proposal? It will be removed from the queue.')) return;
+      try {
+        await api('/admin/knowledge/review/' + proposalId, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'reject' })
+        });
+        loadPendingProposals();
+        loadKnowledgeStats();
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    async function loadApprovedKnowledge() {
+      const category = document.getElementById('kbCategoryFilter').value;
+      try {
+        const data = await api('/admin/knowledge/approved' + (category ? '?category=' + category : ''));
+
+        if (category) {
+          approvedKnowledgeCache[category] = data.items || [];
+        } else {
+          approvedKnowledgeCache.troubleshooting = data.troubleshooting?.items || [];
+          approvedKnowledgeCache.faq = data.faq?.items || [];
+        }
+
+        renderApprovedKnowledge();
+      } catch (e) {
+        document.getElementById('kbApprovedList').innerHTML = '<p class="error">Error loading knowledge: ' + escapeHtml(e.message) + '</p>';
+      }
+    }
+
+    function filterApprovedKnowledge() {
+      renderApprovedKnowledge();
+    }
+
+    function renderApprovedKnowledge() {
+      const category = document.getElementById('kbCategoryFilter').value;
+      const search = document.getElementById('kbSearch').value.toLowerCase();
+
+      let items = [];
+      if (category) {
+        items = approvedKnowledgeCache[category] || [];
+      } else {
+        items = [...(approvedKnowledgeCache.troubleshooting || []), ...(approvedKnowledgeCache.faq || [])];
+      }
+
+      // Filter by search
+      if (search) {
+        items = items.filter(item =>
+          item.problem.toLowerCase().includes(search) ||
+          item.solution.toLowerCase().includes(search)
+        );
+      }
+
+      if (items.length === 0) {
+        document.getElementById('kbApprovedList').innerHTML = '<p style="color:#8b949e;text-align:center;padding:20px;">No approved knowledge entries</p>';
+        return;
+      }
+
+      const html = items.map(item => \`
+        <div class="comment-box" style="margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+            <span class="badge badge-green">\${escapeHtml(item.category)}</span>
+            <button class="btn btn-secondary btn-small" onclick="deleteApprovedKnowledge('\${escapeJsString(item.id)}', '\${escapeJsString(item.category)}')">Delete</button>
+          </div>
+          <h4 style="margin-bottom:6px;color:#f0f6fc;font-size:14px;">\${escapeHtml(item.problem)}</h4>
+          <p style="color:#c9d1d9;font-size:13px;">\${escapeHtml(item.solution)}</p>
+          <div style="margin-top:8px;font-size:11px;color:#8b949e;">
+            Approved \${new Date(item.approvedAt).toLocaleDateString()} · Used \${item.usageCount || 0} times
+          </div>
+        </div>
+      \`).join('');
+
+      document.getElementById('kbApprovedList').innerHTML = html;
+    }
+
+    async function deleteApprovedKnowledge(itemId, category) {
+      if (!confirm('Delete this knowledge entry? It will no longer be shown to users.')) return;
+      try {
+        await api('/admin/knowledge/approved/' + itemId + '?category=' + category, { method: 'DELETE' });
+        loadKnowledgeStats();
+        loadApprovedKnowledge();
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    // ========== MAINTENANCE ==========
+
+    async function loadMaintenanceStatus() {
+      try {
+        const data = await api('/admin/maintenance/status');
+
+        // Update stats cards
+        if (data.lastRun) {
+          const lastRunDate = new Date(data.lastRun.timestamp);
+          document.getElementById('maintLastRun').textContent = lastRunDate.toLocaleString();
+          document.getElementById('maintDuration').textContent = data.lastRun.duration + 'ms';
+        }
+
+        if (data.globalStats) {
+          document.getElementById('maintTotalUsers').textContent = data.globalStats.totalUsers || 0;
+          document.getElementById('maintTotalTrips').textContent = data.globalStats.totalTrips || 0;
+        }
+
+        // Update details panel
+        if (data.lastRun) {
+          const tasks = data.lastRun.tasks;
+          let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">';
+
+          html += '<div><strong style="color:#58a6ff;">Cleanup Tasks</strong><br>';
+          html += 'Telemetry archived: ' + (tasks.telemetryArchive?.archived || 0) + '<br>';
+          html += 'Quotas cleaned: ' + (tasks.quotaCleanup?.deleted || 0) + '<br>';
+          html += 'Logs cleaned: ' + (tasks.logCleanup?.deleted || 0) + '<br>';
+          html += 'Activity cleaned: ' + (tasks.activityCleanup?.deleted || 0) + '</div>';
+
+          html += '<div><strong style="color:#58a6ff;">Index Validation</strong><br>';
+          html += 'Trip indexes checked: ' + (tasks.tripIndexValidation?.usersChecked || 0) + ' users<br>';
+          html += 'Trip indexes repaired: ' + (tasks.tripIndexValidation?.repaired || 0) + '<br>';
+          html += 'Orphaned trips found: ' + (tasks.tripIndexValidation?.orphanedTrips || 0) + '<br>';
+          html += 'Comment indexes repaired: ' + (tasks.commentIndexValidation?.repaired || 0) + '</div>';
+
+          html += '</div>';
+
+          if (tasks.globalStats) {
+            html += '<div style="margin-top:15px;padding-top:15px;border-top:1px solid #30363d;">';
+            html += '<strong style="color:#58a6ff;">Global Stats</strong><br>';
+            html += 'Users: ' + tasks.globalStats.totalUsers + ' | ';
+            html += 'Trips: ' + tasks.globalStats.totalTrips + ' | ';
+            html += 'Active (7d): ' + tasks.globalStats.activeUsers7d;
+            html += '</div>';
+          }
+
+          // Global Indexes section
+          html += '<div style="margin-top:15px;padding-top:15px;border-top:1px solid #30363d;">';
+          html += '<strong style="color:#58a6ff;">Global Indexes (Admin Dashboard)</strong><br>';
+          if (tasks.tripSummariesIndex) {
+            const status = tasks.tripSummariesIndex.complete ? '<span style="color:#3fb950;">Complete</span>' : '<span style="color:#d29922;">Building...</span>';
+            html += 'Trip Summaries: ' + tasks.tripSummariesIndex.processed + '/' + tasks.tripSummariesIndex.total + ' users ' + status + '<br>';
+          }
+          if (tasks.userActivityIndex) {
+            html += 'User Activity: ' + tasks.userActivityIndex.activeCount + ' active / ' + tasks.userActivityIndex.totalUsers + ' total<br>';
+          }
+          if (tasks.commentsIndex) {
+            html += 'Comments Index: ' + tasks.commentsIndex.tripsWithComments + ' trips with comments';
+          }
+          html += '</div>';
+
+          document.getElementById('maintDetails').innerHTML = html;
+        } else {
+          document.getElementById('maintDetails').innerHTML = '<p style="color:#8b949e;">No maintenance runs yet</p>';
+        }
+      } catch (e) {
+        console.error('Error loading maintenance status:', e);
+        document.getElementById('maintDetails').innerHTML = '<p class="error">Error loading maintenance status</p>';
+      }
+    }
+
+    async function loadMaintenanceHistory() {
+      try {
+        const data = await api('/admin/maintenance/history');
+
+        if (!data.history || data.history.length === 0) {
+          document.getElementById('maintHistory').innerHTML = '<p style="color:#8b949e;">No maintenance history available</p>';
+          return;
+        }
+
+        let html = '<table class="data-table" style="width:100%">';
+        html += '<thead><tr><th>Time</th><th>Duration</th><th>Cleanup</th><th>Validation</th><th>Indexes</th></tr></thead>';
+        html += '<tbody>';
+
+        for (const run of data.history.slice(0, 20)) {
+          const time = new Date(run.timestamp).toLocaleString();
+          const cleanup = (run.tasks.telemetryArchive?.archived || 0) +
+                         (run.tasks.quotaCleanup?.deleted || 0) +
+                         (run.tasks.logCleanup?.deleted || 0) +
+                         (run.tasks.activityCleanup?.deleted || 0);
+          const validation = (run.tasks.tripIndexValidation?.repaired || 0) +
+                         (run.tasks.commentIndexValidation?.repaired || 0);
+          const indexStatus = run.tasks.tripSummariesIndex?.complete ? 'OK' :
+                             (run.tasks.tripSummariesIndex ? run.tasks.tripSummariesIndex.processed + '/' + run.tasks.tripSummariesIndex.total : '-');
+
+          html += '<tr>';
+          html += '<td style="font-size:12px;">' + escapeHtml(time) + '</td>';
+          html += '<td>' + run.duration + 'ms</td>';
+          html += '<td>' + cleanup + ' cleaned</td>';
+          html += '<td>' + validation + ' repaired</td>';
+          html += '<td>' + indexStatus + '</td>';
+          html += '</tr>';
+        }
+
+        html += '</tbody></table>';
+        document.getElementById('maintHistory').innerHTML = html;
+      } catch (e) {
+        console.error('Error loading maintenance history:', e);
+        document.getElementById('maintHistory').innerHTML = '<p class="error">Error loading history</p>';
+      }
+    }
+
+    async function runMaintenanceNow() {
+      const btn = document.getElementById('runMaintBtn');
+      const status = document.getElementById('maintRunStatus');
+      btn.disabled = true;
+      status.textContent = 'Running...';
+
+      try {
+        const result = await api('/admin/maintenance/run', { method: 'POST' });
+        status.textContent = 'Completed in ' + result.result.duration + 'ms';
+        status.style.color = '#3fb950';
+        loadMaintenanceStatus();
+        loadMaintenanceHistory();
+      } catch (e) {
+        status.textContent = 'Error: ' + e.message;
+        status.style.color = '#f85149';
+      } finally {
+        btn.disabled = false;
+        setTimeout(() => { status.textContent = ''; status.style.color = '#8b949e'; }, 5000);
+      }
+    }
+
     // ========== MISSION CONTROL ==========
     let missionControlMode = 'live';
     let autoRefreshEnabled = true;
@@ -2937,7 +3380,7 @@ Note: Also works on Claude iOS app (same steps in Settings)
 
     // ========== INIT ==========
     async function init() {
-      await Promise.all([loadStats(), loadUsers(), loadActivity(), loadTrips(), loadComments(), loadSupport(), loadAISettings(), loadBillingStats(), loadPromoCodes(), loadMessages()]);
+      await Promise.all([loadStats(), loadUsers(), loadActivity(), loadTrips(), loadComments(), loadSupport(), loadAISettings(), loadBillingStats(), loadPromoCodes(), loadMessages(), loadKnowledgeStats(), loadPendingProposals(), loadApprovedKnowledge(), loadMaintenanceStatus(), loadMaintenanceHistory()]);
       renderRecentActivity();
       renderSubscriptions();
       initMissionControl();
