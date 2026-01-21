@@ -11,6 +11,18 @@ import { getSampleTripOffer, autoImportSampleTrips } from './sample-trips';
 
 const WORKER_BASE_URL = 'https://voygent.somotravel.workers.dev';
 
+/**
+ * Compute user activity level based on account age and trip count
+ */
+function computeActivityLevel(profile: UserProfile, tripCount: number): 'new' | 'returning' | 'active' | 'power' {
+  const accountAgeDays = Math.floor((Date.now() - new Date(profile.created).getTime()) / (1000 * 60 * 60 * 24));
+
+  if (accountAgeDays < 7) return 'new';
+  if (tripCount >= 10) return 'power';
+  if (tripCount >= 3) return 'active';
+  return 'returning';
+}
+
 export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
   // Get system prompt from KV (check new location first, then old, then fallback)
   let systemPrompt = await env.TRIPS.get("_prompts/system-prompt", "text");
@@ -330,6 +342,12 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
       _displayInGreeting: dashboardUrl ? `Your dashboard: ${dashboardUrl}` : null,
       _note: "Use prepare_image_upload tool instead of these URLs when user wants to add images. These are for reference/manual use."
     },
+    userProfile: userProfile ? {
+      name: userProfile.name,
+      accountAgeDays: Math.floor((Date.now() - new Date(userProfile.created).getTime()) / (1000 * 60 * 60 * 24)),
+      activityLevel: computeActivityLevel(userProfile, totalTripsCount),
+      isFirstSession: !userProfile.onboarding?.welcomeShown
+    } : null,
     subscription: userProfile?.subscription ? {
       tier: userProfile.subscription.tier,
       status: userProfile.subscription.status,
@@ -400,10 +418,13 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
   if (isNewUser && userProfile) {
     baseResult._WELCOME_NEW_USER = true;
 
+    // Get user's first name for personalized greeting
+    const userName = userProfile?.name?.split(' ')[0] || 'there';
+
     // Different welcome based on whether samples were auto-imported
     if (autoImportResult?.imported.length) {
       baseResult._WELCOME_MESSAGE = `
-## Welcome to Voygent!
+## Welcome to Voygent, ${userName}!
 
 Voygent brings professional travel planning tools directly into your AI chat. Plan trips, create beautiful client proposals, and manage bookings - all through natural conversation.
 
@@ -427,7 +448,7 @@ ${dashboardUrl ? `**${dashboardUrl}**` : '(Set up your subdomain for a dashboard
 `;
     } else {
       baseResult._WELCOME_MESSAGE = `
-## Welcome to Voygent!
+## Welcome to Voygent, ${userName}!
 
 Voygent brings professional travel planning tools directly into your AI chat. Plan trips, create beautiful client proposals, and manage bookings - all through natural conversation.
 

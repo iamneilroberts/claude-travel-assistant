@@ -20,6 +20,7 @@ import {
 
 // Subdomain routing
 import { handleSubdomainRoutes } from './routes/subdomain';
+import { generateTrialSubdomain, setSubdomainOwner, getUserSubdomain } from './lib/subdomain';
 
 // MCP protocol handlers
 import {
@@ -29,8 +30,11 @@ import {
   toolHandlers
 } from './mcp';
 
-// AI Support
+// AI Support (disabled - API key removed, but code retained for future use)
 import { retryFailedTickets } from './ai-support';
+
+// Scheduled maintenance tasks
+import { runMaintenance } from './lib/maintenance';
 
 // Base URLs
 const WORKER_BASE_URL = 'https://voygent.somotravel.workers.dev';
@@ -169,6 +173,22 @@ export default {
       }
     }
 
+    // Auto-assign subdomain if user doesn't have one (ensures all users get voygent.ai URLs)
+    if (userProfile && !userProfile.subdomain) {
+      const existingSubdomain = await getUserSubdomain(env, userProfile.userId);
+      if (existingSubdomain) {
+        // Subdomain exists in mapping but not on profile - sync it
+        userProfile.subdomain = existingSubdomain;
+        ctx.waitUntil(env.TRIPS.put(`_users/${userProfile.userId}`, JSON.stringify(userProfile)));
+      } else {
+        // Generate and assign new trial subdomain
+        const newSubdomain = generateTrialSubdomain(userProfile.userId);
+        await setSubdomainOwner(env, newSubdomain, userProfile.userId);
+        userProfile.subdomain = newSubdomain;
+        ctx.waitUntil(env.TRIPS.put(`_users/${userProfile.userId}`, JSON.stringify(userProfile)));
+      }
+    }
+
     // 2. Handle SSE Connection (GET)
     if (request.method === "GET") {
       return new Response("MCP Server Ready (SSE endpoint)", {
@@ -202,9 +222,17 @@ export default {
 
   // Handle scheduled cron jobs
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
-    // Retry failed AI support tickets every 15 minutes
     if (event.cron === '*/15 * * * *') {
-      await retryFailedTickets(env);
+      // Run maintenance tasks (cleanup, archiving, index validation)
+      await runMaintenance(env);
+
+      // AI support retry (disabled - no API key, but kept for future use)
+      // Will gracefully skip if AI support is disabled or API key missing
+      try {
+        await retryFailedTickets(env);
+      } catch (e) {
+        // Expected to fail without ANTHROPIC_API_KEY - ignore
+      }
     }
   }
 };

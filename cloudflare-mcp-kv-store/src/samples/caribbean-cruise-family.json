@@ -7,7 +7,7 @@
     "dates": "Sample dates - customize for your client",
     "phase": "proposal",
     "status": "Sample trip template - ready to customize",
-    "lastModified": "2026-01-15",
+    "lastModified": "2026-01-21",
     "isSample": true
   },
   "travelers": {
@@ -114,24 +114,26 @@
   },
   "lodging": [
     {
-      "name": "Pre-Cruise Hotel - Fort Lauderdale",
+      "name": "Hilton Fort Lauderdale Marina",
       "location": "Fort Lauderdale, FL",
       "type": "pre-cruise",
       "nights": 1,
       "checkIn": "2026-07-18",
       "checkOut": "2026-07-19",
-      "rate": 200,
-      "total": 200,
+      "rate": 250,
+      "total": 250,
       "map": "Fort Lauderdale, FL near Port Everglades",
-      "notes": "Stay near port for stress-free embarkation. Pool a plus for kids! Options: Hilton Marina, Marriott Harbor Beach, or budget-friendly options further from port.",
+      "notes": "Steps from Port Everglades with marina views. Pool, water taxi stop, breakfast and port shuttle available.",
+      "url": "https://www.tripadvisor.com/Hotel_Review-g34227-d84471-Reviews-Hilton_Fort_Lauderdale_Marina-Fort_Lauderdale_Broward_County_Florida.html",
       "confirmed": false,
       "options": [
         {
           "name": "Hilton Fort Lauderdale Marina",
           "tier": "premium",
           "rate": 250,
-          "pros": "Walk to port, pool, views",
-          "cons": "Pricier"
+          "pros": "Steps from port, pool, marina views, water taxi",
+          "cons": "Pricier",
+          "url": "https://www.tripadvisor.com/Hotel_Review-g34227-d84471-Reviews-Hilton_Fort_Lauderdale_Marina-Fort_Lauderdale_Broward_County_Florida.html"
         },
         {
           "name": "Hampton Inn Cruise Port",
@@ -173,7 +175,8 @@
           "description": "Stroll the palm-lined boulevard with shops and restaurants. Great family-friendly options from casual to upscale.",
           "cost": 120,
           "optional": true,
-          "map": "Las Olas Boulevard, Fort Lauderdale"
+          "map": "Las Olas Boulevard, Fort Lauderdale",
+          "url": "https://www.tripadvisor.com/Attraction_Review-g34227-d109953-Reviews-Las_Olas_Boulevard-Fort_Lauderdale_Broward_County_Florida.html"
         }
       ],
       "meals": ["Dinner on Las Olas or near hotel"],
@@ -319,15 +322,16 @@
         },
         {
           "time": "Morning",
-          "name": "OPTION A: Chankanaab National Park",
-          "description": "All-ages adventure: snorkeling in crystal-clear lagoons, sea lion encounters, Dolphin Discovery (additional cost). Beach chairs and clear water.",
+          "name": "OPTION A: Chankanaab Beach Adventure Park",
+          "description": "All-ages adventure: snorkeling in crystal-clear lagoons with underwater statues, sea lion shows, and beautiful beach. Dolphin encounters available for additional cost.",
           "cost": 100,
           "forWho": ["all"],
           "familyFriendly": true,
           "duration": "4-5 hours",
           "bookingRequired": false,
           "crowdLevel": "moderate",
-          "notes": "Taxi ~$15 each way, or book ship excursion with transport"
+          "notes": "Taxi ~$15 each way, or book ship excursion with transport",
+          "url": "https://www.viator.com/tours/Cozumel/Chankanaab-Cozumel-Beach-and-Snorkel-package/d632-120267P11"
         },
         {
           "time": "Morning",
@@ -388,15 +392,16 @@
         },
         {
           "time": "Morning",
-          "name": "OPTION A: Stingray City",
-          "description": "World-famous sandbar where you can touch and feed wild stingrays in waist-deep water. Magical family experience!",
+          "name": "OPTION A: Stingray City Sandbar Experience",
+          "description": "World-famous sandbar where you can touch and feed wild stingrays in waist-deep crystal-clear water. Truly magical family experience! Most tours include snorkeling stops.",
           "cost": 200,
           "forWho": ["all"],
           "familyFriendly": true,
           "highlight": true,
           "duration": "3 hours",
           "notes": "Book early - sells out. Ship excursion or independent catamaran tour.",
-          "crowdLevel": "busy but worth it"
+          "crowdLevel": "busy but worth it",
+          "url": "https://www.viator.com/tours/Grand-Cayman/Stingray-City-Experience-Plus-Two-Snorkeling-Stops/d50485-9297P2"
         },
         {
           "time": "Morning",
@@ -405,7 +410,8 @@
           "cost": 50,
           "forWho": ["all"],
           "duration": "Flexible",
-          "crowdLevel": "spread out - beach is huge"
+          "crowdLevel": "spread out - beach is huge",
+          "url": "https://www.tripadvisor.com/Attraction_Review-g612424-d147948-Reviews-Seven_Mile_Beach-Seven_Mile_Beach_Grand_Cayman.html"
         },
         {
           "time": "Afternoon",
@@ -449,24 +455,26 @@
         {
           "time": "Morning",
           "name": "OPTION A: Dunn's River Falls",
-          "description": "Iconic waterfall climb! Terraced falls you climb hand-in-hand as a group. Wet, adventurous, and unforgettable.",
+          "description": "Iconic 600-foot waterfall climb! Terraced falls you climb hand-in-hand as a group. Wet, adventurous, and unforgettable. One of Jamaica's top attractions.",
           "cost": 180,
           "forWho": ["teen", "adults"],
           "familyFriendly": true,
           "highlight": true,
           "duration": "4-5 hours",
           "notes": "Ship excursion recommended - includes transport (1 hour drive). Bring water shoes!",
-          "crowdLevel": "busy - major attraction"
+          "crowdLevel": "busy - major attraction",
+          "url": "https://www.viator.com/tours/Montego-Bay/Dunns-River-Falls-Tour-from-Montego-Bay-Hotels/d432-137054P4"
         },
         {
           "time": "Morning",
-          "name": "OPTION B: Bamboo Rafting on Martha Brae",
-          "description": "Peaceful 3-mile float down the Martha Brae River on a bamboo raft. Relaxing alternative - great for all ages.",
+          "name": "OPTION B: Martha Brae River Bamboo Rafting",
+          "description": "Peaceful 3-mile float down the Martha Brae River on a traditional bamboo raft with a local captain. Relaxing alternative - perfect for all ages.",
           "cost": 160,
           "forWho": ["all"],
           "familyFriendly": true,
           "duration": "3 hours",
-          "crowdLevel": "low - intimate experience"
+          "crowdLevel": "low - intimate experience",
+          "url": "https://www.viator.com/tours/Falmouth/Falmouth-Shore-Excursion-Martha-Brae-River-Rafting/d4154-2424PRTFMHRAFT"
         },
         {
           "time": "Morning",
@@ -713,14 +721,24 @@
   },
   "featuredLinks": [
     {
-      "title": "Cruise Line Official Site",
-      "url": "#",
-      "description": "Replace with actual cruise line when booked"
+      "title": "Stingray City Tours",
+      "url": "https://www.viator.com/Cayman-Islands-attractions/Stingray-City-Cayman-Islands/d31-a2435",
+      "description": "Book Grand Cayman's top attraction"
     },
     {
-      "title": "Port Everglades Parking",
-      "url": "https://www.porteverglades.net/cruise/parking/",
-      "description": "If driving to port"
+      "title": "Dunn's River Falls Tours",
+      "url": "https://www.viator.com/Montego-Bay-attractions/Dunns-River-Falls/d432-a491",
+      "description": "Jamaica's iconic waterfall climb"
+    },
+    {
+      "title": "Chankanaab Park",
+      "url": "https://www.tripadvisor.com/Attraction_Review-g150809-d185578-Reviews-Chankanaab_Adventure_Beach_Park-Cozumel_Yucatan_Peninsula.html",
+      "description": "Cozumel's best family beach park"
+    },
+    {
+      "title": "Port Everglades Info",
+      "url": "https://www.porteverglades.net/cruise/",
+      "description": "Fort Lauderdale cruise terminal info"
     }
   ],
   "hiddenGems": [
@@ -733,7 +751,7 @@
     {
       "name": "Secret Beach at Chankanaab",
       "location": "Cozumel, Mexico",
-      "description": "Most tourists crowd the main beach at Chankanaab. Walk 5 minutes to the lagoon side for a serene snorkeling spot with sea turtles and colorful fish—often just you and the wildlife.",
+      "description": "Most tourists crowd the main beach at Chankanaab. Walk 5 minutes to the lagoon side for a serene snorkeling spot with underwater statues and colorful fish—often just you and the wildlife.",
       "tip": "Bring your own snorkel gear to avoid the rental lines."
     },
     {
@@ -805,7 +823,8 @@
       "location": "Grand Cayman",
       "description": "Stunning public beach with powdery white sand and crystal-clear water. Take a $5 taxi from the pier, rent a chair ($15), and enjoy paradise without an excursion.",
       "onboard": false,
-      "bestTime": "Early morning for the calmest water and most space"
+      "bestTime": "Early morning for the calmest water and most space",
+      "url": "https://www.tripadvisor.com/Attraction_Review-g612424-d147948-Reviews-Seven_Mile_Beach-Seven_Mile_Beach_Grand_Cayman.html"
     },
     {
       "name": "Fitness Center & Sports Courts",

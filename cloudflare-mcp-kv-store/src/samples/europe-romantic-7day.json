@@ -7,7 +7,7 @@
     "dates": "Sample dates - customize for your client",
     "phase": "proposal",
     "status": "Sample trip template - ready to customize",
-    "lastModified": "2026-01-15",
+    "lastModified": "2026-01-21",
     "isSample": true
   },
   "travelers": {
@@ -80,35 +80,37 @@
   },
   "lodging": [
     {
-      "name": "Boutique Hotel - Le Marais District",
+      "name": "Hotel du Petit Moulin",
       "location": "Paris, France",
       "nights": 3,
       "rate": 220,
       "total": 660,
       "map": "Le Marais, Paris, France",
-      "notes": "Walking distance to Notre-Dame, Centre Pompidou, and charming cafes",
+      "notes": "Boutique hotel in a 17th-century former bakery, designed by Christian Lacroix. Walking distance to Notre-Dame and Centre Pompidou.",
       "status": "confirmed",
-      "url": "https://www.tripadvisor.com/Hotels-Paris-Le_Marais"
+      "url": "https://www.tripadvisor.com/Hotel_Review-g187147-d548458-Reviews-Hotel_du_Petit_Moulin-Paris_Ile_de_France.html"
     },
     {
-      "name": "Boutique Hotel - Trastevere",
+      "name": "Hotel Santa Maria",
       "location": "Rome, Italy",
       "nights": 3,
       "rate": 180,
       "total": 540,
       "map": "Trastevere, Rome, Italy",
-      "notes": "Authentic Roman neighborhood with excellent restaurants and nightlife",
+      "notes": "Charming hotel in a converted 16th-century cloister with orange tree courtyard. Ranked in TripAdvisor's top 10 Rome hotels.",
       "status": "selected",
-      "url": "https://www.tripadvisor.com/Hotels-Rome-Trastevere"
+      "url": "https://www.tripadvisor.com/Hotel_Review-g187791-d239263-Reviews-Hotel_Santa_Maria-Rome_Lazio.html"
     },
     {
-      "name": "Budget Option - Centro Storico",
+      "name": "Hotel Navona Colors",
       "location": "Rome, Italy",
       "nights": 3,
-      "rate": 120,
-      "total": 360,
-      "notes": "More central but less charming neighborhood",
-      "status": "option"
+      "rate": 130,
+      "total": 390,
+      "map": "Piazza Navona, Rome, Italy",
+      "notes": "Budget-friendly option steps from Piazza Navona. Modern rooms, rooftop terrace with city views.",
+      "status": "option",
+      "url": "https://www.tripadvisor.com/Hotels-g187791-Rome_Lazio-Hotels.html"
     }
   ],
   "itinerary": [
@@ -126,7 +128,7 @@
         "notes": "Driver will meet at arrivals with name sign"
       },
       "lodging": {
-        "name": "Boutique Hotel - Le Marais",
+        "name": "Hotel du Petit Moulin",
         "arrival": true,
         "nightNumber": 1
       },
@@ -142,8 +144,7 @@
           "name": "Seine River Walk",
           "description": "Walk along the Seine as the sun sets. Cross to Île de la Cité to see Notre-Dame's exterior restoration.",
           "cost": 0,
-          "optional": true,
-          "url": "https://www.tripadvisor.com/Attraction_Review-Paris-Seine_River.html"
+          "optional": true
         },
         {
           "time": "Evening",
@@ -158,15 +159,15 @@
           {
             "name": "Chez Janou",
             "priceLevel": "$$",
-            "description": "Famous for chocolate mousse and Provençal cuisine",
-            "url": "https://www.tripadvisor.com/Restaurant_Review-Paris-Chez_Janou.html",
+            "description": "Famous for chocolate mousse and Provençal cuisine. Lively atmosphere near Place des Vosges.",
+            "url": "https://www.tripadvisor.com/Restaurant_Review-g187147-d714966-Reviews-Chez_Janou-Paris_Ile_de_France.html",
             "cuisine": "French"
           },
           {
             "name": "Le Petit Cler",
             "priceLevel": "$$",
-            "description": "Cozy neighborhood bistro with seasonal menu",
-            "url": "https://www.tripadvisor.com/Restaurant_Review-Paris-Le_Petit_Cler.html",
+            "description": "Cozy neighborhood bistro with seasonal menu. Perfect find near the Eiffel Tower area.",
+            "url": "https://www.tripadvisor.com/Restaurant_Review-g187147-d1916013-Reviews-Le_Petit_Cler-Paris_Ile_de_France.html",
             "cuisine": "French"
           }
         ]
@@ -183,11 +184,12 @@
       "activities": [
         {
           "time": "Morning",
-          "name": "Eiffel Tower - Skip the Line",
-          "description": "Beat the crowds with an early morning timed entry. Summit access for panoramic views of the city.",
+          "name": "Eiffel Tower - Skip the Line Summit Access",
+          "description": "Beat the crowds with an early morning timed entry. Summit access for panoramic views of the city. Includes host guide for elevator access.",
           "cost": 70,
           "duration": "2 hours",
-          "bookingRequired": true
+          "bookingRequired": true,
+          "url": "https://www.viator.com/tours/Paris/Eiffel-Tower-Skip-The-Line-with-summit-access/d479-7249P6"
         },
         {
           "time": "Late Morning",
@@ -198,10 +200,11 @@
         {
           "time": "Afternoon",
           "name": "Louvre Museum - Guided Highlights Tour",
-          "description": "2-hour guided tour hitting the must-sees: Mona Lisa, Venus de Milo, Winged Victory. Skip-the-line entry included.",
+          "description": "2-hour guided tour hitting the must-sees: Mona Lisa, Venus de Milo, Winged Victory. Skip-the-line entry and audio headsets included.",
           "cost": 140,
           "duration": "2-3 hours",
-          "tour": true
+          "tour": true,
+          "url": "https://www.viator.com/tours/Paris/Skip-the-Line-Louvre-Museum-Walking-Tour-including-Venus-de-Milo-and-Mona-Lisa/d479-3731LOUVRE"
         },
         {
           "time": "Evening",
@@ -224,17 +227,19 @@
         {
           "time": "Morning",
           "name": "Montmartre Food & Wine Tour",
-          "description": "3-hour walking tour through the artistic Montmartre neighborhood. Visit local cheese shops, bakeries, chocolate makers, and wine bars. Includes tastings at 6-8 stops.",
+          "description": "3-hour walking tour through the artistic Montmartre neighborhood. Visit 8 local cheese shops, bakeries, chocolate makers, and wine bars with tastings at each stop.",
           "cost": 180,
           "duration": "3 hours",
           "tour": true,
-          "highlight": true
+          "highlight": true,
+          "url": "https://www.viator.com/tours/Paris/Montmartre-Food-and-Wine-Tour/d479-26729P5"
         },
         {
           "time": "Afternoon",
           "name": "Sacré-Cœur Basilica",
           "description": "Free entry to the stunning white-domed basilica. Climb to the dome for city views or relax on the steps watching street performers.",
-          "cost": 0
+          "cost": 0,
+          "url": "https://www.tripadvisor.com/Attraction_Review-g187147-d190685-Reviews-Basilique_du_Sacre_Coeur_de_Montmartre-Paris_Ile_de_France.html"
         },
         {
           "time": "Afternoon",
@@ -306,11 +311,12 @@
         {
           "time": "Morning",
           "name": "Colosseum, Forum & Palatine - Priority Access",
-          "description": "Comprehensive guided tour of Ancient Rome's heart. Underground Colosseum access to see gladiator tunnels (premium tier). Skip all lines.",
+          "description": "Comprehensive guided tour of Ancient Rome's heart. Skip all lines with priority access. Audio headsets provided so you hear every word of the guide's commentary.",
           "cost": 120,
           "duration": "3.5 hours",
           "tour": true,
-          "highlight": true
+          "highlight": true,
+          "url": "https://www.viator.com/tours/Rome/Colosseum-and-Ancient-Rome-Tour-with-Roman-Forum-and-Palatine-Hill/d511-3731COLOSSEUM"
         },
         {
           "time": "Afternoon",
@@ -321,8 +327,9 @@
         {
           "time": "Afternoon",
           "name": "Trevi Fountain & Spanish Steps",
-          "description": "Hit the iconic spots. Toss a coin in Trevi (guarantees your return to Rome!). Walk up the Spanish Steps.",
-          "cost": 0
+          "description": "Hit the iconic spots. Toss a coin in Trevi (guarantees your return to Rome!). Walk up the Spanish Steps for views.",
+          "cost": 0,
+          "url": "https://www.tripadvisor.com/Attraction_Review-g187791-d190131-Reviews-Trevi_Fountain-Rome_Lazio.html"
         },
         {
           "time": "Evening",
@@ -345,19 +352,21 @@
         {
           "time": "Early Morning",
           "name": "Vatican Museums & Sistine Chapel - Early Entry",
-          "description": "Special early access before crowds. Guided tour through the museums culminating in the Sistine Chapel. St. Peter's Basilica entry included.",
+          "description": "Special early access before crowds. Guided tour through the museums including Raphael Rooms, culminating in the Sistine Chapel. St. Peter's Basilica entry included via special passageway.",
           "cost": 160,
           "duration": "4 hours",
           "tour": true,
           "highlight": true,
-          "bookingRequired": true
+          "bookingRequired": true,
+          "url": "https://www.viator.com/tours/Rome/Early-Vatican-Museums-Tour-The-Best-of-the-Sistine-Chapel/d511-15693P43"
         },
         {
           "time": "Afternoon",
           "name": "Castel Sant'Angelo (Optional)",
           "description": "Former papal fortress with excellent views from the rooftop terrace. Skip if museum'd out.",
           "cost": 22,
-          "optional": true
+          "optional": true,
+          "url": "https://www.tripadvisor.com/Attraction_Review-g187791-d192283-Reviews-Castel_Sant_Angelo-Rome_Lazio.html"
         },
         {
           "time": "Afternoon",
@@ -405,29 +414,33 @@
       "name": "Montmartre Food & Wine Tour",
       "day": 3,
       "duration": "3 hours",
-      "includes": "Guided walk, 6-8 tastings, wine",
-      "price": 90
+      "includes": "Guided walk, 8 tastings, wine",
+      "price": 90,
+      "url": "https://www.viator.com/tours/Paris/Montmartre-Food-and-Wine-Tour/d479-26729P5"
     },
     {
       "name": "Louvre Highlights Tour",
       "day": 2,
       "duration": "2 hours",
-      "includes": "Skip-the-line, expert guide",
-      "price": 70
+      "includes": "Skip-the-line, expert guide, audio headsets",
+      "price": 70,
+      "url": "https://www.viator.com/tours/Paris/Skip-the-Line-Louvre-Museum-Walking-Tour-including-Venus-de-Milo-and-Mona-Lisa/d479-3731LOUVRE"
     },
     {
-      "name": "Ancient Rome Tour",
+      "name": "Colosseum, Forum & Palatine Tour",
       "day": 5,
       "duration": "3.5 hours",
-      "includes": "Colosseum, Forum, Palatine, skip-the-line",
-      "price": 60
+      "includes": "Priority access, guided tour, audio headsets",
+      "price": 60,
+      "url": "https://www.viator.com/tours/Rome/Colosseum-and-Ancient-Rome-Tour-with-Roman-Forum-and-Palatine-Hill/d511-3731COLOSSEUM"
     },
     {
       "name": "Vatican Early Entry Tour",
       "day": 6,
       "duration": "4 hours",
       "includes": "Early access, museums, Sistine Chapel, St. Peter's",
-      "price": 80
+      "price": 80,
+      "url": "https://www.viator.com/tours/Rome/Early-Vatican-Museums-Tour-The-Best-of-the-Sistine-Chapel/d511-15693P43"
     }
   ],
   "tiers": {
@@ -476,14 +489,24 @@
   },
   "featuredLinks": [
     {
-      "title": "Paris Metro Guide",
-      "url": "https://www.ratp.fr/en",
-      "description": "Official Paris public transport"
+      "title": "Eiffel Tower Official",
+      "url": "https://www.toureiffel.paris/en",
+      "description": "Official tickets and visiting info"
     },
     {
-      "title": "Rome Public Transport",
-      "url": "https://www.atac.roma.it/en",
-      "description": "Metro, bus, and tram in Rome"
+      "title": "Louvre Museum",
+      "url": "https://www.tripadvisor.com/Attraction_Review-g187147-d188757-Reviews-Louvre_Museum-Paris_Ile_de_France.html",
+      "description": "World's largest art museum"
+    },
+    {
+      "title": "Colosseum",
+      "url": "https://www.tripadvisor.com/Attraction_Review-g187791-d192285-Reviews-Colosseum-Rome_Lazio.html",
+      "description": "Ancient Rome's iconic amphitheater"
+    },
+    {
+      "title": "Vatican Museums",
+      "url": "https://www.tripadvisor.com/Attraction_Review-g187793-d191000-Reviews-Vatican_Museums-Vatican_City_Lazio.html",
+      "description": "Sistine Chapel and papal collections"
     }
   ],
   "hiddenGems": [
@@ -542,14 +565,16 @@
     {
       "name": "Pantheon",
       "location": "Rome",
-      "description": "This 2,000-year-old temple is free to enter. The dome's oculus (open hole) lets in dramatic shafts of light. One of the best-preserved ancient Roman buildings.",
-      "bestTime": "Arrive early morning (8:30am) or late afternoon to avoid peak crowds"
+      "description": "This 2,000-year-old temple has a stunning dome with an open oculus letting in dramatic shafts of light. One of the best-preserved ancient Roman buildings.",
+      "bestTime": "Arrive early morning (8:30am) or late afternoon to avoid peak crowds",
+      "url": "https://www.tripadvisor.com/Attraction_Review-g187791-d197714-Reviews-Pantheon-Rome_Lazio.html"
     },
     {
       "name": "Sacré-Cœur Basilica",
       "location": "Montmartre, Paris",
       "description": "Stunning white-domed church with panoramic city views from the steps. Free entry to the basilica interior. Street performers and artists add to the atmosphere.",
-      "bestTime": "Sunset for magical views over Paris"
+      "bestTime": "Sunset for magical views over Paris",
+      "url": "https://www.tripadvisor.com/Attraction_Review-g187147-d190685-Reviews-Basilique_du_Sacre_Coeur_de_Montmartre-Paris_Ile_de_France.html"
     },
     {
       "name": "Tuileries Garden",
@@ -561,7 +586,8 @@
       "name": "Trevi Fountain & Spanish Steps",
       "location": "Rome",
       "description": "Two of Rome's most iconic landmarks are free to visit. Toss a coin in Trevi (tradition says you'll return to Rome) and climb the Spanish Steps for views.",
-      "bestTime": "Very early morning (7am) or late evening to avoid massive crowds"
+      "bestTime": "Very early morning (7am) or late evening to avoid massive crowds",
+      "url": "https://www.tripadvisor.com/Attraction_Review-g187791-d197717-Reviews-Spanish_Steps-Rome_Lazio.html"
     },
     {
       "name": "Seine River Walk & Bouquinistes",

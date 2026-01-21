@@ -7,7 +7,7 @@ import type { Env, UserProfile, RouteHandler } from '../../types';
 import { listAllKeys, getKeyPrefix } from '../../lib/kv';
 import { setAuthKeyIndex } from '../../lib/auth';
 import { logAdminAction } from '../../lib/audit';
-import { setSubdomainOwner } from '../../lib/subdomain';
+import { setSubdomainOwner, generateTrialSubdomain } from '../../lib/subdomain';
 
 // Generate setup email for new user
 function generateSetupEmail(user: UserProfile): { subject: string; body: string } {
@@ -154,7 +154,7 @@ export const handleCreateUser: RouteHandler = async (request, env, ctx, url, cor
     created: new Date().toISOString().split('T')[0],
     lastActive: new Date().toISOString().split('T')[0],
     status: 'active',
-    subdomain: body.subdomain,
+    subdomain: body.subdomain || generateTrialSubdomain(userId),
     onboarding: {
       welcomeShown: false
     }
@@ -164,10 +164,8 @@ export const handleCreateUser: RouteHandler = async (request, env, ctx, url, cor
   // Set index for O(1) auth key lookups
   await setAuthKeyIndex(env, authKey, userId);
 
-  // Create subdomain mapping if subdomain is set
-  if (user.subdomain) {
-    await setSubdomainOwner(env, user.subdomain, userId);
-  }
+  // Create subdomain mapping (always set since we auto-generate if not provided)
+  await setSubdomainOwner(env, user.subdomain!, userId);
 
   // Generate setup email content
   const setupEmail = generateSetupEmail(user);
