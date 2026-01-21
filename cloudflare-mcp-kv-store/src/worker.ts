@@ -23,11 +23,16 @@ import { handleSubdomainRoutes } from './routes/subdomain';
 
 // MCP protocol handlers
 import {
-  TOOL_DEFINITIONS,
+  CORE_TOOLS,
+  getToolsByCategories,
   handleLifecycleMethod,
   createResult,
   toolHandlers
 } from './mcp';
+import type { ToolCategory } from './mcp';
+
+// AI Support
+import { retryFailedTickets } from './ai-support';
 
 // Base URLs
 const WORKER_BASE_URL = 'https://voygent.somotravel.workers.dev';
@@ -61,6 +66,7 @@ function getCorsHeaders(request: Request): Record<string, string> {
 }
 
 export default {
+  // Handle HTTP requests
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
@@ -194,6 +200,14 @@ export default {
     }
 
     return new Response("Method not allowed", { status: 405 });
+  },
+
+  // Handle scheduled cron jobs
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    // Retry failed AI support tickets every 15 minutes
+    if (event.cron === '*/15 * * * *') {
+      await retryFailedTickets(env);
+    }
   }
 };
 
@@ -202,14 +216,54 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
   const lifecycleResponse = handleLifecycleMethod(req);
   if (lifecycleResponse) return lifecycleResponse;
 
-  // List Tools - use extracted definitions
+  // List Tools - return CORE tools only (lazy loading)
+  // Extended tools are loaded via _load_tools meta-tool
   if (req.method === "tools/list") {
-    return createResult(req.id!, { tools: TOOL_DEFINITIONS });
+    return createResult(req.id!, { tools: CORE_TOOLS });
   }
 
   // Call Tool - dispatch to extracted handlers
   if (req.method === "tools/call") {
     const { name, arguments: args } = req.params;
+
+    // Special handling for _load_tools meta-tool
+    if (name === "_load_tools") {
+      const categories = (args?.categories || []) as (ToolCategory | 'all')[];
+      if (!categories.length) {
+        return {
+          jsonrpc: "2.0",
+          id: req.id!,
+          result: {
+            content: [{
+              type: "text",
+              text: JSON.stringify({
+                error: "No categories specified",
+                availableCategories: ["comments_extended", "support", "media", "samples", "reference", "advanced", "all"]
+              }, null, 2)
+            }],
+            isError: true
+          }
+        };
+      }
+
+      const tools = getToolsByCategories(categories);
+      return {
+        jsonrpc: "2.0",
+        id: req.id!,
+        result: {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              loaded: categories,
+              toolCount: tools.length,
+              tools: tools,
+              message: `Loaded ${tools.length} tools from categories: ${categories.join(', ')}. You can now use these tools.`
+            }, null, 2)
+          }],
+          isError: false
+        }
+      };
+    }
 
     const handler = toolHandlers[name];
     if (handler) {
