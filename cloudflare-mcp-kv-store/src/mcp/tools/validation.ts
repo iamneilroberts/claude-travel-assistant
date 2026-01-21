@@ -50,7 +50,6 @@ const TEMPLATE_SUPPORTED_FIELDS = {
     'localCustoms', 'localCustoms.title', 'localCustoms.description', 'localCustoms.doThis', 'localCustoms.avoidThis', 'localCustoms.port',
     'freeActivities', 'freeActivities.name', 'freeActivities.location', 'freeActivities.description', 'freeActivities.bestTime', 'freeActivities.onboard',
     'packingTips', 'packingTips.essentials', 'packingTips.recommended', 'packingTips.skip', 'packingTips.weather',
-    'packingTips.formalNights', 'packingTips.portDays',
   ]),
   // Cruise-specific fields
   cruise: new Set([
@@ -65,6 +64,8 @@ const TEMPLATE_SUPPORTED_FIELDS = {
     'itinerary.seaDayTips', 'itinerary.crowdAvoidance',
     'itinerary.activities.forWho', 'itinerary.activities.familyFriendly', 'itinerary.activities.avoidCrowdsTip',
     'itinerary.activities.crowdLevel',
+    // Cruise-specific packing tips
+    'packingTips.formalNights', 'packingTips.portDays',
   ]),
 };
 

@@ -301,7 +301,7 @@ Agents can add curated links for clients - restaurant recommendations, attractio
 
 **Templates:**
 - `default` - General trips (Cruise Planners branded)
-- `cruise` - Cruise vacations (ships, ports, excursions, shore excursions)
+- `cruise` - Cruise vacations (ships, ports, shore excursions)
 
 ### Pre-Preview Checklist: Finding Real URLs
 
@@ -356,7 +356,7 @@ https://www.tripadvisor.com/Restaurant_Review-g187147-d793399-Reviews-Chez_Janou
 
 6. **If you can't search:** Ask the user to provide the URL, or set `null`. Never guess based on URL patterns you think might work.
 
-6. **Update the trip** using `patch_trip`:
+7. **Update the trip** using `patch_trip`:
    ```
    patch_trip("trip-id", {
      "itinerary[0].activities[0].url": "https://actual-url-from-search...",
@@ -515,7 +515,7 @@ When you call `preview_publish`, the response includes an `openSlotAnalysis` sec
 
 4. **Present opportunities to the agent:**
    ```
-   📊 Profitability Opportunity
+   Profitability Opportunity
 
    Day 8 (Milos) has 6 hours unbooked:
    - Kleftiko Sea Caves Boat Tour (~$90, 4.8★, 393 reviews)
@@ -714,21 +714,21 @@ Use `set_reference` when you receive **confirmed** booking information:
 When `get_context` returns `adminMessages`, display them prominently before other content.
 
 ### Announcements (Broadcasts)
-- Display with header: "📢 System Announcement" or "🚨 URGENT Announcement"
+- Display with header: "System Announcement" or "URGENT Announcement"
 - Show the full message content
 - After user acknowledges, call `dismiss_admin_message(id, "broadcast")`
 
 ### Direct Messages from Admin
-- Display with header: "💬 Message from Voygent Support"
+- Display with header: "Message from Voygent Support"
 - Show the message content and subject
 - Ask: "Would you like to reply to this message?"
 - If yes → collect response → call `reply_to_admin(threadId, "their message")`
 - If they just want to acknowledge → call `dismiss_admin_message(threadId, "thread")`
 
 ### Priority Order
-1. **Urgent announcements** - Show first with 🚨
-2. **Direct messages from admin** - Show next with 💬
-3. **Normal announcements** - Show with 📢
+1. **Urgent announcements** - Show first, marked URGENT
+2. **Direct messages from admin** - Show next
+3. **Normal announcements** - Standard display
 4. **Client comments** - Show after admin messages
 
 ## Common Issues

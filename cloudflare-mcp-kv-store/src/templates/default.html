@@ -470,6 +470,51 @@
         .activity-time { font-size: 0.85em; color: var(--primary); font-weight: 600; margin-bottom: 3px; }
         .activity-details { font-size: 0.95em; color: var(--text-light); }
 
+        /* Included vs Optional Activity Styling */
+        .activity.included {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-left-color: var(--accent);
+        }
+
+        .activity.optional {
+            background: var(--bg-light);
+            border-left-color: #f5a623;
+        }
+
+        .activity-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        .activity-badge.included {
+            background: var(--accent);
+            color: white;
+        }
+
+        .activity-badge.optional {
+            background: #f5a623;
+            color: white;
+        }
+
+        .activity-subtext {
+            font-size: 0.85em;
+            font-style: italic;
+            margin-top: 4px;
+        }
+
+        .activity.included .activity-subtext {
+            color: var(--accent);
+        }
+
+        .activity.optional .activity-subtext {
+            color: #c7880a;
+        }
+
         /* Day Description & Info Boxes */
         .day-description {
             font-size: 1.05em;
@@ -1909,7 +1954,7 @@
 
                     {{#if activities}}
                     {{#each activities}}
-                    <div class="activity">
+                    <div class="activity{{#if included}} included{{/if}}{{#if optional}} optional{{/if}}">
                         {{#if image}}<img src="{{image}}" alt="{{name}}" class="activity-thumbnail thumbnail" loading="lazy" decoding="async" onerror="this.style.display='none'" onclick="openLightbox(this.src)">{{/if}}
                         {{#if images}}
                         <div class="card-gallery" style="margin-bottom: 10px;">
@@ -1921,7 +1966,11 @@
                         {{#if time}}<div class="activity-time">{{time}}</div>{{/if}}
                         <div class="activity-title">
                             {{#if url}}<a href="{{url}}" class="activity-link" target="_blank" rel="noopener noreferrer">{{name}}</a>{{else}}{{name}}{{/if}}
+                            {{#if included}}<span class="activity-badge included">Included</span>{{/if}}
+                            {{#if optional}}<span class="activity-badge optional">Optional</span>{{/if}}
                         </div>
+                        {{#if included}}<div class="activity-subtext">Part of your package - no extra cost</div>{{/if}}
+                        {{#if optional}}<div class="activity-subtext">Available if you have free time</div>{{/if}}
                         {{#if description}}<div class="activity-details">{{description}}</div>{{/if}}
                         {{#if notes}}<div class="activity-details">{{notes}}</div>{{/if}}
                         {{#if url}}<a href="{{url}}" class="card-link small-link" target="_blank" rel="noopener noreferrer">More Info →</a>{{/if}}

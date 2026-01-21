@@ -343,20 +343,57 @@ export const handlePatchTrip: McpToolHandler = async (args, env, keyPrefix, user
   const existingData = await env.TRIPS.get(fullKey, "json") as any;
   if (!existingData) throw new Error(`Trip '${args.key}' not found.`);
 
-  // Apply updates using dot-notation paths
+  // Apply updates using dot-notation paths (supports array indexing like "itinerary[0].title")
   const updates = args.updates as Record<string, any>;
   const updatedFields: string[] = [];
 
+  // Keys that could cause prototype pollution - must be blocked
+  const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+  // Parse path into parts, handling array notation
+  const parsePath = (path: string): (string | number)[] => {
+    const parts: (string | number)[] = [];
+    const segments = path.split('.');
+
+    for (const segment of segments) {
+      if (!segment) continue; // Skip empty segments from leading/trailing dots
+
+      // Check for array notation: "itinerary[0]" -> ["itinerary", 0]
+      const bracketMatch = segment.match(/^([^\[]+)\[(\d+)\]$/);
+      if (bracketMatch) {
+        const key = bracketMatch[1];
+        if (FORBIDDEN_KEYS.has(key)) {
+          throw new Error(`Invalid path: forbidden key '${key}'`);
+        }
+        parts.push(key);
+        parts.push(parseInt(bracketMatch[2], 10));
+      } else {
+        if (FORBIDDEN_KEYS.has(segment)) {
+          throw new Error(`Invalid path: forbidden key '${segment}'`);
+        }
+        parts.push(segment);
+      }
+    }
+    return parts;
+  };
+
   for (const [path, value] of Object.entries(updates)) {
-    const parts = path.split('.');
+    const parts = parsePath(path);
+    if (parts.length === 0) continue; // Skip empty paths
+
     let current = existingData;
 
     // Navigate to parent of target field
     for (let i = 0; i < parts.length - 1; i++) {
-      if (current[parts[i]] === undefined) {
-        current[parts[i]] = {};
+      const part = parts[i];
+      if (current[part] === undefined) {
+        // Create array if next part is a number, otherwise object
+        current[part] = typeof parts[i + 1] === 'number' ? [] : {};
+      } else if (current[part] === null || typeof current[part] !== 'object') {
+        // Can't traverse through null or primitives - overwrite with appropriate type
+        current[part] = typeof parts[i + 1] === 'number' ? [] : {};
       }
-      current = current[parts[i]];
+      current = current[part];
     }
 
     // Set the value
