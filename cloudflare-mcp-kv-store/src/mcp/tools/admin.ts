@@ -697,6 +697,92 @@ export const adminTools: AdminTool[] = [
     }
   },
 
+  // ============ PUBLISHING TOOLS (Admin Self-Sufficiency) ============
+  {
+    name: 'admin_save_trip',
+    description: 'Create or replace a trip for any user. Use for creating sample trips, fixing data, or testing.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        userId: {
+          type: 'string',
+          description: 'User ID who will own the trip'
+        },
+        tripId: {
+          type: 'string',
+          description: 'Trip ID to create/update'
+        },
+        tripData: {
+          type: 'object',
+          description: 'Full trip data object (meta, itinerary, lodging, etc.)'
+        }
+      },
+      required: ['userId', 'tripId', 'tripData']
+    }
+  },
+  {
+    name: 'admin_list_templates',
+    description: 'List available publishing templates (system templates and user templates for a specific user).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        userId: {
+          type: 'string',
+          description: 'Optional user ID to see their custom templates too'
+        }
+      }
+    }
+  },
+  {
+    name: 'admin_preview_publish',
+    description: 'Preview a trip as an HTML draft without publishing. Returns preview URL.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        userId: {
+          type: 'string',
+          description: 'User ID who owns the trip'
+        },
+        tripId: {
+          type: 'string',
+          description: 'Trip ID to preview'
+        },
+        template: {
+          type: 'string',
+          description: 'Template name to use (default: "default")'
+        }
+      },
+      required: ['userId', 'tripId']
+    }
+  },
+  {
+    name: 'admin_publish_trip',
+    description: 'Publish a trip to somotravel.us. Returns the public URL.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        userId: {
+          type: 'string',
+          description: 'User ID who owns the trip'
+        },
+        tripId: {
+          type: 'string',
+          description: 'Trip ID to publish'
+        },
+        template: {
+          type: 'string',
+          description: 'Template name to use (default: "default")'
+        },
+        category: {
+          type: 'string',
+          enum: ['testing', 'proposal', 'confirmed', 'deposit_paid', 'paid_in_full', 'active', 'past'],
+          description: 'Category for the trips.json index (default: testing)'
+        }
+      },
+      required: ['userId', 'tripId']
+    }
+  },
+
   // ============ DIRECT DATA MANIPULATION ============
   {
     name: 'admin_write_kv',

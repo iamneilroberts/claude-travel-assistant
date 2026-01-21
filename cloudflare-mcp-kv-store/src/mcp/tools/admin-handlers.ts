@@ -14,8 +14,16 @@ import {
   listAllKeys,
   getKeyPrefix,
   getTripIndex,
+  addToTripIndex,
   removeFromTripIndex
 } from '../../lib/kv';
+import { publishToGitHub, publishDraftToGitHub } from '../../lib/github';
+import { renderTripHtml, listAvailableTemplates, resolveTemplateName } from '../../template-renderer';
+import {
+  computeTripSummary,
+  writeTripSummary
+} from '../../lib/trip-summary';
+import { validateTripId } from '../../lib/validation';
 
 type AdminToolHandler = (
   args: Record<string, any>,
@@ -1883,6 +1891,177 @@ function setNestedValue(obj: any, path: string, value: any): void {
   current[keys[keys.length - 1]] = value;
 }
 
+// ============ Publishing Handlers (Admin Self-Sufficiency) ============
+
+export const handleAdminSaveTrip: AdminToolHandler = async (args, env) => {
+  const { userId, tripId, tripData } = args;
+
+  if (!userId || !tripId || !tripData) {
+    return text('Error: userId, tripId, and tripData are required');
+  }
+
+  // Security: Validate trip ID to prevent path traversal
+  validateTripId(tripId);
+
+  const keyPrefix = getKeyPrefix(userId);
+  const fullKey = keyPrefix + tripId;
+
+  // Check if user exists (optional - allow creating trips for any user)
+  const profile = await env.TRIPS.get(`_profile/${userId}`, 'json') as UserProfile | null;
+
+  // Save the trip
+  await env.TRIPS.put(fullKey, JSON.stringify(tripData));
+
+  // Update trip index
+  await addToTripIndex(env, keyPrefix, tripId);
+
+  // Update trip summary
+  const summary = await computeTripSummary(tripId, tripData);
+  await writeTripSummary(env, keyPrefix, tripId, summary);
+
+  return json({
+    success: true,
+    tripId,
+    userId,
+    key: fullKey,
+    userExists: !!profile,
+    message: `Saved trip ${tripId} for user ${userId}`
+  });
+};
+
+export const handleAdminListTemplates: AdminToolHandler = async (args, env) => {
+  const { userId } = args;
+
+  // Get keyPrefix for user templates if userId provided
+  const keyPrefix = userId ? getKeyPrefix(userId) : '';
+  const userProfile = userId
+    ? await env.TRIPS.get(`_profile/${userId}`, 'json') as UserProfile | null
+    : null;
+
+  // List both user-specific and system templates
+  const templateInfo = await listAvailableTemplates(env, keyPrefix, listAllKeys);
+
+  // Determine user's effective default template
+  const userDefault = resolveTemplateName(undefined, userProfile);
+
+  // Combine templates for display
+  const allTemplates = [
+    ...templateInfo.userTemplates.map(t => `${t} (user template)`),
+    ...templateInfo.systemTemplates.map(t => t === userDefault ? `${t} (default)` : t)
+  ];
+
+  return json({
+    templates: allTemplates,
+    userTemplates: templateInfo.userTemplates,
+    systemTemplates: templateInfo.systemTemplates,
+    currentDefault: userDefault,
+    userId: userId || null,
+    note: "User templates override system templates with the same name."
+  });
+};
+
+export const handleAdminPreviewPublish: AdminToolHandler = async (args, env) => {
+  const { userId, tripId, template } = args;
+
+  if (!userId || !tripId) {
+    return text('Error: userId and tripId are required');
+  }
+
+  // Security: Validate trip ID to prevent path traversal
+  validateTripId(tripId);
+
+  const keyPrefix = getKeyPrefix(userId);
+  const fullKey = keyPrefix + tripId;
+
+  // Read trip data
+  const tripData = await env.TRIPS.get(fullKey, 'json');
+  if (!tripData) {
+    return json({ success: false, message: `Trip '${tripId}' not found for user ${userId}` });
+  }
+
+  // Get user profile for template resolution
+  const userProfile = await env.TRIPS.get(`_profile/${userId}`, 'json') as UserProfile | null;
+
+  // Render using shared template renderer
+  const html = await renderTripHtml(env, tripData, template, userProfile, fullKey, keyPrefix);
+
+  // Publish to GitHub drafts folder
+  if (!env.GITHUB_TOKEN) {
+    return text('Error: GitHub token not configured');
+  }
+  if (!env.GITHUB_REPO) {
+    return text('Error: GitHub repo not configured');
+  }
+
+  const draftFilename = `drafts/${tripId}.html`;
+  const previewUrl = await publishDraftToGitHub(env, draftFilename, html);
+
+  return json({
+    success: true,
+    previewUrl,
+    tripId,
+    userId,
+    template: template || 'default',
+    message: `Preview ready at ${previewUrl}`,
+    cacheNote: "GitHub Pages may take up to 1 minute to update. Use hard refresh (Ctrl+Shift+R) if needed."
+  });
+};
+
+export const handleAdminPublishTrip: AdminToolHandler = async (args, env) => {
+  const { userId, tripId, template, category = 'testing' } = args;
+
+  if (!userId || !tripId) {
+    return text('Error: userId and tripId are required');
+  }
+
+  // Security: Validate trip ID to prevent path traversal
+  validateTripId(tripId);
+
+  const keyPrefix = getKeyPrefix(userId);
+  const fullKey = keyPrefix + tripId;
+
+  // Read trip data
+  const tripData = await env.TRIPS.get(fullKey, 'json') as any;
+  if (!tripData) {
+    return json({ success: false, message: `Trip '${tripId}' not found for user ${userId}` });
+  }
+
+  // Get user profile for template resolution
+  const userProfile = await env.TRIPS.get(`_profile/${userId}`, 'json') as UserProfile | null;
+
+  // Check GitHub config
+  if (!env.GITHUB_TOKEN) {
+    return text('Error: GitHub token not configured');
+  }
+  if (!env.GITHUB_REPO) {
+    return text('Error: GitHub repo not configured');
+  }
+
+  // Render using shared template renderer
+  const html = await renderTripHtml(env, tripData, template, userProfile, fullKey, keyPrefix);
+
+  // Publish to GitHub
+  const outputFilename = tripId.replace(/\.html$/, '') + '.html';
+  const publicUrl = await publishToGitHub(env, outputFilename, html, {
+    title: tripData.meta?.clientName || tripData.meta?.destination || tripId,
+    dates: tripData.meta?.dates || tripData.dates?.start || '',
+    destination: tripData.meta?.destination || '',
+    category: category
+  });
+
+  return json({
+    success: true,
+    url: publicUrl,
+    tripId,
+    userId,
+    filename: outputFilename,
+    template: template || 'default',
+    category,
+    message: `Published! View at ${publicUrl}`,
+    cacheNote: "GitHub Pages may take up to 1 minute to update."
+  });
+};
+
 // ============ Handler Map ============
 
 export const adminHandlers: Record<string, AdminToolHandler> = {
@@ -1936,5 +2115,10 @@ export const adminHandlers: Record<string, AdminToolHandler> = {
   admin_get_pending_comments: handleAdminGetPendingComments,
   // Direct Data Manipulation
   admin_write_kv: handleAdminWriteKv,
-  admin_patch_trip: handleAdminPatchTrip
+  admin_patch_trip: handleAdminPatchTrip,
+  // Publishing (Admin Self-Sufficiency)
+  admin_save_trip: handleAdminSaveTrip,
+  admin_list_templates: handleAdminListTemplates,
+  admin_preview_publish: handleAdminPreviewPublish,
+  admin_publish_trip: handleAdminPublishTrip
 };
