@@ -232,9 +232,10 @@ function normalizeDate(dateStr: string | undefined, fallbackYear?: number): stri
 function buildUnifiedTimeline(tripData: any): any[] {
   const timeline: any[] = [];
   // Ports can be at root level OR inside cruiseInfo
-  const ports = tripData?.ports || tripData?.cruiseInfo?.ports || [];
-  const itinerary = tripData?.itinerary || [];
-  const lodging = tripData?.lodging || [];
+  const portsRaw = tripData?.ports || tripData?.cruiseInfo?.ports;
+  const ports = Array.isArray(portsRaw) ? portsRaw : [];
+  const itinerary = Array.isArray(tripData?.itinerary) ? tripData.itinerary : [];
+  const lodging = Array.isArray(tripData?.lodging) ? tripData.lodging : [];
   const flights = tripData?.flights;
   const embarkation = tripData?.cruiseInfo?.embarkation;
   const debarkation = tripData?.cruiseInfo?.debarkation;
