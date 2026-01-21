@@ -23,13 +23,11 @@ import { handleSubdomainRoutes } from './routes/subdomain';
 
 // MCP protocol handlers
 import {
-  CORE_TOOLS,
-  getToolsByCategories,
+  TOOL_DEFINITIONS,
   handleLifecycleMethod,
   createResult,
   toolHandlers
 } from './mcp';
-import type { ToolCategory } from './mcp';
 
 // AI Support
 import { retryFailedTickets } from './ai-support';
@@ -216,54 +214,14 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
   const lifecycleResponse = handleLifecycleMethod(req);
   if (lifecycleResponse) return lifecycleResponse;
 
-  // List Tools - return CORE tools only (lazy loading)
-  // Extended tools are loaded via _load_tools meta-tool
+  // List Tools - return all tool definitions
   if (req.method === "tools/list") {
-    return createResult(req.id!, { tools: CORE_TOOLS });
+    return createResult(req.id!, { tools: TOOL_DEFINITIONS });
   }
 
   // Call Tool - dispatch to extracted handlers
   if (req.method === "tools/call") {
     const { name, arguments: args } = req.params;
-
-    // Special handling for _load_tools meta-tool
-    if (name === "_load_tools") {
-      const categories = (args?.categories || []) as (ToolCategory | 'all')[];
-      if (!categories.length) {
-        return {
-          jsonrpc: "2.0",
-          id: req.id!,
-          result: {
-            content: [{
-              type: "text",
-              text: JSON.stringify({
-                error: "No categories specified",
-                availableCategories: ["comments_extended", "support", "media", "samples", "reference", "advanced", "all"]
-              }, null, 2)
-            }],
-            isError: true
-          }
-        };
-      }
-
-      const tools = getToolsByCategories(categories);
-      return {
-        jsonrpc: "2.0",
-        id: req.id!,
-        result: {
-          content: [{
-            type: "text",
-            text: JSON.stringify({
-              loaded: categories,
-              toolCount: tools.length,
-              tools: tools,
-              message: `Loaded ${tools.length} tools from categories: ${categories.join(', ')}. You can now use these tools.`
-            }, null, 2)
-          }],
-          isError: false
-        }
-      };
-    }
 
     const handler = toolHandlers[name];
     if (handler) {

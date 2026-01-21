@@ -1,9 +1,12 @@
 /**
  * MCP Tool Definitions
- * Implements tiered tool loading for context optimization.
+ * Organized into tiers for code maintainability.
  *
- * CORE tools (~14) are always loaded - essential for trip planning.
- * EXTENDED tools (~18) are loaded on-demand via _load_tools.
+ * CORE tools (~14) - Essential for basic trip planning workflows
+ * EXTENDED tools (~18) - Additional features (comments, support, media, etc.)
+ *
+ * Note: All tools are returned in tools/list. Lazy loading is not supported
+ * in Claude Web/iOS or ChatGPT. The tiered structure is for code organization only.
  */
 
 export interface ToolDefinition {
@@ -28,7 +31,7 @@ export type ToolCategory =
   | 'advanced';          // import_quote, analyze_profitability, youtube_search
 
 /**
- * CORE tools - always loaded (~14 tools)
+ * CORE tools (~14 tools)
  * Essential for basic trip planning workflows
  */
 export const CORE_TOOLS: ToolDefinition[] = [
@@ -212,30 +215,11 @@ export const CORE_TOOLS: ToolDefinition[] = [
     }
   },
 
-  // ============ META-TOOL FOR LAZY LOADING ============
-  {
-    name: "_load_tools",
-    description: "Load additional tools for specific tasks. Categories: 'comments_extended' (bulk comment management), 'support' (contact admin), 'media' (image uploads), 'samples' (sample trips), 'reference' (source-of-truth management), 'advanced' (quote import, profitability, YouTube). Call with category name to enable those tools.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        categories: {
-          type: "array",
-          items: {
-            type: "string",
-            enum: ["comments_extended", "support", "media", "samples", "reference", "advanced", "all"]
-          },
-          description: "Tool categories to load"
-        }
-      },
-      required: ["categories"]
-    }
-  }
 ];
 
 /**
- * EXTENDED tools - loaded on demand (~18 tools)
- * Organized by category for selective loading
+ * EXTENDED tools (~18 tools)
+ * Additional features organized by category
  */
 export const EXTENDED_TOOLS: Record<ToolCategory, ToolDefinition[]> = {
   // Comments Extended
@@ -583,8 +567,8 @@ export function getToolsByCategories(categories: (ToolCategory | 'all')[]): Tool
 }
 
 /**
- * Legacy: All tools combined (for backward compatibility)
- * @deprecated Use CORE_TOOLS and EXTENDED_TOOLS separately
+ * All tools combined - returned by tools/list
+ * Combines CORE and EXTENDED tools into a single array
  */
 export const TOOL_DEFINITIONS: ToolDefinition[] = [
   ...CORE_TOOLS,

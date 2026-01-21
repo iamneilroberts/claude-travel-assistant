@@ -31,16 +31,18 @@ Claude and ChatGPT are already excellent at trip planning. They just couldn't re
 
 ## Setup Instructions (Web Only)
 
-### Claude Web (claude.ai)
+### Claude Web (claude.ai) & iOS App
 
 1. Go to [claude.ai](https://claude.ai) and sign in
-2. Click your **profile picture** → **Settings**
+2. Click your **profile name** in the sidebar → **Settings**
 3. Go to **Connectors** tab
-4. Click **Add Custom Connector**
+4. Click **Add custom connector**
 5. Enter:
-   - **Name:** `Travel Assistant`
-   - **URL:** `https://voygent.somotravel.workers.dev/sse?key=YOUR_KEY`
-6. Click **Save**, then refresh the page
+   - **Name:** `Voygent`
+   - **Remote MCP server URL:** `https://voygent.somotravel.workers.dev/sse?key=YOUR_KEY`
+6. Click **Add** to save
+
+Same steps work on the Claude iOS app.
 
 ### ChatGPT Web (chatgpt.com)
 

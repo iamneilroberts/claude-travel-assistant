@@ -4,12 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Voygent is a travel planning MCP server deployed on Cloudflare Workers. It enables Claude AI to store, manage, and publish trip itineraries with persistent storage across devices. The architecture is intentionally minimal - Claude handles trip planning intelligence, this system just provides memory and publishing.
+Voygent is a travel planning MCP server deployed on Cloudflare Workers. It enables AI assistants (Claude and ChatGPT) to store, manage, and publish trip itineraries with persistent storage across devices. The architecture is intentionally minimal - the AI handles trip planning intelligence, this system provides memory and publishing.
+
+## Supported Platforms
+
+- **Claude Web** (claude.ai) - Primary target
+- **Claude iOS** app - Tested and working
+- **ChatGPT Web** (chatgpt.com) - Supported via MCP connector
+- Claude Android - Not yet tested
+- Claude Desktop - Supported but not primary target
 
 ## Architecture
 
 ```
-Claude AI Client (Desktop/Web/iOS/Android)
+AI Client (Claude Web/iOS, ChatGPT Web)
     │
     │ MCP Protocol (JSON-RPC 2.0)
     ▼

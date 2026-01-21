@@ -663,6 +663,49 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
     <!-- SUPPORT TAB -->
     <div id="tab-support" class="tab-content">
+      <!-- AI Support Settings Panel -->
+      <div class="section" style="margin-bottom:15px;">
+        <h2 style="display:flex;justify-content:space-between;align-items:center;">
+          AI Support Settings
+          <span id="aiSupportStatus" class="badge badge-gray">Loading...</span>
+        </h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-top:15px;">
+          <div>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+              <span>AI Support Enabled</span>
+              <label class="toggle">
+                <input type="checkbox" id="aiSupportEnabled" onchange="saveAISettings()">
+                <span class="toggle-slider"></span>
+              </label>
+            </label>
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;color:#8b949e;margin-bottom:5px;">Confidence Threshold: <span id="thresholdValue">90</span>%</label>
+            <input type="range" id="aiConfidenceThreshold" min="50" max="100" value="90" style="width:100%;" oninput="document.getElementById('thresholdValue').textContent=this.value" onchange="saveAISettings()">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:#6e7681;"><span>50% (more auto)</span><span>100% (more review)</span></div>
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;color:#8b949e;margin-bottom:5px;">Monthly Cost Limit ($)</label>
+            <input type="number" id="aiMonthlyLimit" value="100" min="1" max="1000" style="width:100px;padding:4px 8px;background:#0d1117;border:1px solid #30363d;border-radius:4px;color:#c9d1d9;" onchange="saveAISettings()">
+          </div>
+          <div>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+              <span>Auto-Send Responses</span>
+              <label class="toggle">
+                <input type="checkbox" id="aiAutoSend" onchange="saveAISettings()">
+                <span class="toggle-slider"></span>
+              </label>
+            </label>
+            <div style="font-size:10px;color:#6e7681;margin-top:4px;">When confidence exceeds threshold</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:20px;margin-top:15px;padding-top:15px;border-top:1px solid #21262d;">
+          <div style="font-size:12px;"><span style="color:#8b949e;">Today:</span> <span id="aiTodayStats">-</span></div>
+          <div style="font-size:12px;"><span style="color:#8b949e;">This Month:</span> <span id="aiMonthStats">-</span></div>
+          <div style="font-size:12px;"><span style="color:#8b949e;">Queue:</span> <span id="aiQueueStats">-</span></div>
+        </div>
+      </div>
+
       <div class="section">
         <div class="filter-row">
           <select id="supportFilterStatus" onchange="applySupportFilters()">
@@ -670,6 +713,9 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <option value="open">Open</option>
             <option value="in_progress">In Progress</option>
             <option value="resolved">Resolved</option>
+            <option value="ai_review">AI Review</option>
+            <option value="ai_resolved">AI Resolved</option>
+            <option value="escalated">Escalated</option>
           </select>
           <select id="supportFilterPriority" onchange="applySupportFilters()">
             <option value="">All Priority</option>
@@ -841,7 +887,7 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
       <h3>Setup Instructions for <span id="setupUserName"></span></h3>
       <div style="display: flex; gap: 10px; margin-bottom: 15px;">
         <button class="btn btn-secondary btn-small" onclick="showSetupTab('chatgpt')" id="tabChatGPT">ChatGPT</button>
-        <button class="btn btn-secondary btn-small" onclick="showSetupTab('claude')" id="tabClaude">Claude Desktop</button>
+        <button class="btn btn-secondary btn-small" onclick="showSetupTab('claude')" id="tabClaude">Claude Web</button>
       </div>
       <div id="setupContent" class="email-preview" style="max-height: 400px;"></div>
       <div style="display: flex; gap: 10px; margin-top: 20px;">
@@ -1445,26 +1491,24 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 == MCP URL ==
 \${mcpUrl}\`;
       } else {
-        content = \`== Claude Desktop Setup ==
+        content = \`== Claude Web Setup (claude.ai) ==
 
-1. Open your Claude Desktop config file:
-   - Mac: ~/Library/Application Support/Claude/claude_desktop_config.json
-   - Windows: %APPDATA%/Claude/claude_desktop_config.json
-   - Linux: ~/.config/Claude/claude_desktop_config.json
+1. Go to claude.ai and click your profile name in the sidebar
 
-2. Add this to the "mcpServers" section:
+2. Click Settings > Connectors
 
-{
-  "voygent": {
-    "command": "npx",
-    "args": ["-y", "mcp-remote", "\${mcpUrl}"]
-  }
-}
+3. Click "Add custom connector"
 
-3. Save the file and restart Claude Desktop
+4. Fill in the form:
+   - Name: Voygent
+   - Remote MCP server URL: \${mcpUrl}
 
-4. Start a new conversation and say:
+5. Click "Add" to save
+
+6. Start a new conversation and say:
    "use voygent, list trips"
+
+Note: Also works on Claude iOS app (same steps in Settings)
 
 == Your Auth Key ==
 \${user.authKey}
@@ -1785,6 +1829,73 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
       document.getElementById('recentActivity').innerHTML = html;
     }
 
+    // ========== AI SUPPORT SETTINGS ==========
+    async function loadAISettings() {
+      try {
+        const data = await api('/admin/ai-support/status');
+
+        // Update toggles and inputs
+        document.getElementById('aiSupportEnabled').checked = data.enabled;
+        document.getElementById('aiConfidenceThreshold').value = data.settings.confidenceThreshold;
+        document.getElementById('thresholdValue').textContent = data.settings.confidenceThreshold;
+        document.getElementById('aiMonthlyLimit').value = data.settings.monthlyLimit;
+        document.getElementById('aiAutoSend').checked = data.settings.autoSendEnabled;
+
+        // Update status badge
+        const statusEl = document.getElementById('aiSupportStatus');
+        if (data.enabled) {
+          statusEl.className = 'badge badge-green';
+          statusEl.textContent = 'Active';
+        } else {
+          statusEl.className = 'badge badge-gray';
+          statusEl.textContent = 'Disabled';
+        }
+
+        // Update stats
+        document.getElementById('aiTodayStats').innerHTML =
+          \`<span style="color:#3fb950;">\${data.today.autoResolved} auto</span> / \` +
+          \`<span style="color:#58a6ff;">\${data.today.queued} queued</span> / \` +
+          \`<span style="color:#f85149;">\${data.today.errors} errors</span>\`;
+
+        document.getElementById('aiMonthStats').innerHTML =
+          \`\${data.month.tickets} tickets / $\${data.month.cost.toFixed(2)} of $\${data.month.limit}\`;
+
+        document.getElementById('aiQueueStats').innerHTML =
+          \`<span style="color:#58a6ff;">\${data.queue.pendingReview} review</span> / \` +
+          \`<span style="color:#f85149;">\${data.queue.escalated} escalated</span>\`;
+
+      } catch (e) {
+        console.error('Failed to load AI settings:', e);
+        document.getElementById('aiSupportStatus').textContent = 'Error';
+        document.getElementById('aiSupportStatus').className = 'badge badge-red';
+      }
+    }
+
+    async function saveAISettings() {
+      try {
+        const settings = {
+          enabled: document.getElementById('aiSupportEnabled').checked,
+          confidenceThreshold: parseInt(document.getElementById('aiConfidenceThreshold').value),
+          monthlyLimit: parseInt(document.getElementById('aiMonthlyLimit').value),
+          autoSendEnabled: document.getElementById('aiAutoSend').checked
+        };
+
+        await api('/admin/ai-support/settings', 'POST', settings);
+
+        // Update status badge
+        const statusEl = document.getElementById('aiSupportStatus');
+        if (settings.enabled) {
+          statusEl.className = 'badge badge-green';
+          statusEl.textContent = 'Active';
+        } else {
+          statusEl.className = 'badge badge-gray';
+          statusEl.textContent = 'Disabled';
+        }
+      } catch (e) {
+        alert('Failed to save AI settings: ' + e.message);
+      }
+    }
+
     // ========== SUPPORT ==========
     let supportCache = [];
 
@@ -1814,7 +1925,14 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
       }
 
       const priorityColors = { high: 'badge-red', medium: 'badge-yellow', low: 'badge-gray' };
-      const statusColors = { open: 'badge-red', in_progress: 'badge-yellow', resolved: 'badge-green' };
+      const statusColors = {
+        open: 'badge-red',
+        in_progress: 'badge-yellow',
+        resolved: 'badge-green',
+        ai_review: 'badge-blue',
+        ai_resolved: 'badge-green',
+        escalated: 'badge-red'
+      };
 
       const html = \`<table>
         <thead><tr><th>Time</th><th>User</th><th>Subject</th><th>Priority</th><th>Status</th><th>Actions</th></tr></thead>
@@ -1836,6 +1954,9 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 <option value="open" \${r.status === 'open' ? 'selected' : ''}>Open</option>
                 <option value="in_progress" \${r.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
                 <option value="resolved" \${r.status === 'resolved' ? 'selected' : ''}>Resolved</option>
+                <option value="ai_review" \${r.status === 'ai_review' ? 'selected' : ''}>AI Review</option>
+                <option value="ai_resolved" \${r.status === 'ai_resolved' ? 'selected' : ''}>AI Resolved</option>
+                <option value="escalated" \${r.status === 'escalated' ? 'selected' : ''}>Escalated</option>
               </select>
             </td>
           </tr>
@@ -2816,7 +2937,7 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
     // ========== INIT ==========
     async function init() {
-      await Promise.all([loadStats(), loadUsers(), loadActivity(), loadTrips(), loadComments(), loadSupport(), loadBillingStats(), loadPromoCodes(), loadMessages()]);
+      await Promise.all([loadStats(), loadUsers(), loadActivity(), loadTrips(), loadComments(), loadSupport(), loadAISettings(), loadBillingStats(), loadPromoCodes(), loadMessages()]);
       renderRecentActivity();
       renderSubscriptions();
       initMissionControl();
