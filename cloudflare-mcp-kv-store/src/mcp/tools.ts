@@ -35,7 +35,7 @@ export const CORE_TOOLS: ToolDefinition[] = [
   // ============ CONTEXT ============
   {
     name: "get_context",
-    description: "REQUIRED FIRST CALL: Invoke immediately when user says 'voygent', 'use voygent', 'travel', 'trip planning', or any travel-related request. Loads your system instructions, user's trips, and activity log. You MUST call this before using any other Voygent tool - it provides essential context for the conversation.",
+    description: "Load Voygent travel planning context. Call when user says 'voygent' or wants to plan/manage trips. Returns system instructions, user's trips, and activity log. Call this before using other Voygent tools.",
     inputSchema: { type: "object", properties: {} }
   },
 
@@ -265,16 +265,35 @@ export const EXTENDED_TOOLS: Record<ToolCategory, ToolDefinition[]> = {
   // Support
   support: [
     {
-      name: "submit_support",
-      description: "Submit support request to admin.",
+      name: "log_support_intent",
+      description: "Log when user has a support-type question (telemetry). Call this after helping users with how-to questions, troubleshooting, or any support-related inquiry - even if you resolved it yourself. This helps track what users struggle with.",
       inputSchema: {
         type: "object",
         properties: {
-          subject: { type: "string", description: "Subject" },
-          message: { type: "string", description: "Description" },
-          priority: { type: "string", enum: ["low", "medium", "high"], description: "Priority" },
+          category: {
+            type: "string",
+            enum: ["how_to", "troubleshooting", "billing", "bug", "feature", "feedback"],
+            description: "Type of support intent"
+          },
+          summary: { type: "string", description: "Brief description of what user asked/needed (1-2 sentences)" },
+          resolved: { type: "boolean", description: "Did you resolve it in-chat without escalation?" },
+          tripId: { type: "string", description: "Related trip ID if applicable" }
+        },
+        required: ["category", "summary", "resolved"]
+      }
+    },
+    {
+      name: "submit_support",
+      description: "ESCALATION ONLY: Submit a ticket to human support. Only use after: (1) you tried to help but couldn't resolve it, AND (2) user confirmed they want to escalate. For billing issues, bugs, feature requests, or problems you cannot solve. Include rich context from the conversation.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          subject: { type: "string", description: "Clear subject line" },
+          message: { type: "string", description: "Detailed description including what you tried" },
+          priority: { type: "string", enum: ["low", "medium", "high", "urgent"], description: "Priority level" },
           tripId: { type: "string", description: "Related trip ID" },
-          screenshotUrl: { type: "string", description: "Screenshot URL" }
+          conversationSummary: { type: "string", description: "Summary of conversation context and troubleshooting attempted" },
+          screenshotUrl: { type: "string", description: "Screenshot URL if user provided one" }
         },
         required: ["subject", "message"]
       }
