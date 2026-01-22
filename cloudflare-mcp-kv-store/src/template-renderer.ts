@@ -27,6 +27,58 @@ function formatHoldDate(dateStr: string): string {
 }
 
 /**
+ * Validate that a URL is relevant to the named item.
+ * Returns null if URL doesn't match the name (prevents showing wrong links).
+ *
+ * STRICT VALIDATION - prefer no link over wrong link.
+ * Extracts the subject from TripAdvisor URLs and compares directly.
+ */
+function validateUrlRelevance(name: string | undefined, url: string | undefined): string | null {
+  if (!url || !name) return null;
+
+  const urlLower = url.toLowerCase();
+  const nameLower = name.toLowerCase();
+
+  // Only validate TripAdvisor URLs
+  if (!urlLower.includes('tripadvisor.com')) return url;
+
+  // Extract subject from TripAdvisor URL
+  // Pattern: .../Attraction_Review-g123-d456-Reviews-Subject_Name_Here-Location.html
+  const reviewsMatch = urlLower.match(/reviews[_-]([^_-](?:[^-]*[^_-])?)/i);
+  if (!reviewsMatch) return null; // Can't parse URL = don't trust it
+
+  const urlSubject = reviewsMatch[1]
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Get identifying words from name (skip common words)
+  const stopWords = new Set([
+    'the', 'a', 'an', 'and', 'or', 'of', 'in', 'at', 'to', 'for', 'on', 'by',
+    'option', 'choice', 'morning', 'afternoon', 'evening', 'early', 'late',
+    'day', 'trip', 'tour', 'visit', 'walk', 'stroll', 'explore', 'free', 'time'
+  ]);
+
+  const nameWords = nameLower
+    .replace(/[^a-z0-9\s]/g, '')
+    .split(/\s+/)
+    .filter(w => w.length > 2 && !stopWords.has(w));
+
+  if (nameWords.length === 0) return null;
+
+  // Check if URL subject contains ANY of the name's key words
+  const hasMatch = nameWords.some(word => urlSubject.includes(word));
+
+  if (!hasMatch) {
+    // DEBUG: Uncomment to see mismatches
+    // console.log(`URL MISMATCH: "${name}" → URL subject "${urlSubject}" (no match for: ${nameWords.join(', ')})`);
+    return null;
+  }
+
+  return url;
+}
+
+/**
  * Add Viator affiliate tracking parameters to a URL
  */
 function addViatorTracking(url: string, userProfile: UserProfile | null): string {
@@ -134,6 +186,66 @@ function processViatorUrls(tripData: any, userProfile: UserProfile | null): any 
       }
       return day;
     });
+  }
+
+  return tripData;
+}
+
+/**
+ * Validate and clean URLs across trip data.
+ * Removes URLs that don't match their activity/item names.
+ * Preference: No link > Wrong link
+ */
+function validateTripUrls(tripData: any): any {
+  // Validate itinerary activities
+  if (tripData.itinerary && Array.isArray(tripData.itinerary)) {
+    tripData.itinerary = tripData.itinerary.map((day: any) => {
+      if (day.activities && Array.isArray(day.activities)) {
+        day.activities = day.activities.map((activity: any) => ({
+          ...activity,
+          url: validateUrlRelevance(activity.name, activity.url)
+        }));
+      }
+      if (day.excursions && Array.isArray(day.excursions)) {
+        day.excursions = day.excursions.map((exc: any) => ({
+          ...exc,
+          url: validateUrlRelevance(exc.name || exc.title, exc.url)
+        }));
+      }
+      return day;
+    });
+  }
+
+  // Validate excursions at root level
+  if (tripData.excursions && Array.isArray(tripData.excursions)) {
+    tripData.excursions = tripData.excursions.map((exc: any) => ({
+      ...exc,
+      url: validateUrlRelevance(exc.name || exc.title, exc.url)
+    }));
+  }
+
+  // Validate lodging
+  if (tripData.lodging && Array.isArray(tripData.lodging)) {
+    tripData.lodging = tripData.lodging.map((hotel: any) => ({
+      ...hotel,
+      url: validateUrlRelevance(hotel.name, hotel.url)
+    }));
+  }
+
+  // Validate recommended extras
+  if (tripData.recommendedExtras && Array.isArray(tripData.recommendedExtras)) {
+    tripData.recommendedExtras = tripData.recommendedExtras.map((extra: any) => ({
+      ...extra,
+      url: validateUrlRelevance(extra.name || extra.title, extra.url)
+    }));
+  }
+
+  // Validate hidden gems
+  if (tripData.hiddenGems && Array.isArray(tripData.hiddenGems)) {
+    tripData.hiddenGems = tripData.hiddenGems.map((gem: any) => ({
+      ...gem,
+      url: validateUrlRelevance(gem.name, gem.url)
+    }));
   }
 
   return tripData;
@@ -524,6 +636,9 @@ export function buildTemplateData(
   // Process Viator URLs to add affiliate tracking
   tripData = processViatorUrls(tripData, userProfile);
 
+  // Validate URLs match their items - prefer no link over wrong link
+  tripData = validateTripUrls(tripData);
+
   if (Array.isArray(tripData?.bookings)) {
     const typeLabels: Record<string, { label: string; icon: string }> = {
       cruise: { label: 'Cruise', icon: '🚢' },
@@ -717,7 +832,8 @@ export function buildTemplateData(
       commentCountLabel,
       hasComments,
       reserveUrl: tripMeta.reserveUrl || agentInfo.bookingUrl || '',
-      agent: agentInfo
+      agent: agentInfo,
+      generatedAt: new Date().toISOString()
     }
   };
 }
@@ -765,6 +881,10 @@ export async function renderTripHtml(
   if (userProfile?.subscription?.tier === 'trial') {
     html = injectTrialWatermark(html);
   }
+
+  // Inject generation timestamp as HTML comment for cache debugging
+  const generatedAt = templateData._config.generatedAt;
+  html = `<!-- voygent:generated:${generatedAt} -->\n${html}`;
 
   return html;
 }

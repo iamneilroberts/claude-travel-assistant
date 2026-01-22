@@ -42,11 +42,16 @@ export async function handleDraftTrip(
     });
   }
 
-  // Return the HTML with short caching for drafts
+  // Check for cache-bust param (used by publish verification)
+  const noCacheRequested = url.searchParams.has('_t');
+
+  // Return the HTML with appropriate caching
   return new Response(html, {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'public, max-age=60, stale-while-revalidate=30',
+      'Cache-Control': noCacheRequested
+        ? 'no-store, no-cache, must-revalidate'
+        : 'public, max-age=60, stale-while-revalidate=30',
       ...corsHeaders
     }
   });

@@ -12,6 +12,43 @@ import { savePublishedTrip, saveDraftTrip } from '../../lib/published';
 import { validateTripId, validateFilename } from '../../lib/validation';
 import { analyzeOpenSlots } from '../../lib/slot-analysis';
 
+/**
+ * Extract the generation timestamp from rendered HTML
+ * Looks for: <!-- voygent:generated:2026-01-22T20:00:13.322Z -->
+ */
+function extractGeneratedTimestamp(html: string): string | null {
+  const match = html.match(/<!-- voygent:generated:([^\s]+)/);
+  return match ? match[1].trim() : null;
+}
+
+/**
+ * Verify published content by reading from R2 directly
+ * This avoids worker-to-worker fetch issues
+ */
+async function verifyPublishedContent(
+  env: Env,
+  userId: string,
+  tripId: string,
+  expectedTimestamp: string
+): Promise<{ success: boolean; foundTimestamp: string | null }> {
+  try {
+    // Read directly from R2
+    const r2Key = `drafts/${userId}/${tripId}.html`;
+    const object = await env.MEDIA.get(r2Key);
+    if (object) {
+      const text = await object.text();
+      const foundTimestamp = extractGeneratedTimestamp(text);
+      return {
+        success: foundTimestamp === expectedTimestamp,
+        foundTimestamp
+      };
+    }
+  } catch (err) {
+    // R2 read failed
+  }
+  return { success: false, foundTimestamp: null };
+}
+
 export const handleListTemplates: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
   // List both user-specific and system templates
   const templateInfo = await listAvailableTemplates(env, keyPrefix, listAllKeys);
@@ -91,6 +128,15 @@ export const handlePreviewPublish: McpToolHandler = async (args, env, keyPrefix,
     }
   }
 
+  // Extract timestamp from rendered HTML for verification
+  const expectedTimestamp = extractGeneratedTimestamp(html);
+
+  // Verify the content was saved to R2 correctly
+  let verificationResult: { success: boolean; foundTimestamp: string | null } = { success: false, foundTimestamp: null };
+  if (expectedTimestamp) {
+    verificationResult = await verifyPublishedContent(env, userId, tripId, expectedTimestamp);
+  }
+
   // Analyze open slots for profitability opportunities
   const openSlotAnalysis = analyzeOpenSlots(tripData, tripId);
 
@@ -98,10 +144,12 @@ export const handlePreviewPublish: McpToolHandler = async (args, env, keyPrefix,
     previewUrl,
     tripId,
     template,
-    message: `Preview ready! View at ${previewUrl}`,
+    message: verificationResult.success
+      ? `Preview ready! View at ${previewUrl}`
+      : `Preview saved but verification failed - please check the URL`,
     note: "This is a draft preview. When ready, use publish_trip to publish to the main site.",
-    cacheWarning: "If you don't see the latest changes, it may take up to 1 minute for updates to appear. Use Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac) to hard refresh your browser.",
-    _displayToUser: "IMPORTANT: Always tell the user about the potential 1-minute delay and how to hard refresh (Ctrl+Shift+R or Cmd+Shift+R) if they don't see the latest changes."
+    verified: verificationResult.success,
+    generatedAt: expectedTimestamp
   };
 
   // Add legacy URL if different from primary
@@ -236,6 +284,15 @@ export const handlePublishTrip: McpToolHandler = async (args, env, keyPrefix, us
     // Don't fail the publish - GitHub is the primary for now
   }
 
+  // Extract timestamp from rendered HTML for verification
+  const expectedTimestamp = extractGeneratedTimestamp(html);
+
+  // Verify the content was saved correctly (R2 is authoritative)
+  let verificationResult: { success: boolean; foundTimestamp: string | null } = { success: false, foundTimestamp: null };
+  if (expectedTimestamp) {
+    verificationResult = await verifyPublishedContent(env, userId, tripId, expectedTimestamp);
+  }
+
   // Increment publish count for subscription tracking
   let usageInfo: { publishesUsed?: number; publishLimit?: number; remaining?: number } = {};
   if (userProfile?.subscription && userProfile.subscription.publishLimit !== 0) {
@@ -255,10 +312,13 @@ export const handlePublishTrip: McpToolHandler = async (args, env, keyPrefix, us
     filename: outputFilename,
     tripId,
     template,
-    message: subdomainUrl
-      ? `Published! View at ${subdomainUrl} (or legacy URL: ${publicUrl})`
-      : `Published! View at ${publicUrl}`,
-    cacheNote: "GitHub Pages may take up to 1 minute to update. If you don't see the latest changes, use hard refresh (Ctrl+Shift+R or Cmd+Shift+R).",
+    message: verificationResult.success
+      ? (subdomainUrl
+          ? `Published! View at ${subdomainUrl} (or legacy URL: ${publicUrl})`
+          : `Published! View at ${publicUrl}`)
+      : `Published but verification failed - please check the URL`,
+    verified: verificationResult.success,
+    generatedAt: expectedTimestamp,
     ...(warningResult || {}),
     ...(Object.keys(usageInfo).length > 0 && { usage: usageInfo })
   };

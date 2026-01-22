@@ -174,11 +174,6 @@
             border-top: 4px solid var(--primary);
         }
 
-        .overview-card .icon {
-            font-size: 2em;
-            margin-bottom: 10px;
-        }
-
         .overview-card .label {
             font-size: 0.85em;
             color: var(--text-light);
@@ -211,18 +206,6 @@
             color: var(--primary);
             font-size: 1.4em;
             font-weight: 700;
-        }
-
-        .section-icon {
-            background: var(--primary);
-            color: var(--white);
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2em;
         }
 
         /* Content Box */
@@ -1418,12 +1401,45 @@
         }
 
         /* Responsive */
+        /* Packing List Grid - responsive columns */
+        .packing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 6px;
+            list-style: none;
+        }
+
+        .packing-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.95em;
+        }
+
+        .packing-item::before {
+            content: "";
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .packing-item.essential { background: var(--bg-light); }
+        .packing-item.essential::before { color: var(--primary); }
+
+        .packing-item.recommended { background: color-mix(in srgb, var(--accent) 15%, white); }
+        .packing-item.recommended::before { content: "+"; }
+
+        .packing-item.skip { background: #ffebee; color: #c62828; }
+        .packing-item.skip::before { content: ""; color: #d32f2f; }
+
         @media (max-width: 768px) {
             .header-bar { flex-direction: column; gap: 10px; text-align: center; }
             .hero h1 { font-size: 1.8em; }
             .hero .destination { font-size: 1.1em; }
             .content { padding: 20px 15px; }
             .cards-grid { grid-template-columns: 1fr; }
+            .packing-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
             .overview-section { grid-template-columns: repeat(2, 1fr); }
         }
 
@@ -1436,6 +1452,22 @@
 
             .advisor-contact {
                 align-items: center;
+            }
+
+            .packing-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 4px;
+            }
+
+            .packing-item {
+                padding: 6px 10px;
+                font-size: 0.9em;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .packing-grid {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -1483,7 +1515,7 @@
     {{#if _config.commentThreadUrl}}
     <div class="conversation-banner">
         <a href="{{_config.commentThreadUrl}}" class="conversation-link">
-            <span>💬 Conversation</span>
+            <span>Conversation</span>
             {{#if _config.hasComments}}
             <span class="conversation-indicator">
                 <span class="conversation-dot"></span>
@@ -1523,7 +1555,6 @@
         <div class="overview-section">
             {{#if travelers.count}}
             <div class="overview-card">
-                <div class="icon">👥</div>
                 <div class="label">Travelers</div>
                 <div class="value">{{pluralize travelers.count "Guest" "Guests"}}</div>
             </div>
@@ -1531,7 +1562,6 @@
 
             {{#if dates.duration}}
             <div class="overview-card">
-                <div class="icon">📅</div>
                 <div class="label">Duration</div>
                 <div class="value">{{dates.duration}} Days</div>
             </div>
@@ -1539,7 +1569,6 @@
 
             {{#if meta.phase}}
             <div class="overview-card">
-                <div class="icon">📋</div>
                 <div class="label">Status</div>
                 <div class="value">{{capitalize meta.phase}}</div>
             </div>
@@ -1547,7 +1576,6 @@
 
             {{#if budget.total}}
             <div class="overview-card">
-                <div class="icon">💰</div>
                 <div class="label">Investment</div>
                 <div class="value">{{formatCurrency budget.total}}</div>
             </div>
@@ -1559,7 +1587,6 @@
         {{#if maps}}
         <div class="section">
             <div class="section-header">
-                <div class="section-icon">🗺️</div>
                 <h2>Trip Maps</h2>
             </div>
             <div class="maps-section">
@@ -1579,27 +1606,6 @@
                 </div>
             </div>
         </div>
-        {{else}}
-        {{#if meta.destination}}
-        <div class="section">
-            <div class="section-header">
-                <div class="section-icon">🗺️</div>
-                <h2>Destination Map</h2>
-            </div>
-            <div class="maps-section">
-                <div class="map-item" style="max-width: 100%;">
-                    <iframe
-                        class="map-embed"
-                        style="height: 350px;"
-                        src="https://www.google.com/maps/embed/v1/place?key={{_config.googleMapsApiKey}}&q={{encodeUri meta.destination}}"
-                        loading="lazy"
-                        allowfullscreen
-                        referrerpolicy="no-referrer-when-downgrade">
-                    </iframe>
-                </div>
-            </div>
-        </div>
-        {{/if}}
         {{/if}}
         {{/if}}
 
@@ -1607,7 +1613,6 @@
         {{#if travelers.details}}
         <div class="section">
             <div class="section-header">
-                <div class="section-icon">👥</div>
                 <h2>Your Travel Party</h2>
             </div>
             <div class="content-box">
@@ -1631,10 +1636,10 @@
                                 {{#if type}}<span class="traveler-type {{type}}">{{capitalize type}}</span>{{/if}}
                             </td>
                             <td>
-                                {{#if mobilityIssues}}<span class="mobility-flag">⚠️ {{default mobility "Mobility considerations"}}</span>{{/if}}
+                                {{#if mobilityIssues}}<span class="mobility-flag">{{default mobility "Mobility considerations"}}</span>{{/if}}
                             </td>
                             <td>
-                                {{#if docsComplete}}<span class="doc-badge complete">✓ Complete</span>{{else}}{{#if documentsNeeded}}{{#each documentsNeeded}}<span class="doc-badge pending">{{this}}</span>{{/each}}{{else}}<span class="doc-badge complete">✓</span>{{/if}}{{/if}}
+                                {{#if docsComplete}}<span class="doc-badge complete"> Complete</span>{{else}}{{#if documentsNeeded}}{{#each documentsNeeded}}<span class="doc-badge pending">{{this}}</span>{{/each}}{{else}}<span class="doc-badge complete"></span>{{/if}}{{/if}}
                             </td>
                         </tr>
                         {{/each}}
@@ -1652,7 +1657,6 @@
         {{#if travelers.names}}
         <div class="section">
             <div class="section-header">
-                <div class="section-icon">👥</div>
                 <h2>Your Travel Party</h2>
             </div>
             <div class="content-box">
@@ -1674,7 +1678,6 @@
         {{#if preferences}}
         <div class="section">
             <div class="section-header">
-                <div class="section-icon">✨</div>
                 <h2>Your Travel Style</h2>
             </div>
             <div class="content-box">
@@ -1699,7 +1702,6 @@
         {{#if flights}}
         <div class="section">
             <div class="section-header">
-                <div class="section-icon">✈️</div>
                 <h2>Flight Details</h2>
             </div>
             <div class="cards-grid">
@@ -1740,7 +1742,6 @@
         {{#if lodging}}
         <div class="section">
             <div class="section-header">
-                <div class="section-icon">🏨</div>
                 <h2>Accommodations</h2>
             </div>
             <div class="cards-grid">
@@ -1757,7 +1758,7 @@
                     <div class="card-header">
                         {{name}}
                         {{#if status}}<span class="lodging-status {{status}}">{{capitalize status}}</span>{{/if}}
-                        {{#if confirmed}}{{#unless status}}<span class="lodging-status confirmed">✓ Confirmed</span>{{/unless}}{{/if}}
+                        {{#if confirmed}}{{#unless status}}<span class="lodging-status confirmed"> Confirmed</span>{{/unless}}{{/if}}
                     </div>
                     <div class="card-body">
                         <div class="card-detail"><span class="label">Location</span><span class="value">{{location}}</span></div>
@@ -1786,7 +1787,6 @@
         {{#if cruiseInfo.cabin.images}}
         <div class="section">
             <div class="section-header">
-                <div class="section-icon">🛏️</div>
                 <h2>Stateroom Photos</h2>
             </div>
             <div class="cabin-media">
@@ -1833,7 +1833,6 @@
         {{#if itinerary}}
         <div class="section">
             <div class="section-header">
-                <div class="section-icon">📍</div>
                 <h2>Day-by-Day Itinerary</h2>
             </div>
             {{#each itinerary}}
@@ -1847,7 +1846,6 @@
                     </div>
                     {{#if lodging}}
                     <div class="daily-lodging">
-                        <span class="hotel-icon">🏨</span>
                         <span class="hotel-name">{{lodging.name}}</span>
                         {{#if lodging.nightNumber}}<span class="night-info">(Night {{lodging.nightNumber}})</span>{{/if}}
                         {{#if lodging.arrival}}<span class="night-info">• Check-in</span>{{/if}}
@@ -1870,7 +1868,7 @@
 
                     {{#if transport}}
                     <div class="transport-info">
-                        <div class="transport-icon">{{default transport.icon "🚗"}}</div>
+                        {{#if transport.icon}}<div class="transport-icon">{{transport.icon}}</div>{{/if}}
                         <div class="transport-details">
                             <div class="mode">{{default transport.details transport.mode}}</div>
                             {{#if transport.departureTime}}
@@ -1890,7 +1888,7 @@
 
                     {{#if driving}}
                     <div class="driving-info">
-                        <div class="driving-header">🚗 Driving Day</div>
+                        <div class="driving-header">Driving Day</div>
                         <div class="driving-stats">
                             {{#if driving.distance}}
                             <div class="driving-stat">
@@ -1910,7 +1908,7 @@
                             <h6>Suggested Stops</h6>
                             {{#each driving.suggestedBreaks}}
                             <div class="break-item">
-                                <span class="location">📍 {{location}}</span>
+                                <span class="location">{{location}}</span>
                                 {{#if reason}}<span class="reason">— {{reason}}</span>{{/if}}
                             </div>
                             {{/each}}
@@ -1918,7 +1916,7 @@
                         {{/if}}
                         {{#if driving.tips}}
                         <div class="day-tips" style="margin-top: 10px; margin-bottom: 0;">
-                            <h5>💡 Driving Tips</h5>
+                            <h5>Driving Tips</h5>
                             <ul>
                             {{#each driving.tips}}
                                 <li>{{this}}</li>
@@ -1971,7 +1969,7 @@
                         </div>
                         {{#if included}}<div class="activity-subtext">Part of your package - no extra cost</div>{{/if}}
                         {{#if optional}}<div class="activity-subtext">Available if you have free time</div>{{/if}}
-                        {{#if description}}<div class="activity-details">{{description}}</div>{{/if}}
+                        {{#if details}}<div class="activity-details">{{details}}</div>{{else}}{{#if description}}<div class="activity-details">{{description}}</div>{{/if}}{{/if}}
                         {{#if notes}}<div class="activity-details">{{notes}}</div>{{/if}}
                         {{#if url}}<a href="{{url}}" class="card-link small-link" target="_blank" rel="noopener noreferrer">More Info →</a>{{/if}}
                     </div>
@@ -1982,7 +1980,7 @@
                     {{#if dining.recommendations}}
                     <!-- Dining recommendations cards -->
                     <div class="dining-recommendations">
-                        <div class="dining-rec-header">🍽️ Restaurant Recommendations</div>
+                        <div class="dining-rec-header">Restaurant Recommendations</div>
                         <div class="dining-rec-grid">
                             {{#each dining.recommendations}}
                             <div class="dining-rec-card">
@@ -2005,7 +2003,7 @@
                     {{else}}
                     <!-- Legacy dining format -->
                     <div class="dining-section">
-                        <div class="dining-header">🍽️ Dining</div>
+                        <div class="dining-header">Dining</div>
                         {{#if dining.recommended}}
                         <div class="dining-item">
                             <span class="meal-type">Recommended:</span>
@@ -2041,7 +2039,7 @@
 
                     {{#if highlights}}
                     <div class="day-highlights">
-                        <h5>⭐ Highlights</h5>
+                        <h5>Highlights</h5>
                         <ul>
                         {{#each highlights}}
                             <li>{{this}}</li>
@@ -2052,7 +2050,7 @@
 
                     {{#if tips}}
                     <div class="day-tips">
-                        <h5>💡 Tips</h5>
+                        <h5>Tips</h5>
                         <ul>
                         {{#each tips}}
                             <li>{{this}}</li>
@@ -2063,7 +2061,7 @@
 
                     {{#if shopping}}
                     <div class="day-shopping">
-                        <h5>🛍️ Shopping</h5>
+                        <h5>Shopping</h5>
                         <div class="shopping-tags">
                         {{#each shopping}}
                             <span class="shopping-tag">{{this}}</span>
@@ -2074,7 +2072,7 @@
 
                     {{#if videos}}
                     <div class="day-videos">
-                        <h5>🎬 Helpful Videos</h5>
+                        <h5>Helpful Videos</h5>
                         <div class="video-grid">
                         {{#each videos}}
                             <div class="video-embed">
@@ -2094,14 +2092,13 @@
         {{#if extras}}
         <div class="section">
             <div class="section-header">
-                <div class="section-icon">💎</div>
                 <h2>Special Recommendations</h2>
             </div>
             <div class="cards-grid">
                 {{#if extras.hiddenGem}}
                 <div class="card" style="border-top: 4px solid #f5a623;">
                     <div class="card-body">
-                        <h4 style="color: #c7880a; margin-bottom: 10px;">🌟 Hidden Gem</h4>
+                        <h4 style="color: #c7880a; margin-bottom: 10px;">Hidden Gem</h4>
                         <p style="font-weight: 600; color: var(--text);">{{extras.hiddenGem.name}}</p>
                         <p style="margin-top: 10px;">{{extras.hiddenGem.why}}</p>
                         {{#if extras.hiddenGem.howToDoIt}}<p style="margin-top: 10px;"><strong>Pro Tip:</strong> {{extras.hiddenGem.howToDoIt}}</p>{{/if}}
@@ -2113,7 +2110,7 @@
                 {{#if extras.waterFeaturePhotoOp}}
                 <div class="card" style="border-top: 4px solid var(--secondary);">
                     <div class="card-body">
-                        <h4 style="color: var(--primary); margin-bottom: 10px;">📸 Photo Opportunity</h4>
+                        <h4 style="color: var(--primary); margin-bottom: 10px;">Photo Opportunity</h4>
                         <p style="font-weight: 600; color: var(--text);">{{extras.waterFeaturePhotoOp.name}}</p>
                         <p style="margin-top: 10px;">{{extras.waterFeaturePhotoOp.why}}</p>
                         {{#if extras.waterFeaturePhotoOp.howToDoIt}}<p style="margin-top: 10px;"><strong>Pro Tip:</strong> {{extras.waterFeaturePhotoOp.howToDoIt}}</p>{{/if}}
@@ -2128,15 +2125,14 @@
         {{#if hiddenGems}}
         <div class="section">
             <div class="section-header">
-                <div class="section-icon">💎</div>
                 <h2>Hidden Gems</h2>
             </div>
             <div class="cards-grid">
                 {{#each hiddenGems}}
                 <div class="card" style="border-top: 4px solid #f5a623;">
                     <div class="card-body">
-                        <h4 style="color: #c7880a; margin-bottom: 10px;">🌟 {{name}}</h4>
-                        {{#if location}}<p style="font-size: 0.9em; color: var(--text-light); margin-bottom: 8px;">📍 {{location}}</p>{{/if}}
+                        <h4 style="color: #c7880a; margin-bottom: 10px;">{{name}}</h4>
+                        {{#if location}}<p style="font-size: 0.9em; color: var(--text-light); margin-bottom: 8px;">{{location}}</p>{{/if}}
                         <p style="color: var(--text);">{{description}}</p>
                         {{#if tip}}<p style="margin-top: 10px;"><strong>Pro Tip:</strong> {{tip}}</p>{{/if}}
                         {{#if url}}<a href="{{url}}" class="card-link" target="_blank" rel="noopener noreferrer">Learn More →</a>{{/if}}
@@ -2151,7 +2147,6 @@
         {{#if localCustoms}}
         <div class="section">
             <div class="section-header">
-                <div class="section-icon">🌍</div>
                 <h2>Local Customs & Etiquette</h2>
             </div>
             <div class="content-box">
@@ -2160,8 +2155,8 @@
                     <div style="padding: 15px; background: var(--bg-light); border-radius: 8px; border-left: 4px solid var(--primary);">
                         <h4 style="color: var(--primary); margin-bottom: 8px;">{{#if url}}<a href="{{url}}" style="color: var(--primary); text-decoration: none;" target="_blank" rel="noopener noreferrer">{{title}}</a>{{else}}{{title}}{{/if}}</h4>
                         <p style="color: var(--text);">{{description}}</p>
-                        {{#if doThis}}<p style="margin-top: 8px; color: var(--accent-dark);"><strong>✓ Do:</strong> {{doThis}}</p>{{/if}}
-                        {{#if avoidThis}}<p style="margin-top: 4px; color: #d32f2f;"><strong>✗ Avoid:</strong> {{avoidThis}}</p>{{/if}}
+                        {{#if doThis}}<p style="margin-top: 8px; color: var(--accent-dark);"><strong> Do:</strong> {{doThis}}</p>{{/if}}
+                        {{#if avoidThis}}<p style="margin-top: 4px; color: #d32f2f;"><strong> Avoid:</strong> {{avoidThis}}</p>{{/if}}
                         {{#if url}}<a href="{{url}}" class="card-link small-link" target="_blank" rel="noopener noreferrer" style="margin-top: 8px; display: inline-block;">Learn More →</a>{{/if}}
                     </div>
                     {{/each}}
@@ -2174,7 +2169,6 @@
         {{#if freeActivities}}
         <div class="section">
             <div class="section-header">
-                <div class="section-icon">🎁</div>
                 <h2>Free Things to Do</h2>
             </div>
             <div class="content-box" style="background: linear-gradient(135deg, #e8f5e9 0%, #fff 100%); border-color: #4caf50;">
@@ -2186,7 +2180,7 @@
                             <span style="background: #4caf50; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 600;">FREE</span>
                             <h4 style="color: var(--text); font-size: 1em;">{{#if url}}<a href="{{url}}" style="color: var(--primary); text-decoration: none;" target="_blank" rel="noopener noreferrer">{{name}}</a>{{else}}{{name}}{{/if}}</h4>
                         </div>
-                        {{#if location}}<p style="font-size: 0.85em; color: var(--text-light); margin-bottom: 6px;">📍 {{location}}</p>{{/if}}
+                        {{#if location}}<p style="font-size: 0.85em; color: var(--text-light); margin-bottom: 6px;">{{location}}</p>{{/if}}
                         <p style="font-size: 0.95em; color: var(--text);">{{description}}</p>
                         {{#if bestTime}}<p style="margin-top: 8px; font-size: 0.85em; color: var(--primary);"><strong>Best time:</strong> {{bestTime}}</p>{{/if}}
                         {{#if url}}<a href="{{url}}" class="card-link small-link" target="_blank" rel="noopener noreferrer" style="margin-top: 8px; display: inline-block;">Learn More →</a>{{/if}}
@@ -2201,43 +2195,42 @@
         {{#if packingTips}}
         <div class="section">
             <div class="section-header">
-                <div class="section-icon">🧳</div>
                 <h2>Packing Tips</h2>
             </div>
             <div class="content-box">
                 {{#if packingTips.essentials}}
-                <div style="margin-bottom: 20px;">
-                    <h4 style="color: var(--primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">✓ Essentials</h4>
-                    <ul style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+                <div style="margin-bottom: 16px;">
+                    <h4 style="color: var(--primary); margin-bottom: 10px; font-size: 0.95em; text-transform: uppercase; letter-spacing: 0.5px;">Essentials</h4>
+                    <ul class="packing-grid">
                         {{#each packingTips.essentials}}
-                        <li style="list-style: none; padding: 8px 12px; background: var(--bg-light); border-radius: 6px;">{{this}}</li>
+                        <li class="packing-item essential">{{this}}</li>
                         {{/each}}
                     </ul>
                 </div>
                 {{/if}}
                 {{#if packingTips.recommended}}
-                <div style="margin-bottom: 20px;">
-                    <h4 style="color: var(--accent); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">👍 Recommended</h4>
-                    <ul style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+                <div style="margin-bottom: 16px;">
+                    <h4 style="color: var(--accent); margin-bottom: 10px; font-size: 0.95em; text-transform: uppercase; letter-spacing: 0.5px;">Recommended</h4>
+                    <ul class="packing-grid">
                         {{#each packingTips.recommended}}
-                        <li style="list-style: none; padding: 8px 12px; background: var(--accent-light); border-radius: 6px;">{{this}}</li>
+                        <li class="packing-item recommended">{{this}}</li>
                         {{/each}}
                     </ul>
                 </div>
                 {{/if}}
                 {{#if packingTips.skip}}
-                <div style="margin-bottom: 20px;">
-                    <h4 style="color: #d32f2f; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">✗ Skip These</h4>
-                    <ul style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+                <div style="margin-bottom: 16px;">
+                    <h4 style="color: #d32f2f; margin-bottom: 10px; font-size: 0.95em; text-transform: uppercase; letter-spacing: 0.5px;">Skip These</h4>
+                    <ul class="packing-grid">
                         {{#each packingTips.skip}}
-                        <li style="list-style: none; padding: 8px 12px; background: #ffebee; border-radius: 6px; color: #c62828;">{{this}}</li>
+                        <li class="packing-item skip">{{this}}</li>
                         {{/each}}
                     </ul>
                 </div>
                 {{/if}}
                 {{#if packingTips.weather}}
-                <div class="highlight-box" style="margin-top: 15px;">
-                    <h4>🌤️ Weather & Clothing</h4>
+                <div class="highlight-box" style="margin-top: 12px;">
+                    <h4 style="font-size: 0.95em;">Weather & Clothing</h4>
                     <p>{{packingTips.weather}}</p>
                 </div>
                 {{/if}}
@@ -2249,7 +2242,6 @@
         {{#if featuredLinks}}
         <div class="section">
             <div class="section-header">
-                <div class="section-icon">🔗</div>
                 <h2>Useful Resources</h2>
             </div>
             <div class="cards-grid">
@@ -2270,7 +2262,6 @@
         {{#if tiers}}
         <div class="section">
             <div class="section-header">
-                <div class="section-icon">📊</div>
                 <h2>Package Options</h2>
             </div>
             <div class="cards-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
@@ -2326,26 +2317,18 @@
         </div>
         {{/if}}
 
-        <!-- Notes Section -->
-        {{#if notes}}
+        <!-- Notes Section - only render if notes is an array with items -->
+        {{#if notes.0}}
         <div class="section">
             <div class="section-header">
-                <div class="section-icon">📝</div>
                 <h2>Important Notes</h2>
             </div>
             <div class="notes-section">
-                <h4>📌 Trip Notes</h4>
-                {{#if notes.0}}
-                <!-- Notes is an array -->
                 <ul>
                     {{#each notes}}
                     <li>{{this}}</li>
                     {{/each}}
                 </ul>
-                {{else}}
-                <!-- Notes is a string -->
-                <p>{{notes}}</p>
-                {{/if}}
             </div>
         </div>
         {{/if}}
@@ -2354,7 +2337,6 @@
         {{#if budget}}
         <div class="section">
             <div class="section-header">
-                <div class="section-icon">💰</div>
                 <h2>Investment Summary</h2>
             </div>
             <div class="pricing-box">
@@ -2400,9 +2382,9 @@
                         {{#if _config.agent.title}}<div class="advisor-title">{{_config.agent.title}}</div>{{/if}}
                         {{#if _config.agent.franchise}}<div class="advisor-franchise">{{_config.agent.franchise}}</div>{{/if}}
                         <div class="advisor-contact">
-                            {{#if _config.agent.phone}}<a href="tel:{{_config.agent.phone}}" class="contact-link phone">📞 {{_config.agent.phone}}</a>{{/if}}
-                            {{#if _config.agent.email}}<a href="mailto:{{_config.agent.email}}" class="contact-link email">✉️ {{_config.agent.email}}</a>{{/if}}
-                            {{#if _config.agent.website}}<a href="{{_config.agent.website}}" target="_blank" class="contact-link web">🌐 {{_config.agent.website}}</a>{{/if}}
+                            {{#if _config.agent.phone}}<a href="tel:{{_config.agent.phone}}" class="contact-link phone">{{_config.agent.phone}}</a>{{/if}}
+                            {{#if _config.agent.email}}<a href="mailto:{{_config.agent.email}}" class="contact-link email">{{_config.agent.email}}</a>{{/if}}
+                            {{#if _config.agent.website}}<a href="{{_config.agent.website}}" target="_blank" class="contact-link web">{{_config.agent.website}}</a>{{/if}}
                         </div>
                     </div>
                 </div>
