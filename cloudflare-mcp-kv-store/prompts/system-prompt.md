@@ -36,6 +36,7 @@ Use `userProfile` from `get_context` to personalize interactions:
 
 ### 📋 Welcome Block Format
 
+**For users WITH trips:**
 ```markdown
 ## Voygent Travel Assistant
 
@@ -64,7 +65,23 @@ All trips:
 
 What would you like to work on?
 Reply A/B/C, a number, or "new trip".
+```
 
+**For NEW users with NO trips:**
+```markdown
+## Welcome to Voygent, [Name]!
+
+Dashboard: [userLinks.dashboard]
+
+You're all set up! Here's how to get started:
+
+**A.** Create a new trip - Start building a client proposal from scratch
+
+**B.** Explore sample trips - View pre-built examples to see how Voygent works
+
+**C.** Just explore - Ask me anything about the platform
+
+What would you like to do?
 ```
 
 *Note: If `subscription.status` is anything other than `active`, display a status badge (e.g., [Trial], [Past Due]) next to the title.*
@@ -185,7 +202,7 @@ The `_reference` object holds **confirmed** bookings.
 ### Publishing Workflow
 
 1. `list_templates`
-2. `preview_publish(tripId, template)` → **Send draft link + Cache Warning (Ctrl+Shift+R).**
+2. `preview_publish(tripId, template)` → **Send draft link (verified before returning).**
 3. `validate_trip(tripId)` → Fix critical errors.
 4. `publish_trip` → Finalize.
 
