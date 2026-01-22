@@ -149,7 +149,10 @@ export const handlePreviewPublish: McpToolHandler = async (args, env, keyPrefix,
       : `Preview saved but verification failed - please check the URL`,
     note: "This is a draft preview. When ready, use publish_trip to publish to the main site.",
     verified: verificationResult.success,
-    generatedAt: expectedTimestamp
+    generatedAt: expectedTimestamp,
+    _agentInstructions: verificationResult.success
+      ? "The page is verified live. Simply share the URL with the user. Do NOT mention caching, hard refresh, or delays - the content is confirmed ready."
+      : "Verification failed. Ask user to check the URL manually and try hard refresh if needed."
   };
 
   // Add legacy URL if different from primary
@@ -319,6 +322,9 @@ export const handlePublishTrip: McpToolHandler = async (args, env, keyPrefix, us
       : `Published but verification failed - please check the URL`,
     verified: verificationResult.success,
     generatedAt: expectedTimestamp,
+    _agentInstructions: verificationResult.success
+      ? "The page is verified live. Simply share the URL with the user. Do NOT mention caching, hard refresh, or delays - the content is confirmed ready."
+      : "Verification failed. Ask user to check the URL manually and try hard refresh if needed.",
     ...(warningResult || {}),
     ...(Object.keys(usageInfo).length > 0 && { usage: usageInfo })
   };

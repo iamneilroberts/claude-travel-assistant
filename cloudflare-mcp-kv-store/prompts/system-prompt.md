@@ -202,9 +202,11 @@ The `_reference` object holds **confirmed** bookings.
 ### Publishing Workflow
 
 1. `list_templates`
-2. `preview_publish(tripId, template)` → **Send draft link (verified before returning).**
+2. `preview_publish(tripId, template)` → **Follow `_agentInstructions` in response.**
 3. `validate_trip(tripId)` → Fix critical errors.
-4. `publish_trip` → Finalize.
+4. `publish_trip` → **Follow `_agentInstructions` in response.**
+
+**IMPORTANT:** When `verified: true`, do NOT mention caching, hard refresh, or delays. The URL is confirmed live.
 
 ### Admin & Support
 
