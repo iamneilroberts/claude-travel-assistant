@@ -28,12 +28,13 @@ function extractGeneratedTimestamp(html: string): string | null {
 async function verifyPublishedContent(
   env: Env,
   userId: string,
-  tripId: string,
-  expectedTimestamp: string
+  filename: string,
+  expectedTimestamp: string,
+  folder: 'drafts' | 'published' = 'drafts'
 ): Promise<{ success: boolean; foundTimestamp: string | null }> {
   try {
     // Read directly from R2
-    const r2Key = `drafts/${userId}/${tripId}.html`;
+    const r2Key = `${folder}/${userId}/${filename}`;
     const object = await env.MEDIA.get(r2Key);
     if (object) {
       const text = await object.text();
@@ -92,47 +93,19 @@ export const handlePreviewPublish: McpToolHandler = async (args, env, keyPrefix,
   // Render using shared template renderer (resolves user default, checks user templates first)
   const html = await renderTripHtml(env, tripData, template, userProfile, fullKey, keyPrefix);
 
-  // Determine URLs based on whether user has a subdomain
+  // Previews always go to R2 for speed
   const userId = keyPrefix.replace(/\/$/, '');
-  let previewUrl: string;
-  let legacyUrl: string | null = null;
 
-  // Always try to save to R2 for subdomain serving
-  if (userProfile?.subdomain || userProfile?.customDomain) {
-    // Save to R2 drafts folder for subdomain serving
-    await saveDraftTrip(env, userId, tripId, html);
-
-    // Build preview URL: customDomain > subdomain
-    if (userProfile?.customDomain) {
-      previewUrl = `https://${userProfile.customDomain}/drafts/${tripId}.html`;
-    } else {
-      previewUrl = `https://${userProfile.subdomain}.voygent.ai/drafts/${tripId}.html`;
-    }
-
-    // Also publish to GitHub as backup (non-blocking)
-    if (env.GITHUB_TOKEN && env.GITHUB_REPO) {
-      try {
-        const draftFilename = `drafts/${tripId}.html`;
-        legacyUrl = await publishDraftToGitHub(env, draftFilename, html);
-      } catch (err) {
-        console.error('Failed to publish to GitHub (non-blocking):', err);
-      }
-    }
-  } else {
-    // No subdomain - use GitHub as primary
-    if (!env.GITHUB_TOKEN) throw new Error("GitHub token not configured. Run: wrangler secret put GITHUB_TOKEN");
-    if (!env.GITHUB_REPO) throw new Error("GitHub repo not configured in wrangler.toml");
-
-    const draftFilename = `drafts/${tripId}.html`;
-    previewUrl = await publishDraftToGitHub(env, draftFilename, html);
-
-    // Also save to R2 in case user sets up subdomain later
-    try {
-      await saveDraftTrip(env, userId, tripId, html);
-    } catch (err) {
-      console.error('Failed to save to R2 (non-blocking):', err);
-    }
+  // User must have a subdomain for previews
+  if (!userProfile?.subdomain) {
+    throw new Error("No subdomain configured. Please contact support to set up your account.");
   }
+
+  // Save to R2 drafts folder
+  await saveDraftTrip(env, userId, tripId, html);
+
+  // Preview URL is always subdomain (R2-served)
+  const previewUrl = `https://${userProfile.subdomain}.voygent.ai/drafts/${tripId}.html`;
 
   // Extract timestamp from rendered HTML for verification
   const expectedTimestamp = extractGeneratedTimestamp(html);
@@ -140,7 +113,7 @@ export const handlePreviewPublish: McpToolHandler = async (args, env, keyPrefix,
   // Verify the content was saved to R2 correctly
   let verificationResult: { success: boolean; foundTimestamp: string | null } = { success: false, foundTimestamp: null };
   if (expectedTimestamp) {
-    verificationResult = await verifyPublishedContent(env, userId, tripId, expectedTimestamp);
+    verificationResult = await verifyPublishedContent(env, userId, `${tripId}.html`, expectedTimestamp, 'drafts');
   }
 
   // Analyze open slots for profitability opportunities
@@ -160,11 +133,6 @@ export const handlePreviewPublish: McpToolHandler = async (args, env, keyPrefix,
       ? "The page is verified live. Simply share the URL with the user. Do NOT mention caching, hard refresh, or delays - the content is confirmed ready."
       : "Verification failed. Ask user to check the URL manually and try hard refresh if needed."
   };
-
-  // Add legacy URL if different from primary
-  if (legacyUrl && legacyUrl !== previewUrl) {
-    result.legacyUrl = legacyUrl;
-  }
 
   // Include open slot analysis for profitability check
   result.openSlotAnalysis = {
@@ -253,10 +221,6 @@ export const handlePublishTrip: McpToolHandler = async (args, env, keyPrefix, us
   // Note: Users without subscription data (legacy users) can still publish
   // This maintains backward compatibility during transition period
 
-  // Check GitHub config
-  if (!env.GITHUB_TOKEN) throw new Error("GitHub token not configured. Run: wrangler secret put GITHUB_TOKEN");
-  if (!env.GITHUB_REPO) throw new Error("GitHub repo not configured in wrangler.toml");
-
   // Read trip data
   const fullKey = keyPrefix + tripId;
   const tripData = await env.TRIPS.get(fullKey, "json") as any;
@@ -265,20 +229,43 @@ export const handlePublishTrip: McpToolHandler = async (args, env, keyPrefix, us
   // Render using shared template renderer (resolves user default, checks user templates first)
   const html = await renderTripHtml(env, tripData, template, userProfile, fullKey, keyPrefix);
 
-  // Publish to GitHub (legacy - will eventually be deprecated)
-  const publicUrl = await publishToGitHub(env, outputFilename, html, {
-    title: tripData.meta?.clientName || tripData.meta?.destination || tripId,
-    dates: tripData.meta?.dates || tripData.dates?.start || "",
-    destination: tripData.meta?.destination || "",
-    category: category
-  });
-
-  // Save to R2 for subdomain serving (primary approach)
   const userId = keyPrefix.replace(/\/$/, '');
   let primaryUrl: string;
-  let legacyUrl: string | null = null;
 
-  try {
+  // Routing logic:
+  // - customDomain users → GitHub Pages (custom domain DNS points there)
+  // - All others → R2 only, served via subdomain.voygent.ai
+  if (userProfile?.customDomain) {
+    // Custom domain users need GitHub Pages for DNS
+    if (!env.GITHUB_TOKEN) throw new Error("GitHub token not configured. Run: wrangler secret put GITHUB_TOKEN");
+    if (!env.GITHUB_REPO) throw new Error("GitHub repo not configured in wrangler.toml");
+
+    const publicUrl = await publishToGitHub(env, outputFilename, html, {
+      title: tripData.meta?.clientName || tripData.meta?.destination || tripId,
+      dates: tripData.meta?.dates || tripData.dates?.start || "",
+      destination: tripData.meta?.destination || "",
+      category: category
+    });
+
+    primaryUrl = `https://${userProfile.customDomain}/${outputFilename}`;
+
+    // Also save to R2 as backup (non-blocking)
+    try {
+      await savePublishedTrip(env, userId, tripId, html, {
+        filename: outputFilename,
+        title: tripData.meta?.clientName || tripData.meta?.destination || tripId,
+        destination: tripData.meta?.destination,
+        category: category
+      });
+    } catch (err) {
+      console.error('Failed to save to R2 (non-blocking):', err);
+    }
+  } else {
+    // Standard users: R2 only, served via subdomain
+    if (!userProfile?.subdomain) {
+      throw new Error("No subdomain configured. Please contact support to set up your account.");
+    }
+
     await savePublishedTrip(env, userId, tripId, html, {
       filename: outputFilename,
       title: tripData.meta?.clientName || tripData.meta?.destination || tripId,
@@ -286,21 +273,7 @@ export const handlePublishTrip: McpToolHandler = async (args, env, keyPrefix, us
       category: category
     });
 
-    // Build primary URL: customDomain > subdomain > GitHub
-    if (userProfile?.customDomain) {
-      primaryUrl = `https://${userProfile.customDomain}/${outputFilename}`;
-      legacyUrl = publicUrl;
-    } else if (userProfile?.subdomain) {
-      primaryUrl = `https://${userProfile.subdomain}.voygent.ai/trips/${outputFilename}`;
-      legacyUrl = publicUrl;
-    } else {
-      // No subdomain - GitHub is primary
-      primaryUrl = publicUrl;
-    }
-  } catch (err) {
-    console.error('Failed to save to R2:', err);
-    // Fall back to GitHub URL
-    primaryUrl = publicUrl;
+    primaryUrl = `https://${userProfile.subdomain}.voygent.ai/trips/${outputFilename}`;
   }
 
   // Extract timestamp from rendered HTML for verification
@@ -309,7 +282,7 @@ export const handlePublishTrip: McpToolHandler = async (args, env, keyPrefix, us
   // Verify the content was saved correctly (R2 is authoritative)
   let verificationResult: { success: boolean; foundTimestamp: string | null } = { success: false, foundTimestamp: null };
   if (expectedTimestamp) {
-    verificationResult = await verifyPublishedContent(env, userId, tripId, expectedTimestamp);
+    verificationResult = await verifyPublishedContent(env, userId, outputFilename, expectedTimestamp, 'published');
   }
 
   // Increment publish count for subscription tracking
@@ -327,7 +300,6 @@ export const handlePublishTrip: McpToolHandler = async (args, env, keyPrefix, us
   const result = {
     success: true,
     url: primaryUrl,
-    ...(legacyUrl && { legacyUrl }),
     filename: outputFilename,
     tripId,
     template,
