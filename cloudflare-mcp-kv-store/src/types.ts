@@ -48,6 +48,7 @@ export interface UserProfile {
   };
   affiliates?: AffiliateIds;
   subdomain?: string;  // e.g., "trial-abc123" or "kimstravel"
+  customDomain?: string;  // e.g., "somotravel.us" for pro users with custom domains
   created: string;
   lastActive: string;
   status: 'active' | 'inactive' | 'pending' | 'suspended';

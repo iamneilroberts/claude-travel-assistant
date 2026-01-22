@@ -98,10 +98,16 @@ export const handlePreviewPublish: McpToolHandler = async (args, env, keyPrefix,
   let legacyUrl: string | null = null;
 
   // Always try to save to R2 for subdomain serving
-  if (userProfile?.subdomain) {
+  if (userProfile?.subdomain || userProfile?.customDomain) {
     // Save to R2 drafts folder for subdomain serving
     await saveDraftTrip(env, userId, tripId, html);
-    previewUrl = `https://${userProfile.subdomain}.voygent.ai/drafts/${tripId}.html`;
+
+    // Build preview URL: customDomain > subdomain
+    if (userProfile?.customDomain) {
+      previewUrl = `https://${userProfile.customDomain}/drafts/${tripId}.html`;
+    } else {
+      previewUrl = `https://${userProfile.subdomain}.voygent.ai/drafts/${tripId}.html`;
+    }
 
     // Also publish to GitHub as backup (non-blocking)
     if (env.GITHUB_TOKEN && env.GITHUB_REPO) {
@@ -267,9 +273,11 @@ export const handlePublishTrip: McpToolHandler = async (args, env, keyPrefix, us
     category: category
   });
 
-  // Also save to R2 for subdomain serving (new approach)
+  // Save to R2 for subdomain serving (primary approach)
   const userId = keyPrefix.replace(/\/$/, '');
-  let subdomainUrl: string | null = null;
+  let primaryUrl: string;
+  let legacyUrl: string | null = null;
+
   try {
     await savePublishedTrip(env, userId, tripId, html, {
       filename: outputFilename,
@@ -278,13 +286,21 @@ export const handlePublishTrip: McpToolHandler = async (args, env, keyPrefix, us
       category: category
     });
 
-    // Build subdomain URL if user has one
-    if (userProfile?.subdomain) {
-      subdomainUrl = `https://${userProfile.subdomain}.voygent.ai/trips/${outputFilename}`;
+    // Build primary URL: customDomain > subdomain > GitHub
+    if (userProfile?.customDomain) {
+      primaryUrl = `https://${userProfile.customDomain}/${outputFilename}`;
+      legacyUrl = publicUrl;
+    } else if (userProfile?.subdomain) {
+      primaryUrl = `https://${userProfile.subdomain}.voygent.ai/trips/${outputFilename}`;
+      legacyUrl = publicUrl;
+    } else {
+      // No subdomain - GitHub is primary
+      primaryUrl = publicUrl;
     }
   } catch (err) {
     console.error('Failed to save to R2:', err);
-    // Don't fail the publish - GitHub is the primary for now
+    // Fall back to GitHub URL
+    primaryUrl = publicUrl;
   }
 
   // Extract timestamp from rendered HTML for verification
@@ -310,15 +326,13 @@ export const handlePublishTrip: McpToolHandler = async (args, env, keyPrefix, us
 
   const result = {
     success: true,
-    url: publicUrl,
-    subdomainUrl: subdomainUrl,
+    url: primaryUrl,
+    ...(legacyUrl && { legacyUrl }),
     filename: outputFilename,
     tripId,
     template,
     message: verificationResult.success
-      ? (subdomainUrl
-          ? `Published! View at ${subdomainUrl} (or legacy URL: ${publicUrl})`
-          : `Published! View at ${publicUrl}`)
+      ? `Published! View at ${primaryUrl}`
       : `Published but verification failed - please check the URL`,
     verified: verificationResult.success,
     generatedAt: expectedTimestamp,
