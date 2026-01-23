@@ -29,9 +29,18 @@ import {
   getTripsPageHtml,
   getCommentsPageHtml,
   getSettingsPageHtml,
-  getMagicLinkSentHtml
+  getMagicLinkSentHtml,
+  getMessagesPageHtml,
+  getThreadPageHtml
 } from '../../user-dashboard-pages';
 import { getMonthlyUsage } from '../../lib/usage';
+import {
+  handleToggleTest,
+  handleArchive,
+  handleDelete,
+  handleCopy,
+  handleRename
+} from './trip-actions';
 
 /**
  * Handle all dashboard routes for a user subdomain
@@ -124,12 +133,36 @@ export async function handleUserDashboard(
 
   // Trips page
   if (path === '/admin/trips') {
-    return addSessionCookie(await handleTripsPage(request, env, ctx, userProfile, session, subdomain, corsHeaders));
+    return addSessionCookie(await handleTripsPage(request, env, ctx, url, userProfile, session, subdomain, corsHeaders));
   }
 
   // Comments page
   if (path === '/admin/comments') {
     return addSessionCookie(await handleCommentsPage(request, env, ctx, userProfile, session, subdomain, corsHeaders));
+  }
+
+  // Messages page
+  if (path === '/admin/messages' && method === 'GET') {
+    return addSessionCookie(await handleMessagesPage(request, env, ctx, userProfile, session, subdomain, corsHeaders));
+  }
+
+  // Thread detail page
+  const threadMatch = path.match(/^\/admin\/messages\/thread\/([^/]+)$/);
+  if (threadMatch && method === 'GET') {
+    const threadId = threadMatch[1];
+    return addSessionCookie(await handleThreadPage(request, env, ctx, userProfile, session, subdomain, threadId, corsHeaders));
+  }
+
+  // Reply to thread
+  const replyMatch = path.match(/^\/admin\/messages\/thread\/([^/]+)\/reply$/);
+  if (replyMatch && method === 'POST') {
+    const threadId = replyMatch[1];
+    return addSessionCookie(await handleThreadReply(request, env, userProfile, session, subdomain, threadId, corsHeaders));
+  }
+
+  // Dismiss broadcast
+  if (path === '/admin/messages/dismiss' && method === 'POST') {
+    return addSessionCookie(await handleDismissMessage(request, env, userProfile, session, subdomain, corsHeaders));
   }
 
   // Settings page
@@ -145,6 +178,28 @@ export async function handleUserDashboard(
   // Branding settings form submission
   if (path === '/admin/settings/branding' && method === 'POST') {
     return addSessionCookie(await handleBrandingUpdate(request, env, userProfile, session, subdomain, corsHeaders));
+  }
+
+  // === Trip Actions ===
+
+  // Extract trip ID from path for trip actions
+  const tripActionMatch = path.match(/^\/admin\/trips\/([^/]+)\/(toggle-test|archive|delete|copy|rename)$/);
+  if (tripActionMatch && method === 'POST') {
+    const tripId = tripActionMatch[1];
+    const action = tripActionMatch[2];
+
+    switch (action) {
+      case 'toggle-test':
+        return addSessionCookie(await handleToggleTest(request, env, ctx, userProfile, session, subdomain, tripId, corsHeaders));
+      case 'archive':
+        return addSessionCookie(await handleArchive(request, env, ctx, userProfile, session, subdomain, tripId, corsHeaders));
+      case 'delete':
+        return addSessionCookie(await handleDelete(request, env, ctx, userProfile, session, subdomain, tripId, corsHeaders));
+      case 'copy':
+        return addSessionCookie(await handleCopy(request, env, ctx, userProfile, session, subdomain, tripId, corsHeaders));
+      case 'rename':
+        return addSessionCookie(await handleRename(request, env, ctx, userProfile, session, subdomain, tripId, corsHeaders));
+    }
   }
 
   // Unknown admin route
@@ -361,6 +416,7 @@ async function handleTripsPage(
   request: Request,
   env: Env,
   ctx: ExecutionContext,
+  url: URL,
   userProfile: UserProfile,
   session: Session,
   subdomain: string,
@@ -379,9 +435,20 @@ async function handleTripsPage(
   const publishedTrips = await listPublishedTrips(env, userProfile.userId);
   const publishedMap = new Map(publishedTrips.map(t => [t.tripId, t]));
 
+  // Get filter params from URL
+  const showTestTrips = url.searchParams.get('showTest') === '1';
+  const showArchived = url.searchParams.get('showArchived') === '1';
+
+  // Filter summaries based on URL params
+  const filteredSummaries = tripSummaries.filter(summary => {
+    if (!showTestTrips && summary.isTest) return false;
+    if (!showArchived && summary.isArchived) return false;
+    return true;
+  });
+
   // Combine trip data with stats
   const tripsWithStats = await Promise.all(
-    tripSummaries.map(async summary => {
+    filteredSummaries.map(async summary => {
       const published = publishedMap.get(summary.tripId);
       const stats = published
         ? await getTripStats(env, userProfile.userId, summary.tripId, 7)
@@ -398,12 +465,24 @@ async function handleTripsPage(
         category: published?.category || 'proposal',
         publishedAt: published?.publishedAt,
         viewsTotal: stats.totalViews,
-        viewsLast7Days: stats.dailyViews.reduce((sum: number, d: any) => sum + d.views, 0)
+        viewsLast7Days: stats.dailyViews.reduce((sum: number, d: any) => sum + d.views, 0),
+        isTest: summary.isTest,
+        isArchived: summary.isArchived
       };
     })
   );
 
-  const html = getTripsPageHtml(userProfile, subdomain, tripsWithStats);
+  // Count hidden trips
+  const testTripCount = tripSummaries.filter(s => s.isTest).length;
+  const archivedTripCount = tripSummaries.filter(s => s.isArchived).length;
+
+  const html = getTripsPageHtml(
+    userProfile,
+    subdomain,
+    tripsWithStats,
+    session.csrfToken,
+    { showTestTrips, showArchived, testTripCount, archivedTripCount }
+  );
 
   return new Response(html, {
     headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders }
@@ -516,6 +595,217 @@ async function handleSettingsUpdate(
     console.error('Settings update error:', err);
     return Response.redirect(`https://${subdomain}.voygent.ai/admin/settings?error=1`, 302);
   }
+}
+
+/**
+ * Handle messages page
+ */
+async function handleMessagesPage(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+  userProfile: UserProfile,
+  session: Session,
+  subdomain: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  // Load broadcasts (non-dismissed for this user)
+  const broadcastData = await env.TRIPS.get("_admin_messages/broadcasts", "json") as { messages: any[] } | null;
+  const userStateKey = `_admin_messages/user_states/${userProfile.userId}`;
+  const userState = await env.TRIPS.get(userStateKey, "json") as { dismissedBroadcasts: string[] } | null;
+  const dismissedIds = new Set(userState?.dismissedBroadcasts || []);
+
+  const now = new Date().toISOString();
+  const broadcasts = (broadcastData?.messages || [])
+    .filter((b: any) => !dismissedIds.has(b.id) && (!b.expiresAt || b.expiresAt > now));
+
+  // Load direct message threads for this user
+  const threadsKey = `_admin_messages/threads/${userProfile.userId}`;
+  const threadsData = await env.TRIPS.get(threadsKey, "json") as { threads: any[] } | null;
+  const threads = (threadsData?.threads || []).map((t: any) => {
+    const unreadCount = t.messages.filter((m: any) => m.sender === 'admin' && !m.read).length;
+    const lastMsg = t.messages[t.messages.length - 1];
+    return {
+      id: t.id,
+      subject: t.subject,
+      status: t.status,
+      unreadCount,
+      lastMessage: lastMsg ? {
+        sender: lastMsg.sender,
+        preview: (lastMsg.body || '').substring(0, 100),
+        timestamp: lastMsg.timestamp
+      } : null,
+      messageCount: t.messages.length
+    };
+  });
+
+  // Calculate total unread
+  const unreadTotal = threads.reduce((sum: number, t: any) => sum + t.unreadCount, 0) + broadcasts.length;
+
+  const html = getMessagesPageHtml(
+    userProfile,
+    subdomain,
+    { broadcasts, threads, unreadTotal },
+    session.csrfToken
+  );
+
+  return new Response(html, {
+    headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders }
+  });
+}
+
+/**
+ * Handle thread detail page
+ */
+async function handleThreadPage(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+  userProfile: UserProfile,
+  session: Session,
+  subdomain: string,
+  threadId: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  const threadsKey = `_admin_messages/threads/${userProfile.userId}`;
+  const threadsData = await env.TRIPS.get(threadsKey, "json") as { threads: any[] } | null;
+  const thread = threadsData?.threads?.find((t: any) => t.id === threadId);
+
+  if (!thread) {
+    return Response.redirect(`https://${subdomain}.voygent.ai/admin/messages`, 302);
+  }
+
+  // Mark admin messages as read
+  let updated = false;
+  for (const msg of thread.messages) {
+    if (msg.sender === 'admin' && !msg.read) {
+      msg.read = true;
+      updated = true;
+    }
+  }
+  if (updated && threadsData) {
+    await env.TRIPS.put(threadsKey, JSON.stringify(threadsData));
+  }
+
+  const html = getThreadPageHtml(
+    userProfile,
+    subdomain,
+    {
+      id: thread.id,
+      subject: thread.subject,
+      status: thread.status,
+      messages: thread.messages
+    },
+    session.csrfToken
+  );
+
+  return new Response(html, {
+    headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders }
+  });
+}
+
+/**
+ * Handle thread reply
+ */
+async function handleThreadReply(
+  request: Request,
+  env: Env,
+  userProfile: UserProfile,
+  session: Session,
+  subdomain: string,
+  threadId: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  // Validate CSRF
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return new Response('Invalid form data', { status: 400, headers: corsHeaders });
+  }
+
+  const csrfToken = formData.get('_csrf') as string | null;
+  const { validateCsrfToken, validateRequestOrigin } = await import('../../lib/session');
+
+  if (!validateRequestOrigin(request, `${subdomain}.voygent.ai`)) {
+    return new Response('Invalid request origin', { status: 403, headers: corsHeaders });
+  }
+  if (!validateCsrfToken(session, csrfToken)) {
+    return new Response('Invalid CSRF token', { status: 403, headers: corsHeaders });
+  }
+
+  const message = formData.get('message') as string;
+  if (!message?.trim()) {
+    return Response.redirect(`https://${subdomain}.voygent.ai/admin/messages/thread/${threadId}`, 302);
+  }
+
+  const threadsKey = `_admin_messages/threads/${userProfile.userId}`;
+  const threadsData = await env.TRIPS.get(threadsKey, "json") as { threads: any[] } | null;
+  const thread = threadsData?.threads?.find((t: any) => t.id === threadId);
+
+  if (!thread || thread.status !== 'open') {
+    return Response.redirect(`https://${subdomain}.voygent.ai/admin/messages`, 302);
+  }
+
+  // Add user reply
+  thread.messages.push({
+    id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    sender: 'user',
+    senderName: userProfile.name || userProfile.email,
+    body: message.trim(),
+    timestamp: new Date().toISOString(),
+    read: false
+  });
+  thread.updatedAt = new Date().toISOString();
+
+  await env.TRIPS.put(threadsKey, JSON.stringify(threadsData));
+
+  return Response.redirect(`https://${subdomain}.voygent.ai/admin/messages/thread/${threadId}`, 302);
+}
+
+/**
+ * Handle dismiss message (broadcast)
+ */
+async function handleDismissMessage(
+  request: Request,
+  env: Env,
+  userProfile: UserProfile,
+  session: Session,
+  subdomain: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  // Validate CSRF
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return new Response('Invalid form data', { status: 400, headers: corsHeaders });
+  }
+
+  const csrfToken = formData.get('_csrf') as string | null;
+  const { validateCsrfToken, validateRequestOrigin } = await import('../../lib/session');
+
+  if (!validateRequestOrigin(request, `${subdomain}.voygent.ai`)) {
+    return new Response('Invalid request origin', { status: 403, headers: corsHeaders });
+  }
+  if (!validateCsrfToken(session, csrfToken)) {
+    return new Response('Invalid CSRF token', { status: 403, headers: corsHeaders });
+  }
+
+  const messageId = formData.get('messageId') as string;
+  const type = formData.get('type') as string;
+
+  if (type === 'broadcast' && messageId) {
+    const userStateKey = `_admin_messages/user_states/${userProfile.userId}`;
+    const userState = await env.TRIPS.get(userStateKey, "json") as { dismissedBroadcasts: string[] } | null || { dismissedBroadcasts: [] };
+
+    if (!userState.dismissedBroadcasts.includes(messageId)) {
+      userState.dismissedBroadcasts.push(messageId);
+      await env.TRIPS.put(userStateKey, JSON.stringify(userState));
+    }
+  }
+
+  return Response.redirect(`https://${subdomain}.voygent.ai/admin/messages`, 302);
 }
 
 /**

@@ -46,13 +46,21 @@ export const CORE_TOOLS: ToolDefinition[] = [
   // ============ TRIP CRUD ============
   {
     name: "list_trips",
-    description: "List all trips with optional summaries.",
+    description: "List all trips with optional summaries. By default hides test and archived trips.",
     inputSchema: {
       type: "object",
       properties: {
         includeSummaries: {
           type: "boolean",
           description: "Include compact trip summaries"
+        },
+        show_test_trips: {
+          type: "boolean",
+          description: "Include test trips (hidden by default)"
+        },
+        show_archived: {
+          type: "boolean",
+          description: "Include archived trips (hidden by default)"
         }
       }
     }
@@ -142,7 +150,7 @@ export const CORE_TOOLS: ToolDefinition[] = [
   },
   {
     name: "get_prompt",
-    description: "Load specialized guide for a topic.",
+    description: "Load specialized guide for a topic. For troubleshooting/faq, includes community-contributed solutions.",
     inputSchema: {
       type: "object",
       properties: {
@@ -153,7 +161,7 @@ export const CORE_TOOLS: ToolDefinition[] = [
         },
         context: {
           type: "string",
-          description: "Optional context for filtering relevant knowledge base entries"
+          description: "Optional: for troubleshooting/faq, describe the issue to filter relevant solutions"
         }
       },
       required: ["name"]
@@ -514,14 +522,14 @@ export const EXTENDED_TOOLS: Record<ToolCategory, ToolDefinition[]> = {
   knowledge: [
     {
       name: "propose_solution",
-      description: "Propose a solution for the knowledge base after resolving a non-obvious issue. Only use for genuinely useful knowledge that would help future users. Admin review required before solutions are added. Limit: 10/day.",
+      description: "Propose a solution for the knowledge base after resolving a non-obvious issue. Only use for genuinely useful knowledge that would help future users. Requires admin approval before being added. Limit: 10/day.",
       inputSchema: {
         type: "object",
         properties: {
           category: {
             type: "string",
             enum: ["troubleshooting", "faq"],
-            description: "Type of knowledge: troubleshooting for problem/fix, faq for how-to/info"
+            description: "Type of knowledge: 'troubleshooting' for problem/fix pairs, 'faq' for common questions"
           },
           problem: {
             type: "string",
@@ -533,7 +541,7 @@ export const EXTENDED_TOOLS: Record<ToolCategory, ToolDefinition[]> = {
           },
           context: {
             type: "string",
-            description: "Optional: what the user was trying to do"
+            description: "Optional: what the user was trying to do (max 300 chars)"
           }
         },
         required: ["category", "problem", "solution"]

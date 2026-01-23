@@ -18,7 +18,7 @@ import {
 import { handleGetActivity } from './activity';
 import { handleGetStats, handleGetBillingStats } from './stats';
 import { handleListTrips, handleRebuildSummaries, handleGetTrip } from './trips';
-import { handleListComments } from './comments';
+import { handleListComments, handleDeleteComment, handleDeleteAllComments } from './comments';
 import { handleListSupport, handleUpdateSupport } from './support';
 import { handleListPromoCodes, handleCreatePromoCode, handleDeletePromoCode } from './promo-codes';
 import {
@@ -111,6 +111,8 @@ const adminHandlers: RouteHandler[] = [
   handleGetTrip,
   // Comments
   handleListComments,
+  handleDeleteComment,
+  handleDeleteAllComments,
   // Support
   handleListSupport,
   handleUpdateSupport,
@@ -225,6 +227,8 @@ export {
   handleRebuildSummaries,
   handleGetTrip,
   handleListComments,
+  handleDeleteComment,
+  handleDeleteAllComments,
   handleListSupport,
   handleUpdateSupport,
   handleListPromoCodes,

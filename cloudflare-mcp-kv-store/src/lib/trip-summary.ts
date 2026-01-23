@@ -5,7 +5,7 @@
 
 import type { Env } from '../types';
 
-export const TRIP_SUMMARY_VERSION = 1;
+export const TRIP_SUMMARY_VERSION = 2;
 const TRIP_SUMMARY_MAX_CONFIRMATIONS = 3;
 const TRIP_SUMMARY_MAX_NEXT_STEPS = 3;
 const TRIP_SUMMARY_DUE_SOON_DAYS = 30;
@@ -41,6 +41,8 @@ export type TripSummary = {
   nextSteps: string[];
   updatedAt: string;
   sourceHash: string;
+  isTest: boolean;
+  isArchived: boolean;
 };
 
 function getTripSummaryKey(keyPrefix: string, tripId: string): string {
@@ -331,7 +333,9 @@ export async function computeTripSummary(tripId: string, tripData: any): Promise
     },
     nextSteps: Array.from(nextStepsSet).slice(0, TRIP_SUMMARY_MAX_NEXT_STEPS),
     updatedAt,
-    sourceHash
+    sourceHash,
+    isTest: !!meta.isTest,
+    isArchived: !!meta.isArchived
   };
 }
 

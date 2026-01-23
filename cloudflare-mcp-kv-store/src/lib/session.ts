@@ -13,6 +13,7 @@ export interface Session {
   subdomain: string;
   createdAt: string;
   expiresAt: string;
+  csrfToken: string;
 }
 
 // Session TTL: 7 days
@@ -33,6 +34,13 @@ async function generateToken(): Promise<string> {
 }
 
 /**
+ * Generate a CSRF token
+ */
+function generateCsrfToken(): string {
+  return crypto.randomUUID();
+}
+
+/**
  * Create a new session
  */
 export async function createSession(
@@ -42,6 +50,7 @@ export async function createSession(
   subdomain: string
 ): Promise<string> {
   const token = await generateToken();
+  const csrfToken = generateCsrfToken();
   const now = new Date();
   const expiresAt = new Date(now.getTime() + SESSION_TTL_SECONDS * 1000);
 
@@ -50,7 +59,8 @@ export async function createSession(
     email,
     subdomain,
     createdAt: now.toISOString(),
-    expiresAt: expiresAt.toISOString()
+    expiresAt: expiresAt.toISOString(),
+    csrfToken
   };
 
   await env.TRIPS.put(
@@ -219,4 +229,53 @@ export async function deleteAllUserSessions(
   }
 
   return tokens.length;
+}
+
+/**
+ * Validate CSRF token from form submission
+ */
+export function validateCsrfToken(session: Session, submittedToken: string | null): boolean {
+  if (!submittedToken || !session.csrfToken) {
+    return false;
+  }
+  // Use constant-time comparison to prevent timing attacks
+  if (submittedToken.length !== session.csrfToken.length) {
+    return false;
+  }
+  let result = 0;
+  for (let i = 0; i < submittedToken.length; i++) {
+    result |= submittedToken.charCodeAt(i) ^ session.csrfToken.charCodeAt(i);
+  }
+  return result === 0;
+}
+
+/**
+ * Validate Origin/Referer header for CSRF protection
+ */
+export function validateRequestOrigin(request: Request, expectedHost: string): boolean {
+  const origin = request.headers.get('Origin');
+  const referer = request.headers.get('Referer');
+
+  // For same-origin requests, Origin header is present
+  if (origin) {
+    try {
+      const originUrl = new URL(origin);
+      return originUrl.host === expectedHost || originUrl.host.endsWith('.voygent.ai');
+    } catch {
+      return false;
+    }
+  }
+
+  // Fall back to Referer header
+  if (referer) {
+    try {
+      const refererUrl = new URL(referer);
+      return refererUrl.host === expectedHost || refererUrl.host.endsWith('.voygent.ai');
+    } catch {
+      return false;
+    }
+  }
+
+  // If neither header is present, reject (POST requests should have Origin)
+  return false;
 }

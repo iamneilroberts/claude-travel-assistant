@@ -288,7 +288,11 @@ function getBranding(userProfile: UserProfile): DashboardBranding {
 /**
  * Common navigation
  */
-function getNav(subdomain: string, activePage: string): string {
+function getNav(subdomain: string, activePage: string, unreadMessages?: number): string {
+  const messagesBadge = unreadMessages && unreadMessages > 0
+    ? `<span style="background:#dc3545;color:white;font-size:0.7rem;padding:0.15rem 0.4rem;border-radius:10px;margin-left:0.25rem;">${unreadMessages}</span>`
+    : '';
+
   return `
     <header class="header">
       <a href="/admin" class="header-brand">${escapeHtml(subdomain)}.voygent.ai</a>
@@ -296,6 +300,7 @@ function getNav(subdomain: string, activePage: string): string {
         <a href="/admin" class="${activePage === 'home' ? 'active' : ''}">Dashboard</a>
         <a href="/admin/trips" class="${activePage === 'trips' ? 'active' : ''}">Trips</a>
         <a href="/admin/comments" class="${activePage === 'comments' ? 'active' : ''}">Comments</a>
+        <a href="/admin/messages" class="${activePage === 'messages' ? 'active' : ''}">Messages${messagesBadge}</a>
         <a href="/admin/settings" class="${activePage === 'settings' ? 'active' : ''}">Settings</a>
         <form action="/admin/logout" method="POST" style="display:inline;">
           <button type="submit" style="background:none;border:none;color:rgba(255,255,255,0.9);cursor:pointer;font-size:0.9rem;">Logout</button>
@@ -577,9 +582,19 @@ export function getTripsPageHtml(
     publishedAt?: string;
     viewsTotal: number;
     viewsLast7Days: number;
-  }>
+    isTest?: boolean;
+    isArchived?: boolean;
+  }>,
+  csrfToken?: string,
+  filters?: {
+    showTestTrips: boolean;
+    showArchived: boolean;
+    testTripCount: number;
+    archivedTripCount: number;
+  }
 ): string {
   const branding = getBranding(userProfile);
+  const { showTestTrips = false, showArchived = false, testTripCount = 0, archivedTripCount = 0 } = filters || {};
 
   const tripsHtml = trips.length > 0
     ? trips.map(trip => `
@@ -589,6 +604,8 @@ export function getTripsPageHtml(
               ? `<a href="/trips/${escapeHtml(trip.filename)}">${escapeHtml(trip.title)}</a>`
               : escapeHtml(trip.title)}</strong>
             ${trip.destination ? `<br><small style="color:var(--text-muted);">${escapeHtml(trip.destination)}</small>` : ''}
+            ${trip.isTest ? '<span class="badge badge-info" style="margin-left:0.5rem;">Test</span>' : ''}
+            ${trip.isArchived ? '<span class="badge badge-warning" style="margin-left:0.5rem;">Archived</span>' : ''}
           </td>
           <td>
             ${trip.isPublished
@@ -598,10 +615,44 @@ export function getTripsPageHtml(
           <td>${trip.isPublished ? trip.viewsTotal : '-'}</td>
           <td>${trip.isPublished ? trip.viewsLast7Days : '-'}</td>
           <td>${trip.isPublished && trip.publishedAt ? formatDate(trip.publishedAt) : formatDate(trip.lastModified)}</td>
-          <td>
-            ${trip.isPublished && trip.filename
-              ? `<a href="/trips/${escapeHtml(trip.filename)}" class="btn btn-sm btn-secondary">View</a>`
-              : `<button class="btn btn-sm btn-primary" onclick="openTripInClaude('${escapeHtml(trip.tripId)}', '${escapeHtml(trip.title).replace(/'/g, "\\'")}')">Open in Claude</button>`}
+          <td style="position:relative;">
+            <div class="action-menu">
+              <button class="action-menu-btn" onclick="toggleMenu(this)">
+                Actions <span style="font-size:0.7rem;">▼</span>
+              </button>
+              <div class="action-menu-content">
+                <button class="action-menu-item" onclick="openTripInClaude('${escapeHtml(trip.tripId)}', '${escapeHtml(trip.title).replace(/'/g, "\\'")}')">
+                  Open in Claude
+                </button>
+                ${trip.isPublished && trip.filename ? `
+                <a href="/trips/${escapeHtml(trip.filename)}" class="action-menu-item">
+                  View Published
+                </a>` : ''}
+                <div class="action-menu-divider"></div>
+                <button class="action-menu-item" onclick="showRenameModal('${escapeHtml(trip.tripId)}', '${escapeHtml(trip.title).replace(/'/g, "\\'")}')">
+                  Rename
+                </button>
+                <button class="action-menu-item" onclick="showCopyModal('${escapeHtml(trip.tripId)}', '${escapeHtml(trip.title).replace(/'/g, "\\'")}')">
+                  Duplicate
+                </button>
+                <form action="/admin/trips/${escapeHtml(trip.tripId)}/toggle-test" method="POST" style="margin:0;">
+                  <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken || '')}">
+                  <button type="submit" class="action-menu-item">
+                    ${trip.isTest ? 'Unmark as Test' : 'Mark as Test'}
+                  </button>
+                </form>
+                <form action="/admin/trips/${escapeHtml(trip.tripId)}/archive" method="POST" style="margin:0;">
+                  <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken || '')}">
+                  <button type="submit" class="action-menu-item">
+                    ${trip.isArchived ? 'Unarchive' : 'Archive'}
+                  </button>
+                </form>
+                <div class="action-menu-divider"></div>
+                <button class="action-menu-item danger" onclick="showDeleteModal('${escapeHtml(trip.tripId)}', '${escapeHtml(trip.title).replace(/'/g, "\\'")}')">
+                  Delete
+                </button>
+              </div>
+            </div>
           </td>
         </tr>
       `).join('')
@@ -611,6 +662,97 @@ export function getTripsPageHtml(
 <html lang="en">
 <head>
   ${getCommonHead('Trips', branding)}
+  <style>
+    /* Action Menu Styles */
+    .action-menu { position: relative; display: inline-block; }
+    .action-menu-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      color: var(--text);
+    }
+    .action-menu-btn:hover { background: var(--border); }
+    .action-menu-content {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 100%;
+      background: var(--card-bg);
+      min-width: 160px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      border-radius: 8px;
+      z-index: 100;
+      overflow: hidden;
+      margin-top: 4px;
+      border: 1px solid var(--border);
+    }
+    .action-menu.open .action-menu-content { display: block; }
+    .action-menu-item {
+      display: block;
+      width: 100%;
+      padding: 0.6rem 1rem;
+      border: none;
+      background: none;
+      text-align: left;
+      font-size: 0.85rem;
+      cursor: pointer;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .action-menu-item:hover { background: var(--surface); text-decoration: none; }
+    .action-menu-item.danger { color: var(--danger); }
+    .action-menu-item.danger:hover { background: rgba(220, 53, 69, 0.1); }
+    .action-menu-divider { height: 1px; background: var(--border); margin: 0.25rem 0; }
+
+    /* Filter Bar Styles */
+    .filter-bar {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .filter-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .filter-toggle input { cursor: pointer; }
+
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal.active { display: flex; }
+    .modal-content {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 1.5rem;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    }
+    .modal-content h3 { margin-bottom: 1rem; }
+    .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem; }
+  </style>
 </head>
 <body>
   ${getNav(subdomain, 'trips')}
@@ -618,11 +760,142 @@ export function getTripsPageHtml(
   <div class="container">
     <h1 class="page-title">All Trips</h1>
 
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <label class="filter-toggle">
+        <input type="checkbox" ${showTestTrips ? 'checked' : ''} onchange="toggleFilter('showTest', this.checked)">
+        Show test trips (${testTripCount})
+      </label>
+      <label class="filter-toggle">
+        <input type="checkbox" ${showArchived ? 'checked' : ''} onchange="toggleFilter('showArchived', this.checked)">
+        Show archived (${archivedTripCount})
+      </label>
+    </div>
+
     <!-- Toast notification -->
     <div id="toast" style="display:none;position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:#333;color:white;padding:1rem 1.5rem;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:1000;max-width:90%;text-align:center;">
       <div id="toast-message"></div>
     </div>
+
+    <!-- Rename Modal -->
+    <div id="renameModal" class="modal">
+      <div class="modal-content">
+        <h3>Rename Trip</h3>
+        <form id="renameForm" method="POST">
+          <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken || '')}">
+          <div class="form-group">
+            <label class="form-label">New Name</label>
+            <input type="text" name="newName" id="renameInput" class="form-input" required>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('renameModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">Rename</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Copy Modal -->
+    <div id="copyModal" class="modal">
+      <div class="modal-content">
+        <h3>Duplicate Trip</h3>
+        <form id="copyForm" method="POST">
+          <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken || '')}">
+          <div class="form-group">
+            <label class="form-label">New Name</label>
+            <input type="text" name="newName" id="copyInput" class="form-input" required>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('copyModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">Duplicate</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal">
+      <div class="modal-content">
+        <h3>Delete Trip</h3>
+        <p id="deleteMessage" style="margin-bottom:1rem;"></p>
+        <form id="deleteForm" method="POST">
+          <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken || '')}">
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('deleteModal')">Cancel</button>
+            <button type="submit" class="btn btn-danger">Delete</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <script>
+      // Filter functions
+      function toggleFilter(filter, checked) {
+        const url = new URL(window.location.href);
+        if (checked) {
+          url.searchParams.set(filter, '1');
+        } else {
+          url.searchParams.delete(filter);
+        }
+        window.location.href = url.toString();
+      }
+
+      // Action menu toggle
+      function toggleMenu(btn) {
+        // Close other menus
+        document.querySelectorAll('.action-menu.open').forEach(m => {
+          if (m !== btn.parentElement) m.classList.remove('open');
+        });
+        btn.parentElement.classList.toggle('open');
+      }
+
+      // Close menus when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.action-menu')) {
+          document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));
+        }
+      });
+
+      // Modal functions
+      function showRenameModal(tripId, currentName) {
+        document.getElementById('renameForm').action = '/admin/trips/' + tripId + '/rename';
+        document.getElementById('renameInput').value = currentName;
+        document.getElementById('renameModal').classList.add('active');
+        document.getElementById('renameInput').focus();
+      }
+
+      function showCopyModal(tripId, currentName) {
+        document.getElementById('copyForm').action = '/admin/trips/' + tripId + '/copy';
+        document.getElementById('copyInput').value = currentName + ' (Copy)';
+        document.getElementById('copyModal').classList.add('active');
+        document.getElementById('copyInput').focus();
+      }
+
+      function showDeleteModal(tripId, tripTitle) {
+        document.getElementById('deleteForm').action = '/admin/trips/' + tripId + '/delete';
+        document.getElementById('deleteMessage').textContent = 'Are you sure you want to delete "' + tripTitle + '"? This action cannot be undone.';
+        document.getElementById('deleteModal').classList.add('active');
+      }
+
+      function closeModal(modalId) {
+        document.getElementById(modalId).classList.remove('active');
+      }
+
+      // Close modal on escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          document.querySelectorAll('.modal.active').forEach(m => m.classList.remove('active'));
+        }
+      });
+
+      // Close modal when clicking backdrop
+      document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) modal.classList.remove('active');
+        });
+      });
+
+      // Clipboard functions
       function openTripInClaude(tripId, tripTitle) {
         const command = 'use voygent work on trip ' + tripId;
         navigator.clipboard.writeText(command).then(() => {
@@ -1128,6 +1401,264 @@ export function getSettingsPageHtml(
       </div>
       <p class="form-hint" style="margin-top:0.5rem;">Keep this URL private - it grants access to your account</p>
     </div>
+  </div>
+</body>
+</html>`;
+}
+
+/**
+ * Messages page
+ */
+export function getMessagesPageHtml(
+  userProfile: UserProfile,
+  subdomain: string,
+  data: {
+    broadcasts: Array<{
+      id: string;
+      title: string;
+      body: string;
+      priority: 'normal' | 'urgent';
+      createdAt: string;
+    }>;
+    threads: Array<{
+      id: string;
+      subject: string;
+      status: 'open' | 'closed';
+      unreadCount: number;
+      lastMessage: {
+        sender: 'admin' | 'user';
+        preview: string;
+        timestamp: string;
+      } | null;
+      messageCount: number;
+    }>;
+    unreadTotal: number;
+  },
+  csrfToken?: string
+): string {
+  const branding = getBranding(userProfile);
+
+  const broadcastsHtml = data.broadcasts.length > 0
+    ? data.broadcasts.map(b => `
+        <div class="broadcast-card ${b.priority === 'urgent' ? 'urgent' : ''}">
+          <div class="broadcast-header">
+            <strong>${escapeHtml(b.title)}</strong>
+            ${b.priority === 'urgent' ? '<span class="badge badge-danger">Urgent</span>' : ''}
+          </div>
+          <div class="broadcast-body">${escapeHtml(b.body)}</div>
+          <div class="broadcast-footer">
+            <span class="broadcast-date">${formatDate(b.createdAt)}</span>
+            <form action="/admin/messages/dismiss" method="POST" style="display:inline;">
+              <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken || '')}">
+              <input type="hidden" name="messageId" value="${escapeHtml(b.id)}">
+              <input type="hidden" name="type" value="broadcast">
+              <button type="submit" class="btn btn-sm btn-secondary">Dismiss</button>
+            </form>
+          </div>
+        </div>
+      `).join('')
+    : '';
+
+  const threadsHtml = data.threads.length > 0
+    ? data.threads.map(t => `
+        <a href="/admin/messages/thread/${escapeHtml(t.id)}" class="thread-item ${t.unreadCount > 0 ? 'unread' : ''}">
+          <div class="thread-info">
+            <div class="thread-subject">
+              ${escapeHtml(t.subject)}
+              ${t.unreadCount > 0 ? `<span class="badge badge-info">${t.unreadCount} new</span>` : ''}
+            </div>
+            <div class="thread-preview">
+              ${t.lastMessage ? `<span class="sender">${t.lastMessage.sender === 'admin' ? 'Support' : 'You'}:</span> ${escapeHtml(t.lastMessage.preview)}` : 'No messages'}
+            </div>
+          </div>
+          <div class="thread-meta">
+            <span class="thread-date">${t.lastMessage ? formatDate(t.lastMessage.timestamp) : ''}</span>
+            <span class="badge ${t.status === 'open' ? 'badge-success' : 'badge-warning'}">${t.status}</span>
+          </div>
+        </a>
+      `).join('')
+    : '<p style="color:var(--text-muted);text-align:center;padding:2rem;">No message threads yet</p>';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  ${getCommonHead('Messages', branding)}
+  <style>
+    .broadcast-card {
+      background: var(--card-bg);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-left: 4px solid var(--primary);
+    }
+    .broadcast-card.urgent { border-left-color: var(--danger); background: rgba(220, 53, 69, 0.05); }
+    .broadcast-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    .broadcast-body { font-size: 0.95rem; color: var(--text); margin-bottom: 0.75rem; white-space: pre-wrap; }
+    .broadcast-footer { display: flex; justify-content: space-between; align-items: center; }
+    .broadcast-date { font-size: 0.8rem; color: var(--text-muted); }
+
+    .thread-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      text-decoration: none;
+      color: var(--text);
+      transition: background 0.2s;
+    }
+    .thread-item:hover { background: var(--surface); text-decoration: none; }
+    .thread-item.unread { background: rgba(102, 126, 234, 0.05); }
+    .thread-info { flex: 1; min-width: 0; }
+    .thread-subject { font-weight: 500; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem; }
+    .thread-preview { font-size: 0.85rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .thread-preview .sender { font-weight: 500; }
+    .thread-meta { text-align: right; flex-shrink: 0; margin-left: 1rem; }
+    .thread-date { font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem; }
+  </style>
+</head>
+<body>
+  ${getNav(subdomain, 'messages')}
+
+  <div class="container">
+    <h1 class="page-title">Messages ${data.unreadTotal > 0 ? `<span class="badge badge-info">${data.unreadTotal} unread</span>` : ''}</h1>
+
+    ${data.broadcasts.length > 0 ? `
+      <div class="card">
+        <div class="card-title">Announcements</div>
+        ${broadcastsHtml}
+      </div>
+    ` : ''}
+
+    <div class="card">
+      <div class="card-title">Support Conversations</div>
+      ${threadsHtml}
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+/**
+ * Thread detail page
+ */
+export function getThreadPageHtml(
+  userProfile: UserProfile,
+  subdomain: string,
+  thread: {
+    id: string;
+    subject: string;
+    status: 'open' | 'closed';
+    messages: Array<{
+      id: string;
+      sender: 'admin' | 'user';
+      senderName?: string;
+      body: string;
+      timestamp: string;
+    }>;
+  },
+  csrfToken?: string
+): string {
+  const branding = getBranding(userProfile);
+
+  const messagesHtml = thread.messages.map(m => `
+    <div class="message ${m.sender === 'user' ? 'message-user' : 'message-admin'}">
+      <div class="message-header">
+        <span class="message-sender">${m.sender === 'user' ? 'You' : escapeHtml(m.senderName || 'Voygent Support')}</span>
+        <span class="message-time">${formatDate(m.timestamp)}</span>
+      </div>
+      <div class="message-body">${escapeHtml(m.body)}</div>
+    </div>
+  `).join('');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  ${getCommonHead('Thread: ' + thread.subject, branding)}
+  <style>
+    .thread-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .thread-back { color: var(--text-muted); font-size: 0.9rem; }
+    .messages-container { margin-bottom: 1.5rem; }
+    .message {
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      max-width: 80%;
+    }
+    .message-admin {
+      background: var(--surface);
+      margin-right: auto;
+    }
+    .message-user {
+      background: var(--primary);
+      color: white;
+      margin-left: auto;
+    }
+    .message-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      margin-bottom: 0.5rem;
+      opacity: 0.8;
+    }
+    .message-sender { font-weight: 500; }
+    .message-body { white-space: pre-wrap; }
+    .reply-form {
+      background: var(--card-bg);
+      padding: 1.5rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .reply-form textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 1rem;
+      resize: vertical;
+      margin-bottom: 1rem;
+    }
+    .reply-form textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+  ${getNav(subdomain, 'messages')}
+
+  <div class="container">
+    <div class="thread-header">
+      <div>
+        <a href="/admin/messages" class="thread-back">← Back to Messages</a>
+        <h1 class="page-title" style="margin-bottom:0;">${escapeHtml(thread.subject)}</h1>
+      </div>
+      <span class="badge ${thread.status === 'open' ? 'badge-success' : 'badge-warning'}">${thread.status}</span>
+    </div>
+
+    <div class="messages-container">
+      ${messagesHtml}
+    </div>
+
+    ${thread.status === 'open' ? `
+      <div class="reply-form">
+        <form method="POST" action="/admin/messages/thread/${escapeHtml(thread.id)}/reply">
+          <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken || '')}">
+          <textarea name="message" placeholder="Type your reply..." required></textarea>
+          <button type="submit" class="btn btn-primary">Send Reply</button>
+        </form>
+      </div>
+    ` : '<p style="color:var(--text-muted);text-align:center;">This conversation has been closed.</p>'}
   </div>
 </body>
 </html>`;

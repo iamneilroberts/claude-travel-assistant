@@ -624,7 +624,10 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         <div id="recentActivity"><div class="loading">Loading...</div></div>
       </div>
       <div class="section">
-        <h2>Recent Comments</h2>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <h2 style="margin:0;">Recent Comments</h2>
+          <button class="btn btn-small btn-secondary" onclick="dismissAllComments()" id="dismissAllCommentsBtn" style="display:none;">Dismiss All</button>
+        </div>
         <div id="recentComments"><div class="loading">Loading...</div></div>
       </div>
     </div>
@@ -641,7 +644,13 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <option value="confirmed">Confirmed</option>
           </select>
           <input type="text" id="tripFilterSearch" onkeyup="applyTripFilters()" placeholder="Search trips..." style="width:200px;">
-          <span id="tripCount" style="color:#666;font-size:12px;"></span>
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#8b949e;cursor:pointer;">
+            <input type="checkbox" id="tripFilterShowTest" onchange="applyTripFilters()"> Show test
+          </label>
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#8b949e;cursor:pointer;">
+            <input type="checkbox" id="tripFilterShowArchived" onchange="applyTripFilters()"> Show archived
+          </label>
+          <span id="tripCount" style="color:#8b949e;font-size:12px;"></span>
         </div>
         <div id="tripsTable" style="max-height:600px;overflow-y:auto;"><div class="loading">Loading...</div></div>
       </div>
@@ -1134,6 +1143,79 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
           <button class="btn btn-secondary" onclick="closeThread()">Close Thread</button>
           <button class="btn btn-primary" onclick="sendThreadReply()">Send Reply</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trip Rename Modal -->
+  <div id="tripRenameModal" class="modal">
+    <div class="modal-content">
+      <h3>Rename Trip</h3>
+      <p style="color:#8b949e;margin-bottom:15px;">Trip: <code id="tripRenameId"></code></p>
+      <div class="form-group">
+        <label>New Name *</label>
+        <input type="text" id="tripRenameNewName" required placeholder="Enter new trip name">
+      </div>
+      <input type="hidden" id="tripRenameUserId">
+      <input type="hidden" id="tripRenameTripId">
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button class="btn btn-primary" onclick="executeTripRename()">Rename</button>
+        <button class="btn btn-secondary" onclick="closeTripModal('tripRenameModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trip Copy Modal -->
+  <div id="tripCopyModal" class="modal">
+    <div class="modal-content">
+      <h3>Duplicate Trip</h3>
+      <p style="color:#8b949e;margin-bottom:15px;">Creating a copy of: <code id="tripCopyId"></code></p>
+      <div class="form-group">
+        <label>Name for Copy</label>
+        <input type="text" id="tripCopyNewName" placeholder="Leave blank to auto-generate">
+      </div>
+      <input type="hidden" id="tripCopyUserId">
+      <input type="hidden" id="tripCopyTripId">
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button class="btn btn-primary" onclick="executeTripCopy()">Duplicate</button>
+        <button class="btn btn-secondary" onclick="closeTripModal('tripCopyModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trip Move Modal -->
+  <div id="tripMoveModal" class="modal">
+    <div class="modal-content">
+      <h3>Move Trip to Another User</h3>
+      <p style="color:#8b949e;margin-bottom:15px;">Moving: <code id="tripMoveId"></code></p>
+      <p style="color:#8b949e;margin-bottom:15px;">From: <strong id="tripMoveFromUser"></strong></p>
+      <div class="form-group">
+        <label>Move to User *</label>
+        <select id="tripMoveTargetUser">
+          <option value="">Select user...</option>
+        </select>
+      </div>
+      <input type="hidden" id="tripMoveUserId">
+      <input type="hidden" id="tripMoveTripId">
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button class="btn btn-primary" onclick="executeTripMove()">Move Trip</button>
+        <button class="btn btn-secondary" onclick="closeTripModal('tripMoveModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trip Delete Modal -->
+  <div id="tripDeleteModal" class="modal">
+    <div class="modal-content">
+      <h3>Delete Trip</h3>
+      <p style="color:#f85149;margin-bottom:15px;">⚠️ This action cannot be undone!</p>
+      <p style="margin-bottom:15px;">Are you sure you want to delete <strong id="tripDeleteName"></strong>?</p>
+      <p style="color:#8b949e;margin-bottom:15px;">Trip ID: <code id="tripDeleteId"></code></p>
+      <input type="hidden" id="tripDeleteUserId">
+      <input type="hidden" id="tripDeleteTripId">
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button class="btn btn-secondary" onclick="closeTripModal('tripDeleteModal')">Cancel</button>
+        <button class="btn" style="background:#f85149;color:white;" onclick="executeTripDelete()">Delete Trip</button>
       </div>
     </div>
   </div>
@@ -1803,8 +1885,13 @@ Note: Also works on Claude iOS app (same steps in Settings)
       const searchFilter = document.getElementById('tripFilterSearch').value.toLowerCase();
 
       let filtered = tripsCache;
+      const showTest = document.getElementById('tripFilterShowTest').checked;
+      const showArchived = document.getElementById('tripFilterShowArchived').checked;
+
       if (userFilter) filtered = filtered.filter(t => t.userId === userFilter);
       if (phaseFilter) filtered = filtered.filter(t => t.meta.phase === phaseFilter);
+      if (!showTest) filtered = filtered.filter(t => !t.meta.isTest);
+      if (!showArchived) filtered = filtered.filter(t => !t.meta.isArchived);
       if (searchFilter) {
         filtered = filtered.filter(t =>
           t.tripId.toLowerCase().includes(searchFilter) ||
@@ -1827,15 +1914,42 @@ Note: Also works on Claude iOS app (same steps in Settings)
           const phase = t.meta.phase || '';
           const badgeColor = phase === 'confirmed' ? 'green' : phase === 'proposal' ? 'blue' : 'gray';
           const validUrl = safeUrl(t.publishedUrl);
+          const isTest = t.meta.isTest || false;
+          const isArchived = t.meta.isArchived || false;
           return \`
           <tr class="clickable" data-action="view-trip" data-user-id="\${escapeHtml(t.userId)}" data-trip-id="\${escapeHtml(t.tripId)}">
-            <td><code style="font-size:11px;">\${escapeHtml(t.tripId)}</code><br><small style="color:#666;">\${escapeHtml(t.meta.destination || '')}</small></td>
-            <td>\${escapeHtml(t.meta.clientName || '-')}<br><small style="color:#666;">\${escapeHtml(t.meta.dates || '')}</small></td>
-            <td>\${escapeHtml(t.userName)}<br><small style="color:#999;">\${escapeHtml(t.agency)}</small></td>
+            <td>
+              <code style="font-size:11px;">\${escapeHtml(t.tripId)}</code>
+              \${isTest ? '<span class="badge badge-blue" style="margin-left:4px;font-size:9px;">TEST</span>' : ''}
+              \${isArchived ? '<span class="badge badge-gray" style="margin-left:4px;font-size:9px;">ARCHIVED</span>' : ''}
+              <br><small style="color:#8b949e;">\${escapeHtml(t.meta.destination || '')}</small>
+            </td>
+            <td>\${escapeHtml(t.meta.clientName || '-')}<br><small style="color:#8b949e;">\${escapeHtml(t.meta.dates || '')}</small></td>
+            <td>\${escapeHtml(t.userName)}<br><small style="color:#6e7681;">\${escapeHtml(t.agency)}</small></td>
             <td><span class="badge badge-\${badgeColor}">\${escapeHtml(phase || '-')}</span></td>
             <td>\${t.commentCount > 0 ? \`<span class="badge \${t.unreadComments > 0 ? 'badge-red' : 'badge-gray'}">\${t.commentCount}\${t.unreadComments > 0 ? ' (' + t.unreadComments + ' new)' : ''}</span>\` : '-'}</td>
             <td>\${validUrl ? \`<a href="\${escapeHtml(validUrl)}" target="_blank" class="link-external" onclick="event.stopPropagation()">View</a>\` : '-'}</td>
-            <td><button class="btn btn-small btn-secondary" data-action="view-trip" data-user-id="\${escapeHtml(t.userId)}" data-trip-id="\${escapeHtml(t.tripId)}" onclick="event.stopPropagation()">Details</button></td>
+            <td onclick="event.stopPropagation()">
+              <div class="action-menu" data-trip-menu="\${escapeHtml(t.userId)}_\${escapeHtml(t.tripId)}">
+                <button class="action-menu-btn" onclick="toggleTripMenu('\${escapeHtml(t.userId)}', '\${escapeHtml(t.tripId)}')">Actions ▾</button>
+                <div class="action-menu-content">
+                  <div class="action-menu-header">View</div>
+                  <button class="action-menu-item" onclick="viewTripDetail('\${escapeHtml(t.userId)}', '\${escapeHtml(t.tripId)}')">View Details</button>
+                  <div class="action-menu-divider"></div>
+                  <div class="action-menu-header">Manage</div>
+                  <button class="action-menu-item" onclick="tripAction('\${escapeHtml(t.userId)}', '\${escapeHtml(t.tripId)}', 'toggle-test')">\${isTest ? 'Unmark as Test' : 'Mark as Test'}</button>
+                  <button class="action-menu-item" onclick="tripAction('\${escapeHtml(t.userId)}', '\${escapeHtml(t.tripId)}', 'archive')">\${isArchived ? 'Unarchive' : 'Archive'}</button>
+                  <button class="action-menu-item" onclick="showTripRenameModal('\${escapeHtml(t.userId)}', '\${escapeHtml(t.tripId)}', '\${escapeJsString(t.meta.clientName || t.tripId)}')">Rename</button>
+                  <button class="action-menu-item" onclick="showTripCopyModal('\${escapeHtml(t.userId)}', '\${escapeHtml(t.tripId)}', '\${escapeJsString(t.meta.clientName || t.tripId)}')">Duplicate</button>
+                  <div class="action-menu-divider"></div>
+                  <div class="action-menu-header">Admin</div>
+                  <button class="action-menu-item" onclick="showTripMoveModal('\${escapeHtml(t.userId)}', '\${escapeHtml(t.tripId)}', '\${escapeJsString(t.meta.clientName || t.tripId)}')">Move to User...</button>
+                  <button class="action-menu-item" onclick="emailUserAboutTrip('\${escapeHtml(t.userId)}', '\${escapeHtml(t.tripId)}')">Email User</button>
+                  <div class="action-menu-divider"></div>
+                  <button class="action-menu-item danger" onclick="showTripDeleteModal('\${escapeHtml(t.userId)}', '\${escapeHtml(t.tripId)}', '\${escapeJsString(t.meta.clientName || t.tripId)}')">Delete Trip</button>
+                </div>
+              </div>
+            </td>
           </tr>
         \`}).join('')}</tbody>
       </table>\`;
@@ -1907,6 +2021,194 @@ Note: Also works on Claude iOS app (same steps in Settings)
     function toggleJson() {
       const el = document.getElementById('jsonData');
       el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // ========== TRIP ACTIONS ==========
+    function toggleTripMenu(userId, tripId) {
+      // Close all other menus first
+      document.querySelectorAll('.action-menu.open').forEach(m => {
+        if (m.dataset.tripMenu !== \`\${userId}_\${tripId}\`) {
+          m.classList.remove('open');
+        }
+      });
+      const menu = document.querySelector(\`.action-menu[data-trip-menu="\${userId}_\${tripId}"]\`);
+      if (menu) menu.classList.toggle('open');
+    }
+
+    // Close trip menus when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.action-menu[data-trip-menu]')) {
+        document.querySelectorAll('.action-menu[data-trip-menu].open').forEach(m => m.classList.remove('open'));
+      }
+    });
+
+    async function tripAction(userId, tripId, action) {
+      document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));
+      try {
+        const result = await api(\`/admin/trips/\${userId}/\${tripId}/\${action}\`, { method: 'POST' });
+        if (result.success) {
+          loadTrips();
+        } else {
+          alert('Error: ' + (result.error || 'Unknown error'));
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    function closeTripModal(modalId) {
+      document.getElementById(modalId).classList.remove('active');
+    }
+
+    function showTripRenameModal(userId, tripId, currentName) {
+      document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));
+      document.getElementById('tripRenameUserId').value = userId;
+      document.getElementById('tripRenameTripId').value = tripId;
+      document.getElementById('tripRenameId').textContent = tripId;
+      document.getElementById('tripRenameNewName').value = currentName;
+      document.getElementById('tripRenameModal').classList.add('active');
+      document.getElementById('tripRenameNewName').focus();
+    }
+
+    async function executeTripRename() {
+      const userId = document.getElementById('tripRenameUserId').value;
+      const tripId = document.getElementById('tripRenameTripId').value;
+      const newName = document.getElementById('tripRenameNewName').value.trim();
+      if (!newName) {
+        alert('Please enter a name');
+        return;
+      }
+      try {
+        const result = await api(\`/admin/trips/\${userId}/\${tripId}/rename\`, {
+          method: 'POST',
+          body: JSON.stringify({ newName })
+        });
+        if (result.success) {
+          closeTripModal('tripRenameModal');
+          loadTrips();
+        } else {
+          alert('Error: ' + (result.error || 'Unknown error'));
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    function showTripCopyModal(userId, tripId, currentName) {
+      document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));
+      document.getElementById('tripCopyUserId').value = userId;
+      document.getElementById('tripCopyTripId').value = tripId;
+      document.getElementById('tripCopyId').textContent = tripId;
+      document.getElementById('tripCopyNewName').value = currentName + ' (Copy)';
+      document.getElementById('tripCopyModal').classList.add('active');
+      document.getElementById('tripCopyNewName').focus();
+    }
+
+    async function executeTripCopy() {
+      const userId = document.getElementById('tripCopyUserId').value;
+      const tripId = document.getElementById('tripCopyTripId').value;
+      const newName = document.getElementById('tripCopyNewName').value.trim();
+      try {
+        const result = await api(\`/admin/trips/\${userId}/\${tripId}/copy\`, {
+          method: 'POST',
+          body: JSON.stringify({ newName: newName || undefined })
+        });
+        if (result.success) {
+          closeTripModal('tripCopyModal');
+          loadTrips();
+          alert(\`Trip duplicated! New trip ID: \${result.newTripId}\`);
+        } else {
+          alert('Error: ' + (result.error || 'Unknown error'));
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    function showTripMoveModal(userId, tripId, tripName) {
+      document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));
+      document.getElementById('tripMoveUserId').value = userId;
+      document.getElementById('tripMoveTripId').value = tripId;
+      document.getElementById('tripMoveId').textContent = tripId + ' (' + tripName + ')';
+
+      // Find current user name
+      const currentUser = usersCache.find(u => u.userId === userId);
+      document.getElementById('tripMoveFromUser').textContent = currentUser ? currentUser.name : userId;
+
+      // Populate target user dropdown (excluding current user)
+      const targetSelect = document.getElementById('tripMoveTargetUser');
+      targetSelect.innerHTML = '<option value="">Select user...</option>' +
+        usersCache
+          .filter(u => u.userId !== userId)
+          .map(u => \`<option value="\${escapeHtml(u.userId)}">\${escapeHtml(u.name)} (\${escapeHtml(u.agency || 'No agency')})</option>\`)
+          .join('');
+
+      document.getElementById('tripMoveModal').classList.add('active');
+    }
+
+    async function executeTripMove() {
+      const sourceUserId = document.getElementById('tripMoveUserId').value;
+      const tripId = document.getElementById('tripMoveTripId').value;
+      const targetUserId = document.getElementById('tripMoveTargetUser').value;
+      if (!targetUserId) {
+        alert('Please select a target user');
+        return;
+      }
+      try {
+        const result = await api('/admin/trips/move', {
+          method: 'POST',
+          body: JSON.stringify({ sourceUserId, tripId, targetUserId })
+        });
+        if (result.success) {
+          closeTripModal('tripMoveModal');
+          loadTrips();
+          const targetUser = usersCache.find(u => u.userId === targetUserId);
+          alert(\`Trip moved to \${targetUser ? targetUser.name : targetUserId}\`);
+        } else {
+          alert('Error: ' + (result.error || 'Unknown error'));
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    function showTripDeleteModal(userId, tripId, tripName) {
+      document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));
+      document.getElementById('tripDeleteUserId').value = userId;
+      document.getElementById('tripDeleteTripId').value = tripId;
+      document.getElementById('tripDeleteId').textContent = tripId;
+      document.getElementById('tripDeleteName').textContent = tripName;
+      document.getElementById('tripDeleteModal').classList.add('active');
+    }
+
+    async function executeTripDelete() {
+      const userId = document.getElementById('tripDeleteUserId').value;
+      const tripId = document.getElementById('tripDeleteTripId').value;
+      try {
+        const result = await api(\`/admin/trips/\${userId}/\${tripId}/delete\`, { method: 'POST' });
+        if (result.success) {
+          closeTripModal('tripDeleteModal');
+          loadTrips();
+        } else {
+          alert('Error: ' + (result.error || 'Unknown error'));
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    async function emailUserAboutTrip(userId, tripId) {
+      document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));
+      try {
+        const result = await api(\`/admin/trips/\${userId}/\${tripId}/email-url\`);
+        if (result.gmailComposeUrl) {
+          window.open(result.gmailComposeUrl, '_blank');
+        } else {
+          alert('Error: ' + (result.error || 'Could not generate email URL'));
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
     }
 
     // ========== COMMENTS ==========

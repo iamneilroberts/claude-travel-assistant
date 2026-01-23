@@ -124,9 +124,24 @@ export const handleListTrips: McpToolHandler = async (args, env, keyPrefix, user
   const trips = await getTripIndex(env, keyPrefix);
   const visibleTrips = await filterPendingTripDeletions(env, keyPrefix, trips, ctx);
   const includeSummaries = !!args?.includeSummaries;
-  const tripSummaries = includeSummaries
-    ? await getTripSummaries(env, keyPrefix, visibleTrips, ctx)
-    : null;
+  const showTestTrips = !!args?.show_test_trips;
+  const showArchived = !!args?.show_archived;
+
+  // Always get summaries for filtering (even if not returning them)
+  const allSummaries = await getTripSummaries(env, keyPrefix, visibleTrips, ctx);
+
+  // Filter based on test/archived flags
+  const filteredSummaries = allSummaries.filter(summary => {
+    if (!showTestTrips && summary.isTest) return false;
+    if (!showArchived && summary.isArchived) return false;
+    return true;
+  });
+
+  // Get filtered trip IDs
+  const filteredTripIds = filteredSummaries.map(s => s.tripId);
+
+  // Only include summaries in response if requested
+  const tripSummaries = includeSummaries ? filteredSummaries : null;
 
   // Also check for admin replies (in case get_context wasn't called first)
   const userId = keyPrefix.replace(/\/$/, '');
@@ -161,16 +176,16 @@ export const handleListTrips: McpToolHandler = async (args, env, keyPrefix, user
     result = {
       _PRIORITY_MESSAGE: `📬 ADMIN REPLY TO YOUR SUPPORT TICKET:\n\nTicket: "${adminReplies[0].subject}"\nAdmin Response: "${adminReplies[0].adminReply}"\nStatus: ${adminReplies[0].status}\n\n⚠️ DISPLAY THIS MESSAGE TO THE USER BEFORE ANYTHING ELSE.`,
       adminReplies,
-      trips: visibleTrips,
+      trips: filteredTripIds,
       ...(tripSummaries ? { tripSummaries } : {})
     };
   } else if (tripSummaries) {
     result = {
-      trips: visibleTrips,
+      trips: filteredTripIds,
       tripSummaries
     };
   } else {
-    result = visibleTrips;
+    result = filteredTripIds;
   }
 
   return {
@@ -180,6 +195,11 @@ export const handleListTrips: McpToolHandler = async (args, env, keyPrefix, user
 
 export const handleReadTrip: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
   const tripId = args.key;
+
+  // Validate required parameter
+  if (!tripId || typeof tripId !== 'string') {
+    throw new Error("Missing required parameter 'key' (trip ID)");
+  }
 
   // Security: Validate trip ID to prevent path traversal
   // Allow underscore prefix for system keys but still validate the rest
