@@ -14,7 +14,7 @@
  *    Use: mcp-client.ts exports
  */
 
-// Scenarios
+// Scenarios (Legacy - hardcoded)
 export {
   ALL_SCENARIOS,
   SCENARIOS_BY_TIER,
@@ -26,6 +26,22 @@ export {
   type TestPersona,
   type SuccessCriteria
 } from './scenarios';
+
+// Scenarios (AI-Driven - JSON config with dynamic variation)
+export {
+  loadScenariosConfig,
+  getTemplate,
+  resolveKeyword,
+  listTemplates,
+  getTemplatesByTier,
+  getBuilderInstructions,
+  getRandomTemplate,
+  generateBuilderPrompt,
+  KEYWORD_TO_TEMPLATE,
+  type ScenarioTemplate,
+  type ScenariosConfig,
+  type GeneratedTestInstance
+} from './scenarios-loader';
 
 // Conversational Test Framework (RECOMMENDED)
 export {
@@ -70,19 +86,48 @@ export {
   getRunKey,
   getConfigKey,
   getAnalysisKey,
+  getMonthlyCostKey,
+  getDailyCostKey,
+  getTripCostKey,
   saveSessionResult,
   saveRunSummary,
   getSessionResult,
   getRunSummary,
   listRecentSessions,
   listRecentRuns,
+  redactArgs,
+  TEST_TTL_SECONDS,
+  COST_TTL_SECONDS,
   type JudgeScores,
   type JudgeFinding,
   type ProposedFAQ,
   type JudgeResult,
   type TestSessionResult,
-  type TestRunSummary
+  type TestRunSummary,
+  type VisualReview,
+  type VisualReviewFinding,
+  type SuggestedFix,
+  type TokenUsage,
+  type McpCallDetail,
+  type ConversationTokens,
+  type TestCostSummary,
+  type TripCostSummary
 } from './results';
+
+// Cost Tracking
+export {
+  PRICING,
+  CHARS_PER_TOKEN,
+  estimateTokens,
+  calculateCost,
+  estimateCallCost,
+  aggregateSessionCosts,
+  buildMonthlySummary,
+  createCallDetail,
+  truncateArgsPreview,
+  formatCost,
+  formatTokenCount
+} from './cost-tracking';
 
 // Runner
 export {

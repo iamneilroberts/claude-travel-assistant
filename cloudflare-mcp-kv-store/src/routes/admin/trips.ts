@@ -60,6 +60,13 @@ export const handleListTrips: RouteHandler = async (request, env, ctx, url, cors
       // Check if published (look in trips.json on GitHub or use meta)
       const publishedUrl = tripData.meta?.publishedUrl || null;
 
+      // Get cost data if available (stored at trip/_costs)
+      const costData = await env.TRIPS.get(key.name + '/_costs', 'json') as {
+        totalCost?: number;
+        operationCount?: number;
+        lastUpdated?: string;
+      } | null;
+
       allTrips.push({
         tripId,
         userId,
@@ -80,7 +87,13 @@ export const handleListTrips: RouteHandler = async (request, env, ctx, url, cors
         publishedUrl,
         hasItinerary: !!(tripData.itinerary && tripData.itinerary.length > 0),
         hasLodging: !!(tripData.lodging && tripData.lodging.length > 0),
-        hasTiers: !!(tripData.tiers)
+        hasTiers: !!(tripData.tiers),
+        // Cost tracking
+        costs: costData ? {
+          totalCost: costData.totalCost || 0,
+          operationCount: costData.operationCount || 0,
+          lastUpdated: costData.lastUpdated
+        } : null
       });
     }
   }

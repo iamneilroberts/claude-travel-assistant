@@ -66,7 +66,10 @@ import {
   handleApproveFAQ,
   handleDismissFAQ,
   handleSaveTestSession,
-  handleSaveTestRun
+  handleSaveTestRun,
+  handleGetCosts,
+  handleGetSessionCalls,
+  handleGetCostsByTool
 } from './test';
 import {
   handleAdminToggleTest,
@@ -160,6 +163,10 @@ const adminHandlers: RouteHandler[] = [
   handleDismissFAQ,
   handleSaveTestSession,
   handleSaveTestRun,
+  // Test Cost Tracking
+  handleGetCosts,
+  handleGetSessionCalls,
+  handleGetCostsByTool,
   // Trip Actions
   handleAdminToggleTest,
   handleAdminArchive,

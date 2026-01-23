@@ -895,6 +895,8 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         <div class="stat-card"><div class="label">Total Runs</div><div class="value" id="qaTestTotalRuns">-</div></div>
         <div class="stat-card"><div class="label">Pass Rate</div><div class="value" id="qaTestPassRate">-</div></div>
         <div class="stat-card"><div class="label">Avg Score</div><div class="value" id="qaTestAvgScore">-</div></div>
+        <div class="stat-card"><div class="label">Mo. Cost</div><div class="value" id="qaTestMonthlyCost">-</div></div>
+        <div class="stat-card"><div class="label">Avg/Test</div><div class="value" id="qaTestAvgCost">-</div></div>
         <div class="stat-card"><div class="label">Proposed FAQs</div><div class="value" id="qaTestFAQCount">-</div></div>
       </div>
 
@@ -1910,13 +1912,15 @@ Note: Also works on Claude iOS app (same steps in Settings)
       }
 
       const html = \`<table>
-        <thead><tr><th>Trip</th><th>Client</th><th>Agent</th><th>Phase</th><th>Comments</th><th>Published</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Trip</th><th>Client</th><th>Agent</th><th>Phase</th><th>Cost</th><th>Comments</th><th>Published</th><th>Actions</th></tr></thead>
         <tbody>\${filtered.map(t => {
           const phase = t.meta.phase || '';
           const badgeColor = phase === 'confirmed' ? 'green' : phase === 'proposal' ? 'blue' : 'gray';
           const validUrl = safeUrl(t.publishedUrl);
           const isTest = t.meta.isTest || false;
           const isArchived = t.meta.isArchived || false;
+          const costDisplay = t.costs?.totalCost ? '$' + t.costs.totalCost.toFixed(3) : '-';
+          const opsCount = t.costs?.operationCount || 0;
           return \`
           <tr class="clickable" data-action="view-trip" data-user-id="\${escapeHtml(t.userId)}" data-trip-id="\${escapeHtml(t.tripId)}">
             <td>
@@ -1928,6 +1932,7 @@ Note: Also works on Claude iOS app (same steps in Settings)
             <td>\${escapeHtml(t.meta.clientName || '-')}<br><small style="color:#8b949e;">\${escapeHtml(t.meta.dates || '')}</small></td>
             <td>\${escapeHtml(t.userName)}<br><small style="color:#6e7681;">\${escapeHtml(t.agency)}</small></td>
             <td><span class="badge badge-\${badgeColor}">\${escapeHtml(phase || '-')}</span></td>
+            <td style="font-size:11px;color:#d29922;">\${costDisplay}\${opsCount > 0 ? '<br><small style="color:#8b949e;">' + opsCount + ' ops</small>' : ''}</td>
             <td>\${t.commentCount > 0 ? \`<span class="badge \${t.unreadComments > 0 ? 'badge-red' : 'badge-gray'}">\${t.commentCount}\${t.unreadComments > 0 ? ' (' + t.unreadComments + ' new)' : ''}</span>\` : '-'}</td>
             <td>\${validUrl ? \`<a href="\${escapeHtml(validUrl)}" target="_blank" class="link-external" onclick="event.stopPropagation()">View</a>\` : '-'}</td>
             <td onclick="event.stopPropagation()">
@@ -3253,6 +3258,14 @@ Note: Also works on Claude iOS app (same steps in Settings)
         document.getElementById('qaTestTotalRuns').textContent = data.totalRuns || 0;
         document.getElementById('qaTestPassRate').textContent = (data.passRate || 0) + '%';
         document.getElementById('qaTestAvgScore').textContent = data.averageScores?.overall || '-';
+        // Cost tracking
+        const costs = data.costs || {};
+        document.getElementById('qaTestMonthlyCost').textContent = costs.monthlyTotalCost
+          ? '$' + costs.monthlyTotalCost.toFixed(2)
+          : '$0.00';
+        document.getElementById('qaTestAvgCost').textContent = costs.avgCostPerSession
+          ? '$' + costs.avgCostPerSession.toFixed(3)
+          : '$0.00';
       } catch (e) {
         console.error('Error loading QA test stats:', e);
       }
@@ -3305,7 +3318,7 @@ Note: Also works on Claude iOS app (same steps in Settings)
         }
 
         let html = '<table style="width:100%">';
-        html += '<thead><tr><th>Time</th><th>Scenario</th><th>Tier</th><th>Status</th><th>Score</th><th>Preview</th><th>Action</th></tr></thead>';
+        html += '<thead><tr><th>Time</th><th>Scenario</th><th>Tier</th><th>Status</th><th>Score</th><th>Tokens</th><th>Cost</th><th>Preview</th><th>Action</th></tr></thead>';
         html += '<tbody>';
 
         for (const session of data.sessions) {
@@ -3313,6 +3326,9 @@ Note: Also works on Claude iOS app (same steps in Settings)
           const passed = session.passed;
           const scoreColor = session.overallScore >= 80 ? '#3fb950' : session.overallScore >= 60 ? '#d29922' : '#f85149';
           const tierBadge = session.tier === 1 ? 'badge-blue' : session.tier === 2 ? 'badge-yellow' : session.tier === 4 ? 'badge-purple' : 'badge-gray';
+          // Token and cost formatting
+          const tokens = session.tokenCount ? formatTokenCount(session.tokenCount) : '-';
+          const cost = session.costEstimate ? '$' + session.costEstimate.toFixed(3) : '-';
 
           html += '<tr>';
           html += '<td style="font-size:12px;">' + escapeHtml(time) + '</td>';
@@ -3320,6 +3336,8 @@ Note: Also works on Claude iOS app (same steps in Settings)
           html += '<td><span class="badge ' + tierBadge + '">T' + session.tier + '</span></td>';
           html += '<td>' + (passed === true ? '<span class="badge badge-green">PASS</span>' : passed === false ? '<span class="badge badge-red">FAIL</span>' : '<span class="badge badge-gray">-</span>') + '</td>';
           html += '<td style="color:' + scoreColor + ';font-weight:bold;">' + (session.overallScore || '-') + '</td>';
+          html += '<td style="font-size:11px;color:#8b949e;">' + tokens + '</td>';
+          html += '<td style="font-size:11px;color:#d29922;">' + cost + '</td>';
           html += '<td>' + (session.previewUrl ? '<a href="' + escapeHtml(session.previewUrl) + '" target="_blank" class="btn btn-small" style="background:#238636;">View Trip</a>' : (session.tripId ? '<span style="color:#8b949e;font-size:11px;">' + escapeHtml(session.tripId) + '</span>' : '-')) + '</td>';
           html += '<td><button class="btn btn-small btn-secondary" onclick="viewTestSession(\\'' + session.id + '\\')">Details</button></td>';
           html += '</tr>';
@@ -3331,6 +3349,13 @@ Note: Also works on Claude iOS app (same steps in Settings)
         console.error('Error loading QA test sessions:', e);
         document.getElementById('qaTestSessions').innerHTML = '<p class="error">Error loading test sessions</p>';
       }
+    }
+
+    // Helper to format token counts with K/M suffix
+    function formatTokenCount(count) {
+      if (count >= 1000000) return (count / 1000000).toFixed(1) + 'M';
+      if (count >= 1000) return (count / 1000).toFixed(1) + 'K';
+      return count.toString();
     }
 
     async function loadQATestFAQs() {
@@ -3427,6 +3452,17 @@ Note: Also works on Claude iOS app (same steps in Settings)
         html += '<div class="detail-row"><span class="label">Completed:</span><span>' + new Date(session.completedAt).toLocaleString() + '</span></div>';
         html += '<div class="detail-row"><span class="label">MCP Calls:</span><span>' + session.mcpCallCount + ' total, ' + session.mcpSuccessCount + ' successful</span></div>';
         html += '<div class="detail-row"><span class="label">Tools Used:</span><span>' + (session.toolsUsed?.join(', ') || '-') + '</span></div>';
+        // Cost tracking
+        if (session.costEstimate !== undefined) {
+          const tokens = session.tokens?.total;
+          html += '<div class="detail-row"><span class="label">Est. Cost:</span><span style="color:#d29922;font-weight:bold;">$' + session.costEstimate.toFixed(4) + '</span></div>';
+          if (tokens) {
+            html += '<div class="detail-row"><span class="label">Tokens:</span><span>' + formatTokenCount(tokens.input) + ' in / ' + formatTokenCount(tokens.output) + ' out (' + formatTokenCount(tokens.total) + ' total)</span></div>';
+          }
+          if (session.modelUsed) {
+            html += '<div class="detail-row"><span class="label">Model:</span><span>' + escapeHtml(session.modelUsed) + '</span></div>';
+          }
+        }
         if (session.tripId) {
           html += '<div class="detail-row"><span class="label">Trip ID:</span><span>' + escapeHtml(session.tripId) + '</span></div>';
         }
@@ -3466,6 +3502,57 @@ Note: Also works on Claude iOS app (same steps in Settings)
               html += '</div>';
             }
             html += '</div>';
+          }
+        }
+
+        // MCP Call Details (if available)
+        if (session.mcpCallDetails && session.mcpCallDetails.length > 0) {
+          html += '<details style="margin-top:20px;">';
+          html += '<summary style="cursor:pointer;color:#58a6ff;font-weight:500;">MCP Call Breakdown (' + session.mcpCallDetails.length + ' calls)</summary>';
+          html += '<div style="margin-top:10px;overflow-x:auto;">';
+          html += '<table style="width:100%;font-size:11px;">';
+          html += '<thead><tr><th>#</th><th>Tool</th><th>Duration</th><th>In Tok</th><th>Out Tok</th><th>Cost</th><th>Status</th></tr></thead>';
+          html += '<tbody>';
+          for (const call of session.mcpCallDetails) {
+            const statusBadge = call.success ? '<span class="badge badge-green" style="font-size:10px;">OK</span>' : '<span class="badge badge-red" style="font-size:10px;">ERR</span>';
+            html += '<tr>';
+            html += '<td>' + call.seq + '</td>';
+            html += '<td style="font-family:monospace;">' + escapeHtml(call.tool) + '</td>';
+            html += '<td>' + call.durationMs + 'ms</td>';
+            html += '<td>' + formatTokenCount(call.tokens.input) + '</td>';
+            html += '<td>' + formatTokenCount(call.tokens.output) + '</td>';
+            html += '<td style="color:#d29922;">$' + call.cost.toFixed(4) + '</td>';
+            html += '<td>' + statusBadge + '</td>';
+            html += '</tr>';
+          }
+          html += '</tbody></table>';
+          html += '</div>';
+          html += '</details>';
+        }
+
+        // Token breakdown by category (if available)
+        if (session.tokens?.mcp?.byTool) {
+          const byTool = session.tokens.mcp.byTool;
+          const tools = Object.keys(byTool);
+          if (tools.length > 0) {
+            html += '<details style="margin-top:20px;">';
+            html += '<summary style="cursor:pointer;color:#58a6ff;font-weight:500;">Token Usage by Tool</summary>';
+            html += '<div style="margin-top:10px;overflow-x:auto;">';
+            html += '<table style="width:100%;font-size:11px;">';
+            html += '<thead><tr><th>Tool</th><th>Calls</th><th>Input Tokens</th><th>Output Tokens</th></tr></thead>';
+            html += '<tbody>';
+            for (const tool of tools) {
+              const data = byTool[tool];
+              html += '<tr>';
+              html += '<td style="font-family:monospace;">' + escapeHtml(tool) + '</td>';
+              html += '<td>' + data.calls + '</td>';
+              html += '<td>' + formatTokenCount(data.input) + '</td>';
+              html += '<td>' + formatTokenCount(data.output) + '</td>';
+              html += '</tr>';
+            }
+            html += '</tbody></table>';
+            html += '</div>';
+            html += '</details>';
           }
         }
 

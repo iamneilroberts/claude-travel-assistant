@@ -1,6 +1,7 @@
 /**
  * Admin Routes: Test Results Dashboard
  * Handles: GET /admin/test/runs, GET /admin/test/sessions, GET /admin/test/session/:id
+ *          GET /admin/test/costs, GET /admin/test/costs/:month
  */
 
 import type { Env, RouteHandler } from '../../types';
@@ -13,6 +14,77 @@ interface JudgeScores {
   dataQuality: number;
   errorHandling: number;
   overall: number;
+}
+
+// Token & Cost tracking types
+interface TokenUsage {
+  input: number;
+  output: number;
+  total: number;
+  isEstimated: boolean;
+}
+
+interface McpCallDetail {
+  seq: number;
+  tool: string;
+  argsPreview: string;
+  argsSize: number;
+  success: boolean;
+  error?: string;
+  responseSize: number;
+  durationMs: number;
+  tokens: { input: number; output: number };
+  cost: number;
+  timestamp: string;
+}
+
+interface ConversationTokens {
+  mcp: {
+    input: number;
+    output: number;
+    byTool: Record<string, { input: number; output: number; calls: number }>;
+  };
+  reasoning: {
+    personaGeneration: number;
+    tripPlanning: number;
+    judgeAnalysis: number;
+  };
+  overhead: {
+    systemPrompt: number;
+    toolSchemas: number;
+  };
+  total: TokenUsage;
+}
+
+interface TestCostSummary {
+  month: string;
+  totalCost: number;
+  totalSessions: number;
+  tokenUsage: TokenUsage;
+  avgCostPerSession: number;
+  byScenario: Record<string, { cost: number; sessions: number }>;
+  byTool: Record<string, { cost: number; calls: number; avgDuration: number }>;
+  dailyBreakdown: Array<{ date: string; cost: number; sessions: number }>;
+}
+
+interface VisualReviewFinding {
+  area: 'layout' | 'content' | 'media' | 'data';
+  issue: string;
+  severity: 'critical' | 'warning' | 'minor';
+}
+
+interface SuggestedFix {
+  issue: string;
+  fix: string;
+  file?: string;
+}
+
+interface VisualReview {
+  enabled: boolean;
+  codexFindings: VisualReviewFinding[];
+  screenshots?: string[];  // Descriptions of captured screenshots
+  overallAssessment: 'pass' | 'issues_found' | 'fail';
+  suggestedFixes: SuggestedFix[];
 }
 
 interface TestSessionResult {
@@ -34,6 +106,7 @@ interface TestSessionResult {
   toolsUsed: string[];
   transcript: string;
   agentNotes?: string;  // Test agent's observations and summary
+  visualReview?: VisualReview;  // Codex browser-use visual review (when +visual flag used)
   judgeResult?: {
     scenarioId: string;
     passed: boolean;
@@ -50,6 +123,16 @@ interface TestSessionResult {
       evidence: string;
     }>;
     summary: string;
+  };
+  // Token & Cost Tracking
+  tokens?: ConversationTokens;
+  costEstimate?: number;
+  modelUsed?: string;
+  mcpCallDetails?: McpCallDetail[];
+  reasoning?: {
+    persona: string;
+    structure: string;
+    judge: string;
   };
 }
 
@@ -122,6 +205,10 @@ export const handleListTestSessions: RouteHandler = async (request, env, ctx, ur
     completedAt: string;
     tripId?: string;
     previewUrl?: string;
+    // Cost tracking fields
+    costEstimate?: number;
+    tokenCount?: number;
+    mcpCallCount: number;
   }> = [];
 
   for (const key of keys) {
@@ -138,7 +225,11 @@ export const handleListTestSessions: RouteHandler = async (request, env, ctx, ur
         overallScore: session.judgeResult?.scores.overall,
         completedAt: session.completedAt,
         tripId: session.tripId,
-        previewUrl: session.previewUrl
+        previewUrl: session.previewUrl,
+        // Cost tracking
+        costEstimate: session.costEstimate,
+        tokenCount: session.tokens?.total?.total,
+        mcpCallCount: session.mcpCallCount
       });
     }
     if (sessions.length >= limit * 2) break;
@@ -228,6 +319,21 @@ export const handleTestStats: RouteHandler = async (request, env, ctx, url, cors
   const totalPassed = recentRuns.reduce((sum, r) => sum + r.passCount, 0);
   const totalFailed = recentRuns.reduce((sum, r) => sum + r.failCount, 0);
 
+  // Calculate cost stats from recent sessions
+  const recentSessions: TestSessionResult[] = [];
+  const sortedSessionKeys = sessionKeys.sort((a, b) => b.name.localeCompare(a.name)).slice(0, 50);
+  for (const key of sortedSessionKeys) {
+    const session = await env.TRIPS.get(key.name, 'json') as TestSessionResult | null;
+    if (session) recentSessions.push(session);
+  }
+
+  // Aggregate costs
+  const currentMonth = new Date().toISOString().substring(0, 7);
+  const sessionsThisMonth = recentSessions.filter(s => s.completedAt?.startsWith(currentMonth));
+  const monthlyTotalCost = sessionsThisMonth.reduce((sum, s) => sum + (s.costEstimate || 0), 0);
+  const monthlyTotalTokens = sessionsThisMonth.reduce((sum, s) => sum + (s.tokens?.total?.total || 0), 0);
+  const avgCostPerSession = sessionsThisMonth.length > 0 ? monthlyTotalCost / sessionsThisMonth.length : 0;
+
   return new Response(JSON.stringify({
     totalRuns: runKeys.length,
     totalSessions: sessionKeys.length,
@@ -247,7 +353,15 @@ export const handleTestStats: RouteHandler = async (request, env, ctx, url, cors
       completedAt: r.completedAt,
       passRate: Math.round((r.passCount / (r.passCount + r.failCount)) * 100),
       overall: r.aggregateScores.overall
-    }))
+    })),
+    // Cost tracking stats
+    costs: {
+      currentMonth,
+      monthlyTotalCost,
+      monthlyTotalTokens,
+      avgCostPerSession,
+      sessionsThisMonth: sessionsThisMonth.length
+    }
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   });
@@ -494,6 +608,229 @@ export const handleDismissFAQ: RouteHandler = async (request, env, ctx, url, cor
   return new Response(JSON.stringify({
     success: true,
     message: 'FAQ dismissed'
+  }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  });
+};
+
+// =============================================================================
+// COST TRACKING ENDPOINTS
+// =============================================================================
+
+/**
+ * GET /admin/test/costs - Get monthly cost summary
+ */
+export const handleGetCosts: RouteHandler = async (request, env, ctx, url, corsHeaders) => {
+  if (url.pathname !== '/admin/test/costs' || request.method !== 'GET') return null;
+
+  const month = url.searchParams.get('month') || new Date().toISOString().substring(0, 7);
+
+  // Check for cached monthly summary
+  const cachedSummary = await env.TRIPS.get(`_test/costs/${month}`, 'json') as TestCostSummary | null;
+  if (cachedSummary) {
+    return new Response(JSON.stringify(cachedSummary), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  // Build summary from sessions
+  const sessionKeys = await listAllKeys(env, { prefix: '_test/sessions/' });
+  const sessions: TestSessionResult[] = [];
+
+  for (const key of sessionKeys) {
+    const session = await env.TRIPS.get(key.name, 'json') as TestSessionResult | null;
+    if (session && session.completedAt?.startsWith(month)) {
+      sessions.push(session);
+    }
+  }
+
+  // Build cost summary
+  let totalCost = 0;
+  let totalInput = 0;
+  let totalOutput = 0;
+  const byScenario: Record<string, { cost: number; sessions: number }> = {};
+  const byTool: Record<string, { cost: number; calls: number; totalDuration: number }> = {};
+  const dailyMap: Record<string, { cost: number; sessions: number }> = {};
+
+  for (const session of sessions) {
+    const sessionCost = session.costEstimate || 0;
+    totalCost += sessionCost;
+
+    if (session.tokens) {
+      totalInput += session.tokens.total.input;
+      totalOutput += session.tokens.total.output;
+    }
+
+    // By scenario
+    if (!byScenario[session.scenarioId]) {
+      byScenario[session.scenarioId] = { cost: 0, sessions: 0 };
+    }
+    byScenario[session.scenarioId].cost += sessionCost;
+    byScenario[session.scenarioId].sessions += 1;
+
+    // By tool
+    if (session.mcpCallDetails) {
+      for (const call of session.mcpCallDetails) {
+        if (!byTool[call.tool]) {
+          byTool[call.tool] = { cost: 0, calls: 0, totalDuration: 0 };
+        }
+        byTool[call.tool].cost += call.cost;
+        byTool[call.tool].calls += 1;
+        byTool[call.tool].totalDuration += call.durationMs;
+      }
+    }
+
+    // Daily breakdown
+    const date = session.completedAt?.substring(0, 10) || 'unknown';
+    if (!dailyMap[date]) {
+      dailyMap[date] = { cost: 0, sessions: 0 };
+    }
+    dailyMap[date].cost += sessionCost;
+    dailyMap[date].sessions += 1;
+  }
+
+  // Convert byTool to include avgDuration
+  const byToolWithAvg: Record<string, { cost: number; calls: number; avgDuration: number }> = {};
+  for (const [tool, data] of Object.entries(byTool)) {
+    byToolWithAvg[tool] = {
+      cost: data.cost,
+      calls: data.calls,
+      avgDuration: data.calls > 0 ? Math.round(data.totalDuration / data.calls) : 0,
+    };
+  }
+
+  // Convert daily map to sorted array
+  const dailyBreakdown = Object.entries(dailyMap)
+    .map(([date, data]) => ({ date, ...data }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const summary: TestCostSummary = {
+    month,
+    totalCost,
+    totalSessions: sessions.length,
+    tokenUsage: {
+      input: totalInput,
+      output: totalOutput,
+      total: totalInput + totalOutput,
+      isEstimated: true,
+    },
+    avgCostPerSession: sessions.length > 0 ? totalCost / sessions.length : 0,
+    byScenario,
+    byTool: byToolWithAvg,
+    dailyBreakdown,
+  };
+
+  // Cache the summary (30 day TTL)
+  const COST_TTL = 30 * 24 * 60 * 60;
+  await env.TRIPS.put(`_test/costs/${month}`, JSON.stringify(summary), {
+    expirationTtl: COST_TTL
+  });
+
+  return new Response(JSON.stringify(summary), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  });
+};
+
+/**
+ * GET /admin/test/session/:id/calls - Get detailed call breakdown for a session
+ */
+export const handleGetSessionCalls: RouteHandler = async (request, env, ctx, url, corsHeaders) => {
+  const match = url.pathname.match(/^\/admin\/test\/session\/([^/]+)\/calls$/);
+  if (!match || request.method !== 'GET') return null;
+
+  const sessionId = match[1];
+  const session = await env.TRIPS.get(`_test/sessions/${sessionId}`, 'json') as TestSessionResult | null;
+
+  if (!session) {
+    return new Response(JSON.stringify({ error: 'Session not found' }), {
+      status: 404,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  return new Response(JSON.stringify({
+    sessionId: session.id,
+    scenarioId: session.scenarioId,
+    totalCost: session.costEstimate || 0,
+    tokenUsage: session.tokens?.total || { input: 0, output: 0, total: 0, isEstimated: true },
+    modelUsed: session.modelUsed || 'unknown',
+    calls: session.mcpCallDetails || [],
+    reasoning: session.reasoning
+  }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  });
+};
+
+/**
+ * GET /admin/test/costs/by-tool - Get cost breakdown by tool across all sessions
+ */
+export const handleGetCostsByTool: RouteHandler = async (request, env, ctx, url, corsHeaders) => {
+  if (url.pathname !== '/admin/test/costs/by-tool' || request.method !== 'GET') return null;
+
+  const days = parseInt(url.searchParams.get('days') || '30');
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - days);
+  const cutoffStr = cutoffDate.toISOString();
+
+  const sessionKeys = await listAllKeys(env, { prefix: '_test/sessions/' });
+  const byTool: Record<string, {
+    cost: number;
+    calls: number;
+    totalDuration: number;
+    successCount: number;
+    errorCount: number;
+    avgInputTokens: number;
+    avgOutputTokens: number;
+  }> = {};
+
+  for (const key of sessionKeys) {
+    const session = await env.TRIPS.get(key.name, 'json') as TestSessionResult | null;
+    if (!session || !session.completedAt || session.completedAt < cutoffStr) continue;
+
+    if (session.mcpCallDetails) {
+      for (const call of session.mcpCallDetails) {
+        if (!byTool[call.tool]) {
+          byTool[call.tool] = {
+            cost: 0,
+            calls: 0,
+            totalDuration: 0,
+            successCount: 0,
+            errorCount: 0,
+            avgInputTokens: 0,
+            avgOutputTokens: 0,
+          };
+        }
+        byTool[call.tool].cost += call.cost;
+        byTool[call.tool].calls += 1;
+        byTool[call.tool].totalDuration += call.durationMs;
+        if (call.success) {
+          byTool[call.tool].successCount += 1;
+        } else {
+          byTool[call.tool].errorCount += 1;
+        }
+        byTool[call.tool].avgInputTokens += call.tokens.input;
+        byTool[call.tool].avgOutputTokens += call.tokens.output;
+      }
+    }
+  }
+
+  // Calculate averages
+  const result = Object.entries(byTool).map(([tool, data]) => ({
+    tool,
+    cost: data.cost,
+    calls: data.calls,
+    avgDuration: data.calls > 0 ? Math.round(data.totalDuration / data.calls) : 0,
+    successRate: data.calls > 0 ? Math.round((data.successCount / data.calls) * 100) : 0,
+    avgInputTokens: data.calls > 0 ? Math.round(data.avgInputTokens / data.calls) : 0,
+    avgOutputTokens: data.calls > 0 ? Math.round(data.avgOutputTokens / data.calls) : 0,
+    avgCostPerCall: data.calls > 0 ? data.cost / data.calls : 0,
+  })).sort((a, b) => b.cost - a.cost);
+
+  return new Response(JSON.stringify({
+    days,
+    tools: result,
+    totalCost: result.reduce((sum, t) => sum + t.cost, 0),
+    totalCalls: result.reduce((sum, t) => sum + t.calls, 0)
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   });

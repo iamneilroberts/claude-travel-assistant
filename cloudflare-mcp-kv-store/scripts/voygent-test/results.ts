@@ -7,6 +7,116 @@ import type { McpSession } from './mcp-client';
 import type { TestScenario } from './scenarios';
 
 // =============================================================================
+// TOKEN & COST TRACKING TYPES
+// =============================================================================
+
+/**
+ * Keys that should be redacted from args for security
+ */
+const REDACT_KEYS = ['token', 'key', 'auth', 'password', 'secret', 'apiKey', 'authorization'];
+
+/**
+ * Redact sensitive fields from MCP call arguments
+ */
+export function redactArgs(args: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(args).map(([k, v]) => [
+      k,
+      REDACT_KEYS.some(r => k.toLowerCase().includes(r)) ? '[REDACTED]' : v
+    ])
+  );
+}
+
+/**
+ * Token usage breakdown
+ */
+export interface TokenUsage {
+  input: number;
+  output: number;
+  total: number;
+  isEstimated: boolean;  // true = calculated from payload size, not real counts
+}
+
+/**
+ * Detailed record of a single MCP tool call with cost tracking
+ */
+export interface McpCallDetail {
+  seq: number;                    // Call sequence number
+  tool: string;                   // Tool name
+  argsPreview: string;            // First 200 chars of args, redacted
+  argsSize: number;               // Size in bytes
+  success: boolean;
+  error?: string;
+  responseSize: number;           // Size in bytes
+  durationMs: number;             // Wall clock time
+  tokens: {
+    input: number;                // Estimated input tokens
+    output: number;               // Estimated output tokens
+  };
+  cost: number;                   // Estimated cost in USD
+  timestamp: string;
+}
+
+/**
+ * Full token breakdown for a conversation/session
+ */
+export interface ConversationTokens {
+  // MCP tool calls (estimated from payloads)
+  mcp: {
+    input: number;
+    output: number;
+    byTool: Record<string, { input: number; output: number; calls: number }>;
+  };
+
+  // Claude reasoning (estimated from captured text)
+  reasoning: {
+    personaGeneration: number;
+    tripPlanning: number;
+    judgeAnalysis: number;
+  };
+
+  // Fixed overhead estimates
+  overhead: {
+    systemPrompt: number;   // ~3000 tokens for voygent-test.md
+    toolSchemas: number;    // ~500 tokens per tool definition
+  };
+
+  // Totals
+  total: TokenUsage;
+}
+
+/**
+ * Monthly cost aggregation for dashboard
+ */
+export interface TestCostSummary {
+  month: string;                  // YYYY-MM
+  totalCost: number;
+  totalSessions: number;
+  tokenUsage: TokenUsage;
+  avgCostPerSession: number;
+  byScenario: Record<string, { cost: number; sessions: number }>;
+  byTool: Record<string, { cost: number; calls: number; avgDuration: number }>;
+  dailyBreakdown: Array<{ date: string; cost: number; sessions: number }>;
+}
+
+/**
+ * Cost summary for a single trip (all operations)
+ */
+export interface TripCostSummary {
+  tripId: string;
+  totalCost: number;
+  tokenUsage: TokenUsage;
+  operationCount: number;
+  operations: Array<{
+    tool: string;
+    timestamp: string;
+    tokens: { input: number; output: number };
+    cost: number;
+    durationMs: number;
+  }>;
+}
+
+// =============================================================================
 // TYPES
 // =============================================================================
 
@@ -44,6 +154,26 @@ export interface JudgeResult {
   summary: string;
 }
 
+export interface VisualReviewFinding {
+  area: 'layout' | 'content' | 'media' | 'data';
+  issue: string;
+  severity: 'critical' | 'warning' | 'minor';
+}
+
+export interface SuggestedFix {
+  issue: string;
+  fix: string;
+  file?: string;
+}
+
+export interface VisualReview {
+  enabled: boolean;
+  codexFindings: VisualReviewFinding[];
+  screenshots?: string[];
+  overallAssessment: 'pass' | 'issues_found' | 'fail';
+  suggestedFixes: SuggestedFix[];
+}
+
 export interface TestSessionResult {
   id: string;
   scenarioId: string;
@@ -56,12 +186,28 @@ export interface TestSessionResult {
     experience: string;
     description?: string;  // Full persona description for realistic scenarios
   };
+  tripId?: string;
+  previewUrl?: string;
   mcpCallCount: number;
   mcpSuccessCount: number;
   toolsUsed: string[];
   transcript: string;
   agentNotes?: string;  // Test agent's observations and summary
+  visualReview?: VisualReview;  // Codex browser-use visual review (when +visual flag used)
   judgeResult?: JudgeResult;
+
+  // Token & Cost Tracking (added for cost visibility)
+  tokens?: ConversationTokens;
+  costEstimate?: number;           // Total session cost in USD
+  modelUsed?: string;              // e.g., "claude-opus-4-5-20251101"
+  mcpCallDetails?: McpCallDetail[]; // Detailed per-call breakdown
+
+  // Reasoning capture for token estimation
+  reasoning?: {
+    persona: string;               // Why this persona was chosen
+    structure: string;             // Why trip was structured this way
+    judge: string;                 // Judge's full reasoning
+  };
 }
 
 export interface TestRunSummary {
@@ -84,6 +230,7 @@ export interface TestRunSummary {
 // =============================================================================
 
 const TEST_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
+const COST_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days for cost aggregates
 
 export function getSessionKey(sessionId: string): string {
   return `_test/sessions/${sessionId}`;
@@ -100,6 +247,20 @@ export function getConfigKey(): string {
 export function getAnalysisKey(date: string): string {
   return `_test/analysis/${date}`;
 }
+
+export function getMonthlyCostKey(month: string): string {
+  return `_test/costs/${month}`;
+}
+
+export function getDailyCostKey(date: string): string {
+  return `_test/costs/daily/${date}`;
+}
+
+export function getTripCostKey(tripId: string): string {
+  return `_costs/trips/${tripId}`;
+}
+
+export { TEST_TTL_SECONDS, COST_TTL_SECONDS };
 
 // =============================================================================
 // RESULT BUILDERS

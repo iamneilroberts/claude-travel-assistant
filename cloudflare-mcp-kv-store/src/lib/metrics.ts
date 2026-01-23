@@ -18,7 +18,11 @@ export interface ToolCallMetric {
   userName?: string;
   tool: string;
   durationMs: number;
+  requestBytes?: number;   // Size of JSON request in bytes
   responseBytes?: number;  // Size of JSON response in bytes
+  inputTokens?: number;    // Estimated input tokens
+  outputTokens?: number;   // Estimated output tokens
+  costEstimate?: number;   // Estimated cost in USD
   success: boolean;
   errorType?: string;
   metadata?: {
@@ -27,6 +31,23 @@ export interface ToolCallMetric {
     templateName?: string;
     [key: string]: any;
   };
+}
+
+export interface TripCostRecord {
+  tripId: string;
+  totalCost: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  operationCount: number;
+  operations: Array<{
+    tool: string;
+    inputTokens: number;
+    outputTokens: number;
+    cost: number;
+    durationMs: number;
+    timestamp: string;
+  }>;
+  lastUpdated: string;
 }
 
 export interface ToolStats {
@@ -633,4 +654,82 @@ export async function getResponseSizeBenchmarks(
     largestTools,
     period: summary.period
   };
+}
+
+// ============ Per-Trip Cost Tracking ============
+
+const TRIP_COST_TTL = 90 * 24 * 60 * 60;  // 90 days
+
+/**
+ * Update cost tracking for a specific trip
+ * Called by the metrics wrapper for trip-related operations
+ */
+export async function updateTripCost(
+  env: Env,
+  keyPrefix: string,
+  tripId: string,
+  operation: {
+    tool: string;
+    inputTokens: number;
+    outputTokens: number;
+    cost: number;
+    durationMs: number;
+    timestamp: string;
+  },
+  ctx?: ExecutionContext
+): Promise<void> {
+  const costKey = `${keyPrefix}${tripId}/_costs`;
+
+  const write = async () => {
+    try {
+      const existing = await env.TRIPS.get(costKey, 'json') as TripCostRecord | null;
+
+      const record: TripCostRecord = existing || {
+        tripId,
+        totalCost: 0,
+        totalInputTokens: 0,
+        totalOutputTokens: 0,
+        operationCount: 0,
+        operations: [],
+        lastUpdated: ''
+      };
+
+      // Update totals
+      record.totalCost += operation.cost;
+      record.totalInputTokens += operation.inputTokens;
+      record.totalOutputTokens += operation.outputTokens;
+      record.operationCount += 1;
+      record.lastUpdated = operation.timestamp;
+
+      // Add operation to history (keep last 50)
+      record.operations.unshift(operation);
+      if (record.operations.length > 50) {
+        record.operations = record.operations.slice(0, 50);
+      }
+
+      await env.TRIPS.put(costKey, JSON.stringify(record), {
+        expirationTtl: TRIP_COST_TTL
+      });
+    } catch (err) {
+      console.error('Failed to update trip cost:', err);
+    }
+  };
+
+  if (ctx) {
+    ctx.waitUntil(write());
+  } else {
+    await write();
+  }
+}
+
+/**
+ * Get cost tracking for a specific trip
+ */
+export async function getTripCost(
+  env: Env,
+  keyPrefix: string,
+  tripId: string
+): Promise<TripCostRecord | null> {
+  const costKey = `${keyPrefix}${tripId}/_costs`;
+  return await env.TRIPS.get(costKey, 'json') as TripCostRecord | null;
 }

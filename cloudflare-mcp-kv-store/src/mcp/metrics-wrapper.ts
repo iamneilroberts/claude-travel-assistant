@@ -3,7 +3,33 @@
  */
 
 import type { McpToolHandler, UserProfile, Env } from '../types';
-import { recordToolCall } from '../lib/metrics';
+import { recordToolCall, updateTripCost } from '../lib/metrics';
+
+// Approximate token estimation: ~4 chars per token
+const CHARS_PER_TOKEN = 4;
+
+// Claude pricing (per million tokens)
+const PRICING = {
+  inputPerMillion: 15.0,   // $15 per 1M input tokens (Opus 4.5)
+  outputPerMillion: 75.0,  // $75 per 1M output tokens
+};
+
+/**
+ * Estimate tokens from content size
+ */
+function estimateTokens(bytes: number): number {
+  return Math.ceil(bytes / CHARS_PER_TOKEN);
+}
+
+/**
+ * Calculate cost estimate from input/output tokens
+ */
+function estimateCost(inputTokens: number, outputTokens: number): number {
+  return (
+    (inputTokens * PRICING.inputPerMillion / 1_000_000) +
+    (outputTokens * PRICING.outputPerMillion / 1_000_000)
+  );
+}
 
 /**
  * Error type classification for metrics
@@ -158,7 +184,15 @@ export function withMetrics(toolName: string, handler: McpToolHandler): McpToolH
     let success = true;
     let errorType: string | undefined;
     let responseBytes: number | undefined;
+    let requestBytes: number | undefined;
     let result: any;
+
+    // Measure request size
+    try {
+      requestBytes = JSON.stringify(args).length;
+    } catch {
+      requestBytes = 0;
+    }
 
     try {
       result = await handler(args, env, keyPrefix, userProfile, authKey, ctx);
@@ -181,6 +215,11 @@ export function withMetrics(toolName: string, handler: McpToolHandler): McpToolH
       // Extract user info from profile or keyPrefix
       const userId = userProfile?.userId || keyPrefix.replace(/\/$/, '').replace(/_/g, '.');
 
+      // Calculate cost estimate
+      const inputTokens = estimateTokens(requestBytes || 0);
+      const outputTokens = estimateTokens(responseBytes || 0);
+      const costEstimate = estimateCost(inputTokens, outputTokens);
+
       // Record metric asynchronously
       recordToolCall(
         env,
@@ -191,12 +230,35 @@ export function withMetrics(toolName: string, handler: McpToolHandler): McpToolH
           tool: toolName,
           durationMs,
           responseBytes,
+          requestBytes,
+          inputTokens,
+          outputTokens,
+          costEstimate,
           success,
           errorType,
           metadata: extractMetadata(toolName, args)
         },
         ctx
       );
+
+      // Update per-trip cost if this is a trip-related operation
+      const tripId = args.tripId || args.trip_id;
+      if (tripId && ['save_trip', 'patch_trip', 'preview_publish', 'publish_trip', 'delete_trip'].includes(toolName)) {
+        updateTripCost(
+          env,
+          keyPrefix,
+          tripId,
+          {
+            tool: toolName,
+            inputTokens,
+            outputTokens,
+            cost: costEstimate,
+            durationMs,
+            timestamp: new Date().toISOString()
+          },
+          ctx
+        );
+      }
     }
   };
 }
