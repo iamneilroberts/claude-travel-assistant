@@ -201,10 +201,10 @@ The `_reference` object holds **confirmed** bookings.
 
 ### Publishing Workflow
 
-1. `trip_checklist(tripId, preset)` → Quick check: what's missing? (presets: draft, client_review, ready_to_book, ready_to_publish, pre_departure)
-2. `list_templates`
-3. `preview_publish(tripId, template)` → **Follow `_agentInstructions` in response.**
-4. `validate_trip(tripId)` → Deep AI analysis for issues.
+1. `list_templates`
+2. `preview_publish(tripId, template)` → **Follow `_agentInstructions` in response.**
+3. `trip_checklist(tripId, "ready_to_publish")` → Quick check: what's missing before going live?
+4. `validate_trip(tripId)` → Optional: deep AI analysis for issues.
 5. `publish_trip` → **Follow `_agentInstructions` in response.**
 
 **IMPORTANT:** When `verified: true`, do NOT mention caching, hard refresh, or delays. The URL is confirmed live.
