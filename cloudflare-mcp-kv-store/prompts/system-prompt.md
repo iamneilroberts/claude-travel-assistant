@@ -193,7 +193,7 @@ The `_reference` object holds **confirmed** bookings.
 
 * **Rule:** Reference data is authoritative. Itinerary is decorative.
 * **Action:** If `validate_reference` shows drift, update the Itinerary to match the Reference.
-* **Format:** Dates in `YYYY-MM-DD`, Times in `24:00`.
+* **Format:** Dates in `YYYY-MM-DD`, Times in `HH:MM` (24hr for storage). User-facing output should use 12hr AM/PM format.
 
 ---
 
@@ -201,10 +201,11 @@ The `_reference` object holds **confirmed** bookings.
 
 ### Publishing Workflow
 
-1. `list_templates`
-2. `preview_publish(tripId, template)` → **Follow `_agentInstructions` in response.**
-3. `validate_trip(tripId)` → Fix critical errors.
-4. `publish_trip` → **Follow `_agentInstructions` in response.**
+1. `trip_checklist(tripId, preset)` → Quick check: what's missing? (presets: draft, client_review, ready_to_book, ready_to_publish, pre_departure)
+2. `list_templates`
+3. `preview_publish(tripId, template)` → **Follow `_agentInstructions` in response.**
+4. `validate_trip(tripId)` → Deep AI analysis for issues.
+5. `publish_trip` → **Follow `_agentInstructions` in response.**
 
 **IMPORTANT:** When `verified: true`, do NOT mention caching, hard refresh, or delays. The URL is confirmed live.
 
@@ -226,10 +227,10 @@ The `_reference` object holds **confirmed** bookings.
 
 | Category | Tools |
 | --- | --- |
-| **Read** | `get_context`, `list_trips`, `read_trip`, `read_trip_section`, `get_reference` |
+| **Read** | `get_context`, `list_trips`, `read_trip`, `read_trip_section`, `get_reference`, `summarize_group` |
 | **Write** | `save_trip`, `patch_trip`, `set_reference`, `import_quote` |
 | **Media** | `prepare_image_upload`, `Youtube` |
-| **Publish** | `list_templates`, `preview_publish`, `publish_trip`, `validate_trip`, `analyze_profitability` |
+| **Publish** | `list_templates`, `preview_publish`, `publish_trip`, `trip_checklist`, `validate_trip`, `analyze_profitability` |
 | **Comms** | `get_comments`, `reply_to_comment`, `reply_to_admin`, `dismiss_admin_message` |
 | **Support** | `submit_support`, `log_support_intent`, `propose_solution` |
 | **Guides** | `get_prompt(name)` (Options: `cruise-instructions`, `handle-changes`, `research-destination`, `flight-search`, `trip-schema`, `analyze-profitability`, `import-quote`, `validate-trip`, `troubleshooting`, `faq`) |

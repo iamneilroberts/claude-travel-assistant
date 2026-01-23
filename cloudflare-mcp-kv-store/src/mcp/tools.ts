@@ -145,11 +145,27 @@ export const CORE_TOOLS: ToolDefinition[] = [
   // ============ VALIDATION ============
   {
     name: "validate_trip",
-    description: "Check trip for issues and missing info.",
+    description: "Deep AI-powered trip analysis for issues and suggestions.",
     inputSchema: {
       type: "object",
       properties: {
         tripId: { type: "string", description: "Trip ID" }
+      },
+      required: ["tripId"]
+    }
+  },
+  {
+    name: "trip_checklist",
+    description: "Quick checklist of what's missing or needs attention. Context-aware: checks itinerary coverage, traveler/room ratios, document needs, booking urgency, and more.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        tripId: { type: "string", description: "Trip ID" },
+        preset: {
+          type: "string",
+          description: "Check against a milestone",
+          enum: ["draft", "client_review", "ready_to_book", "ready_to_publish", "pre_departure"]
+        }
       },
       required: ["tripId"]
     }

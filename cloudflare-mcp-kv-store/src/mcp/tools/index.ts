@@ -33,7 +33,8 @@ import {
   handleValidateTrip,
   handleImportQuote,
   handleAnalyzeProfitability,
-  handleGetPrompt
+  handleGetPrompt,
+  handleTripChecklist
 } from './validation';
 import {
   handleLogSupportIntent,
@@ -73,6 +74,7 @@ export const toolHandlers: Record<string, McpToolHandler> = {
   preview_publish: withMetrics('preview_publish', handlePreviewPublish),
   publish_trip: withMetrics('publish_trip', handlePublishTrip),
   validate_trip: withMetrics('validate_trip', handleValidateTrip),
+  trip_checklist: withMetrics('trip_checklist', handleTripChecklist),
   import_quote: withMetrics('import_quote', handleImportQuote),
   analyze_profitability: withMetrics('analyze_profitability', handleAnalyzeProfitability),
   get_prompt: withMetrics('get_prompt', handleGetPrompt),
@@ -111,6 +113,7 @@ export {
   handlePreviewPublish,
   handlePublishTrip,
   handleValidateTrip,
+  handleTripChecklist,
   handleImportQuote,
   handleAnalyzeProfitability,
   handleGetPrompt,

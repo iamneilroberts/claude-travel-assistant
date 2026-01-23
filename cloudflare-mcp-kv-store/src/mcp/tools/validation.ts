@@ -264,15 +264,73 @@ export const handleAnalyzeProfitability: McpToolHandler = async (args, env, keyP
   };
 };
 
+/**
+ * Knowledge base item structure (for approved solutions)
+ */
+interface ApprovedKnowledge {
+  id: string;
+  problem: string;
+  solution: string;
+  context?: string;
+  keywords: string[];
+  approvedAt: string;
+}
+
+/**
+ * Extract keywords from text for matching
+ */
+function extractKeywords(text: string): string[] {
+  const stopWords = new Set([
+    'the', 'a', 'an', 'is', 'are', 'was', 'were', 'to', 'of', 'in', 'for', 'on', 'with',
+    'and', 'or', 'but', 'not', 'it', 'this', 'that', 'be', 'have', 'has', 'had', 'do'
+  ]);
+
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 2 && !stopWords.has(w));
+}
+
 export const handleGetPrompt: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
-  const { name: promptName } = args;
+  const { name: promptName, context: queryContext } = args;
 
   // Load the requested prompt from KV
   const promptKey = `_prompts/${promptName}`;
-  const promptContent = await env.TRIPS.get(promptKey, "text");
+  let promptContent = await env.TRIPS.get(promptKey, "text");
 
   if (!promptContent) {
-    throw new Error(`Prompt '${promptName}' not found. Available prompts: system-prompt, validate-trip, import-quote, analyze-profitability, cruise-instructions, handle-changes, flight-search, research-destination, trip-schema, admin-system-prompt`);
+    throw new Error(`Prompt '${promptName}' not found. Available prompts: system-prompt, validate-trip, import-quote, analyze-profitability, cruise-instructions, handle-changes, flight-search, research-destination, trip-schema, admin-system-prompt, troubleshooting, faq`);
+  }
+
+  // For troubleshooting/faq prompts, append approved community knowledge
+  if (promptName === 'troubleshooting' || promptName === 'faq') {
+    const approvedData = await env.TRIPS.get(`_knowledge/approved/${promptName}`, 'json') as { items: ApprovedKnowledge[] } | null;
+
+    if (approvedData?.items?.length) {
+      let items = approvedData.items;
+
+      // If context provided, filter to relevant items using keyword matching
+      if (queryContext) {
+        const contextKeywords = extractKeywords(queryContext);
+        items = items.filter(item =>
+          item.keywords.some(k => contextKeywords.includes(k))
+        ).slice(0, 10); // Max 10 relevant items
+      } else {
+        // Default: most recent 20
+        items = items.slice(0, 20);
+      }
+
+      if (items.length > 0) {
+        promptContent += '\n\n---\n\n## Community Solutions\n\n';
+        promptContent += '_The following solutions were contributed by users and approved by admins. If they conflict with the guidance above, the official guidance takes precedence._\n\n';
+
+        for (const item of items) {
+          promptContent += `### ${item.problem}\n`;
+          promptContent += `${item.solution}\n\n`;
+        }
+      }
+    }
   }
 
   const result = {
@@ -283,5 +341,348 @@ export const handleGetPrompt: McpToolHandler = async (args, env, keyPrefix, user
 
   return {
     content: [{ type: "text", text: JSON.stringify(stripEmpty(result), null, 2) }]
+  };
+};
+
+/**
+ * Smart, context-aware trip checklist
+ * Proactively identifies what's missing based on trip context
+ */
+interface ChecklistItem {
+  category: string;
+  issue: string;
+  severity: 'missing' | 'warning' | 'suggestion';
+  urgent?: boolean;
+}
+
+function calculateDaysBetween(start: string, end: string): number {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  return Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+}
+
+function daysUntilDeparture(startDate: string): number {
+  const start = new Date(startDate);
+  const now = new Date();
+  return Math.ceil((start.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function hasChildren(travelers: any): boolean {
+  if (!travelers?.details || !Array.isArray(travelers.details)) return false;
+  return travelers.details.some((t: any) =>
+    t.type === 'child' || t.type === 'infant' || (t.age && t.age < 18)
+  );
+}
+
+function getTravelerCount(travelers: any): number {
+  if (travelers?.count) return travelers.count;
+  if (travelers?.details?.length) return travelers.details.length;
+  return 0;
+}
+
+export const handleTripChecklist: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
+  const tripId = args.tripId || args.key;
+  const preset = args.preset || 'client_review';
+
+  if (!tripId || typeof tripId !== 'string') {
+    throw new Error("Missing required parameter 'tripId'");
+  }
+
+  const fullKey = keyPrefix + tripId;
+  const trip = await env.TRIPS.get(fullKey, "json") as any;
+  if (!trip) throw new Error(`Trip '${tripId}' not found.`);
+
+  const issues: ChecklistItem[] = [];
+  const complete: string[] = [];
+
+  const isCruise = !!trip.cruiseInfo;
+  const travelerCount = getTravelerCount(trip.travelers);
+  const hasKids = hasChildren(trip.travelers);
+  const daysUntil = trip.dates?.start ? daysUntilDeparture(trip.dates.start) : null;
+  const tripDuration = (trip.dates?.start && trip.dates?.end)
+    ? calculateDaysBetween(trip.dates.start, trip.dates.end)
+    : null;
+
+  // ============ BASIC STRUCTURE ============
+  if (!trip.meta?.title) {
+    issues.push({ category: 'basics', issue: 'Trip title not set', severity: 'missing' });
+  } else {
+    complete.push('Trip title');
+  }
+
+  if (!trip.meta?.destination) {
+    issues.push({ category: 'basics', issue: 'Destination not specified', severity: 'missing' });
+  } else {
+    complete.push('Destination');
+  }
+
+  if (!trip.meta?.clientName) {
+    issues.push({ category: 'basics', issue: 'Client name not set', severity: 'warning' });
+  } else {
+    complete.push('Client name');
+  }
+
+  // ============ DATES ============
+  if (!trip.dates?.start) {
+    issues.push({ category: 'dates', issue: 'Start date not set', severity: 'missing' });
+  } else {
+    complete.push('Start date');
+  }
+
+  if (!trip.dates?.end) {
+    issues.push({ category: 'dates', issue: 'End date not set', severity: 'missing' });
+  } else {
+    complete.push('End date');
+  }
+
+  // ============ TRAVELERS ============
+  if (travelerCount === 0) {
+    issues.push({ category: 'travelers', issue: 'No travelers specified', severity: 'missing' });
+  } else {
+    complete.push(`${travelerCount} traveler(s)`);
+
+    // Check if we have details for all travelers
+    if (trip.travelers?.details?.length !== travelerCount && travelerCount > 0) {
+      issues.push({
+        category: 'travelers',
+        issue: `Traveler details incomplete (have ${trip.travelers?.details?.length || 0} of ${travelerCount})`,
+        severity: 'warning'
+      });
+    }
+  }
+
+  // ============ ITINERARY COVERAGE ============
+  const itineraryDays = Array.isArray(trip.itinerary) ? trip.itinerary.length : 0;
+
+  if (itineraryDays === 0) {
+    issues.push({ category: 'itinerary', issue: 'No itinerary days created', severity: 'missing' });
+  } else if (tripDuration && itineraryDays < tripDuration) {
+    const missing = tripDuration - itineraryDays;
+    issues.push({
+      category: 'itinerary',
+      issue: `Itinerary incomplete: ${missing} day(s) missing (have ${itineraryDays} of ${tripDuration})`,
+      severity: 'warning'
+    });
+  } else {
+    complete.push(`Itinerary (${itineraryDays} days)`);
+  }
+
+  // Check for empty itinerary days
+  if (Array.isArray(trip.itinerary)) {
+    trip.itinerary.forEach((day: any, idx: number) => {
+      const dayNum = day.day || idx + 1;
+      if (!day.activities || day.activities.length === 0) {
+        issues.push({
+          category: 'itinerary',
+          issue: `Day ${dayNum} has no activities`,
+          severity: 'suggestion'
+        });
+      }
+    });
+  }
+
+  // ============ LODGING ============
+  if (isCruise) {
+    // Cruise - check cabin info
+    if (!trip.cruiseInfo?.cabin) {
+      issues.push({ category: 'lodging', issue: 'Cabin details not specified', severity: 'warning' });
+    } else {
+      complete.push('Cabin info');
+    }
+  } else {
+    // Non-cruise - check lodging
+    const lodgingCount = Array.isArray(trip.lodging) ? trip.lodging.length : 0;
+    if (lodgingCount === 0) {
+      issues.push({ category: 'lodging', issue: 'No lodging specified', severity: 'missing' });
+    } else {
+      complete.push(`Lodging (${lodgingCount} properties)`);
+
+      // Check room/traveler ratio
+      if (travelerCount > 0) {
+        const totalRooms = trip.lodging.reduce((sum: number, l: any) => sum + (l.rooms || 1), 0);
+        if (travelerCount > totalRooms * 4) {
+          issues.push({
+            category: 'lodging',
+            issue: `Room capacity may be insufficient (${totalRooms} room(s) for ${travelerCount} travelers)`,
+            severity: 'warning'
+          });
+        }
+      }
+
+      // Check lodging coverage
+      if (tripDuration) {
+        const totalNights = trip.lodging.reduce((sum: number, l: any) => sum + (l.nights || 0), 0);
+        if (totalNights > 0 && totalNights < tripDuration - 1) {
+          issues.push({
+            category: 'lodging',
+            issue: `Lodging nights don't cover full trip (${totalNights} nights for ${tripDuration - 1} night trip)`,
+            severity: 'warning'
+          });
+        }
+      }
+    }
+  }
+
+  // ============ CRUISE-SPECIFIC ============
+  if (isCruise) {
+    if (!trip.cruiseInfo?.shipName) {
+      issues.push({ category: 'cruise', issue: 'Ship name not specified', severity: 'warning' });
+    }
+    if (!trip.cruiseInfo?.embarkation?.port) {
+      issues.push({ category: 'cruise', issue: 'Embarkation port not set', severity: 'missing' });
+    }
+    if (!trip.cruiseInfo?.debarkation?.port) {
+      issues.push({ category: 'cruise', issue: 'Debarkation port not set', severity: 'missing' });
+    }
+
+    // Check port days have activities
+    if (Array.isArray(trip.itinerary)) {
+      trip.itinerary.forEach((day: any) => {
+        if (day.type === 'port' && day.location && (!day.activities || day.activities.length === 0)) {
+          issues.push({
+            category: 'cruise',
+            issue: `No shore excursions planned for ${day.location}`,
+            severity: 'suggestion'
+          });
+        }
+      });
+    }
+  }
+
+  // ============ FLIGHTS ============
+  if (!isCruise) {
+    const hasOutbound = trip.flights?.outbound?.route || trip.flights?.outbound?.airline;
+    const hasReturn = trip.flights?.return?.route || trip.flights?.return?.airline;
+
+    if (!hasOutbound && !hasReturn) {
+      issues.push({ category: 'flights', issue: 'No flights specified', severity: 'warning' });
+    } else {
+      if (!hasOutbound) {
+        issues.push({ category: 'flights', issue: 'Outbound flight not set', severity: 'warning' });
+      }
+      if (!hasReturn) {
+        issues.push({ category: 'flights', issue: 'Return flight not set', severity: 'warning' });
+      }
+      if (hasOutbound && hasReturn) {
+        complete.push('Flights');
+      }
+    }
+  }
+
+  // ============ BUDGET ============
+  if (!trip.budget?.total && !trip.budget?.perPerson && !trip.tiers) {
+    issues.push({ category: 'budget', issue: 'No pricing/budget information', severity: 'warning' });
+  } else {
+    complete.push('Budget/pricing');
+  }
+
+  // ============ FAMILY-SPECIFIC ============
+  if (hasKids) {
+    // Check if any activities are marked family-friendly
+    let hasFamilyActivities = false;
+    if (Array.isArray(trip.itinerary)) {
+      for (const day of trip.itinerary) {
+        if (Array.isArray(day.activities)) {
+          if (day.activities.some((a: any) => a.familyFriendly || a.forWho?.includes('kid') || a.forWho?.includes('family'))) {
+            hasFamilyActivities = true;
+            break;
+          }
+        }
+      }
+    }
+    if (!hasFamilyActivities) {
+      issues.push({
+        category: 'family',
+        issue: 'Trip includes children but no activities marked as family-friendly',
+        severity: 'suggestion'
+      });
+    }
+  }
+
+  // ============ URGENCY CHECKS ============
+  if (daysUntil !== null && daysUntil >= 0) {
+    if (daysUntil <= 14) {
+      // Urgent checks
+      const missingCritical = issues.filter(i => i.severity === 'missing');
+      if (missingCritical.length > 0) {
+        issues.forEach(i => {
+          if (i.severity === 'missing') i.urgent = true;
+        });
+      }
+
+      if (!isCruise && !trip.flights?.outbound?.route) {
+        issues.push({
+          category: 'urgent',
+          issue: `Departure in ${daysUntil} days - flights not confirmed`,
+          severity: 'warning',
+          urgent: true
+        });
+      }
+    }
+
+    if (daysUntil <= 7 && preset === 'pre_departure') {
+      // Check for confirmation numbers
+      if (!trip.bookings || Object.keys(trip.bookings).length === 0) {
+        issues.push({
+          category: 'urgent',
+          issue: 'No booking confirmation numbers recorded',
+          severity: 'warning',
+          urgent: true
+        });
+      }
+    }
+  }
+
+  // ============ PRESET-SPECIFIC CHECKS ============
+  if (preset === 'ready_to_publish' || preset === 'client_review') {
+    if (!trip.heroImage && (!trip.images || trip.images.length === 0)) {
+      issues.push({
+        category: 'presentation',
+        issue: 'No images for published page',
+        severity: 'suggestion'
+      });
+    }
+  }
+
+  if (preset === 'pre_departure') {
+    // Document checks
+    if (trip.travelers?.details) {
+      const needsDocs = trip.travelers.details.filter((t: any) => !t.docsComplete);
+      if (needsDocs.length > 0) {
+        issues.push({
+          category: 'documents',
+          issue: `${needsDocs.length} traveler(s) without confirmed documents`,
+          severity: 'warning',
+          urgent: daysUntil !== null && daysUntil <= 14
+        });
+      }
+    }
+  }
+
+  // ============ BUILD RESPONSE ============
+  const urgent = issues.filter(i => i.urgent);
+  const missing = issues.filter(i => i.severity === 'missing' && !i.urgent);
+  const warnings = issues.filter(i => i.severity === 'warning' && !i.urgent);
+  const suggestions = issues.filter(i => i.severity === 'suggestion');
+
+  const readyForPreset = missing.length === 0 && urgent.length === 0;
+
+  const result = {
+    tripId,
+    preset,
+    ready: readyForPreset,
+    summary: readyForPreset
+      ? `✓ Ready for ${preset.replace(/_/g, ' ')}`
+      : `${missing.length + urgent.length} issue(s) to resolve`,
+    ...(daysUntil !== null && daysUntil >= 0 && { daysUntilDeparture: daysUntil }),
+    ...(urgent.length > 0 && { urgent: urgent.map(i => i.issue) }),
+    ...(missing.length > 0 && { missing: missing.map(i => i.issue) }),
+    ...(warnings.length > 0 && { warnings: warnings.map(i => i.issue) }),
+    ...(suggestions.length > 0 && { suggestions: suggestions.map(i => i.issue) }),
+    complete
+  };
+
+  return {
+    content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
   };
 };
