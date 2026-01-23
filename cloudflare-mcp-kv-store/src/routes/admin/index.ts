@@ -64,7 +64,9 @@ import {
   handleProposedFAQs,
   handleTestCleanup,
   handleApproveFAQ,
-  handleDismissFAQ
+  handleDismissFAQ,
+  handleSaveTestSession,
+  handleSaveTestRun
 } from './test';
 import {
   handleAdminToggleTest,
@@ -156,6 +158,8 @@ const adminHandlers: RouteHandler[] = [
   handleTestCleanup,
   handleApproveFAQ,
   handleDismissFAQ,
+  handleSaveTestSession,
+  handleSaveTestRun,
   // Trip Actions
   handleAdminToggleTest,
   handleAdminArchive,
@@ -262,6 +266,8 @@ export {
   handleTestCleanup,
   handleApproveFAQ,
   handleDismissFAQ,
+  handleSaveTestSession,
+  handleSaveTestRun,
   handleAdminToggleTest,
   handleAdminArchive,
   handleAdminDelete,

@@ -202,18 +202,69 @@ export default {
 
     // 3. Handle JSON-RPC Messages (POST)
     if (request.method === "POST") {
+      let body: JsonRpcRequest;
+      let rawBody: string | undefined;
+
+      // Step 1: Parse JSON with detailed error reporting
       try {
-        const body = await request.json() as JsonRpcRequest;
+        rawBody = await request.text();
+        body = JSON.parse(rawBody) as JsonRpcRequest;
+      } catch (err) {
+        // Provide detailed parse error with context
+        const errorMessage = err instanceof SyntaxError
+          ? `JSON parse error: ${err.message}`
+          : `Parse error: ${err instanceof Error ? err.message : 'Unknown error'}`;
+
+        // Include snippet of problematic JSON (first 200 chars)
+        const snippet = rawBody
+          ? ` | Received (first 200 chars): ${rawBody.substring(0, 200).replace(/\n/g, '\\n')}${rawBody.length > 200 ? '...' : ''}`
+          : '';
+
+        return new Response(JSON.stringify({
+          jsonrpc: "2.0",
+          error: {
+            code: -32700,
+            message: errorMessage + snippet
+          },
+          id: null
+        }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      // Step 2: Handle MCP request with guaranteed response
+      try {
         const response = await handleMcpRequest(body, env, keyPrefix, userProfile, requestKey, ctx);
+
+        // Guard against null/undefined responses (should never happen but prevents silent failures)
+        if (!response) {
+          console.error(`MCP handler returned null/undefined for method: ${body.method}`);
+          return new Response(JSON.stringify({
+            jsonrpc: "2.0",
+            error: { code: -32603, message: `Internal error: handler returned no response for ${body.method}` },
+            id: body.id || null
+          }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
         return new Response(JSON.stringify(response), {
           headers: { "Content-Type": "application/json" }
         });
       } catch (err) {
+        // Handler threw an unexpected error - always return structured response
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        console.error(`MCP handler error for ${body.method}:`, err);
         return new Response(JSON.stringify({
           jsonrpc: "2.0",
-          error: { code: -32700, message: "Parse error" },
-          id: null
-        }), { status: 400 });
+          error: { code: -32603, message: `Internal error: ${errorMessage}` },
+          id: body.id || null
+        }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
       }
     }
 
@@ -242,19 +293,57 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
   const lifecycleResponse = handleLifecycleMethod(req);
   if (lifecycleResponse) return lifecycleResponse;
 
-  // List Tools - return all tool definitions
+  // List Tools - return all tool definitions (filtered for test users)
   if (req.method === "tools/list") {
-    return createResult(req.id!, { tools: TOOL_DEFINITIONS });
+    // Test users don't see publish_trip in tool list
+    const isTestUser = authKey.startsWith('TestRunner.');
+    const RESTRICTED_TOOLS_FOR_TEST = ['publish_trip'];
+
+    const tools = isTestUser
+      ? TOOL_DEFINITIONS.filter(t => !RESTRICTED_TOOLS_FOR_TEST.includes(t.name))
+      : TOOL_DEFINITIONS;
+
+    return createResult(req.id!, { tools });
   }
 
   // Call Tool - dispatch to extracted handlers
   if (req.method === "tools/call") {
     const { name, arguments: args } = req.params;
 
+    // Test user tool restrictions
+    // Test users (authKey starting with "TestRunner.") cannot use publish_trip
+    const isTestUser = authKey.startsWith('TestRunner.');
+    const RESTRICTED_TOOLS_FOR_TEST = ['publish_trip'];
+
+    if (isTestUser && RESTRICTED_TOOLS_FOR_TEST.includes(name)) {
+      return {
+        jsonrpc: "2.0",
+        id: req.id!,
+        result: {
+          content: [{ type: "text", text: `Error: Tool "${name}" is restricted for test users. Use preview_publish instead.` }],
+          isError: true
+        }
+      };
+    }
+
     const handler = toolHandlers[name];
     if (handler) {
       try {
         const result = await handler(args || {}, env, keyPrefix, userProfile, authKey, ctx);
+
+        // Guard against handlers returning null/undefined (prevents silent failures)
+        if (!result || !result.content) {
+          console.error(`Tool handler '${name}' returned invalid result:`, result);
+          return {
+            jsonrpc: "2.0",
+            id: req.id!,
+            result: {
+              content: [{ type: "text", text: `Error: Tool '${name}' completed but returned no content. This is a bug - please report it.` }],
+              isError: true
+            }
+          };
+        }
+
         return {
           jsonrpc: "2.0",
           id: req.id!,
@@ -264,11 +353,14 @@ async function handleMcpRequest(req: JsonRpcRequest, env: Env, keyPrefix: string
           }
         };
       } catch (err: any) {
+        // Always return a structured error response
+        const errorMsg = err?.message || String(err) || 'Unknown error';
+        console.error(`Tool handler '${name}' threw error:`, err);
         return {
           jsonrpc: "2.0",
           id: req.id!,
           result: {
-            content: [{ type: "text", text: `Error: ${err.message}` }],
+            content: [{ type: "text", text: `Error: ${errorMsg}` }],
             isError: true
           }
         };

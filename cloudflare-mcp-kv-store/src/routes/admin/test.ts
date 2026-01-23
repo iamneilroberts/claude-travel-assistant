@@ -19,17 +19,19 @@ interface TestSessionResult {
   id: string;
   scenarioId: string;
   scenarioName: string;
-  tier: 1 | 2 | 3;
+  tier: 1 | 2 | 3 | 4;  // 4 = realistic user scenarios
   startedAt: string;
   completedAt: string;
   persona: {
     name: string;
     experience: string;
+    description?: string;  // Full persona description for realistic scenarios
   };
   mcpCallCount: number;
   mcpSuccessCount: number;
   toolsUsed: string[];
   transcript: string;
+  agentNotes?: string;  // Test agent's observations and summary
   judgeResult?: {
     scenarioId: string;
     passed: boolean;
@@ -280,6 +282,76 @@ export const handleProposedFAQs: RouteHandler = async (request, env, ctx, url, c
   return new Response(JSON.stringify({
     faqs,
     count: faqs.length
+  }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  });
+};
+
+/**
+ * POST /admin/test/sessions - Save a test session result
+ */
+export const handleSaveTestSession: RouteHandler = async (request, env, ctx, url, corsHeaders) => {
+  if (url.pathname !== '/admin/test/sessions' || request.method !== 'POST') return null;
+
+  const session = await request.json() as TestSessionResult;
+
+  // Validate required fields
+  if (!session.id || !session.scenarioId || !session.scenarioName) {
+    return new Response(JSON.stringify({ error: 'Missing required fields: id, scenarioId, scenarioName' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  // Ensure timestamps
+  if (!session.startedAt) session.startedAt = new Date().toISOString();
+  if (!session.completedAt) session.completedAt = new Date().toISOString();
+
+  // Save with 7-day TTL
+  const TTL = 7 * 24 * 60 * 60;
+  await env.TRIPS.put(`_test/sessions/${session.id}`, JSON.stringify(session), {
+    expirationTtl: TTL
+  });
+
+  return new Response(JSON.stringify({
+    success: true,
+    sessionId: session.id,
+    message: 'Test session saved'
+  }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  });
+};
+
+/**
+ * POST /admin/test/runs - Save a test run summary
+ */
+export const handleSaveTestRun: RouteHandler = async (request, env, ctx, url, corsHeaders) => {
+  if (url.pathname !== '/admin/test/runs' || request.method !== 'POST') return null;
+
+  const run = await request.json() as TestRunSummary;
+
+  // Validate required fields
+  if (!run.id || !run.scenariosRun || !Array.isArray(run.results)) {
+    return new Response(JSON.stringify({ error: 'Missing required fields: id, scenariosRun, results' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  // Ensure timestamps
+  if (!run.startedAt) run.startedAt = new Date().toISOString();
+  if (!run.completedAt) run.completedAt = new Date().toISOString();
+
+  // Save with 7-day TTL
+  const TTL = 7 * 24 * 60 * 60;
+  await env.TRIPS.put(`_test/runs/${run.id}`, JSON.stringify(run), {
+    expirationTtl: TTL
+  });
+
+  return new Response(JSON.stringify({
+    success: true,
+    runId: run.id,
+    message: 'Test run saved'
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   });
