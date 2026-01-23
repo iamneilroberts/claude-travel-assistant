@@ -75,7 +75,7 @@ Make REAL MCP calls to `https://voygent.somotravel.workers.dev/mcp` with key `Te
 **IMPORTANT: Always start with `get_context`**
 
 1. **Call `get_context` FIRST** - This returns the system prompt with trip schema, tool documentation, and data structure requirements. READ IT before making other calls.
-2. Call `get_prompt("trip-schema")` to get the full trip data schema reference
+2. Review the trip schema in the system prompt (included in get_context response) - NO separate get_prompt call needed
 3. Create trip with `save_trip` using the schema from the system prompt
 4. Add details with `patch_trip` if needed
 5. Generate preview with `preview_publish`
@@ -90,6 +90,44 @@ The system prompt tells you exactly how to structure trip data. Follow it.
 - Success/failure status
 
 This data will be used to estimate token usage and costs. See "Cost Tracking" section below.
+
+**COST TRACKING IMPLEMENTATION (MANDATORY):**
+
+For EACH MCP call, you MUST track and record:
+
+1. **Before the call:**
+   - Record `startTime = Date.now()`
+
+2. **After the call:**
+   - Record `endTime = Date.now()`
+   - Calculate `durationMs = endTime - startTime`
+   - Measure `argsSize = JSON.stringify(args).length`
+   - Measure `responseSize = JSON.stringify(response).length`
+
+3. **Build mcpCallDetail object:**
+   ```json
+   {
+     "seq": [call number starting at 1],
+     "tool": "[tool name]",
+     "argsPreview": "[first 200 chars of args JSON, with tripData redacted]",
+     "argsSize": [bytes],
+     "success": [true/false],
+     "error": "[error message if failed]",
+     "responseSize": [bytes],
+     "durationMs": [milliseconds],
+     "tokens": {
+       "input": "Math.ceil(argsSize / 4)",
+       "output": "Math.ceil(responseSize / 4)"
+     },
+     "cost": "(inputTokens * 15 / 1000000) + (outputTokens * 75 / 1000000)",
+     "timestamp": "[ISO timestamp]"
+   }
+   ```
+
+4. **Aggregate at end of test:**
+   - Sum all call costs for `costEstimate`
+   - Build `tokens` object with mcp/reasoning/overhead breakdowns
+   - Set `modelUsed` to your current model ID (e.g., "claude-opus-4-5-20251101")
 
 **Quick Reference: Trip Data Structure**
 
@@ -313,6 +351,14 @@ Include all MCP calls in order. For each call:
 
 POST to: `https://voygent.somotravel.workers.dev/admin/test/sessions`
 Admin key from `.env` line 3: `ede9dec4d517f9e0cfd6fdecb065eb495b0102dace78c34a`
+
+**REQUIRED fields in POST body (DO NOT OMIT):**
+- `mcpCallDetails`: Array of call detail objects (MUST NOT be empty if MCP calls were made)
+- `costEstimate`: Total USD cost (MUST be > 0 if calls were made)
+- `tokens`: Token breakdown object with mcp/reasoning/overhead
+- `modelUsed`: Your model identifier (e.g., "claude-opus-4-5-20251101")
+
+**Without these fields, the session will show as "no cost data" in the cost optimizer.**
 
 ## Test Environment
 
