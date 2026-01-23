@@ -473,6 +473,7 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
       <button class="nav-tab" onclick="showTab('messages')">Messages</button>
       <button class="nav-tab" onclick="showTab('knowledge')">Knowledge</button>
       <button class="nav-tab" onclick="showTab('maintenance')">Maintenance</button>
+      <button class="nav-tab" onclick="showTab('qatests')">QA Tests</button>
     </div>
   </div>
 
@@ -877,6 +878,39 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         </div>
       </div>
     </div>
+
+    <!-- QA TESTS TAB -->
+    <div id="tab-qatests" class="tab-content">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="label">Total Runs</div><div class="value" id="qaTestTotalRuns">-</div></div>
+        <div class="stat-card"><div class="label">Pass Rate</div><div class="value" id="qaTestPassRate">-</div></div>
+        <div class="stat-card"><div class="label">Avg Score</div><div class="value" id="qaTestAvgScore">-</div></div>
+        <div class="stat-card"><div class="label">Proposed FAQs</div><div class="value" id="qaTestFAQCount">-</div></div>
+      </div>
+
+      <div class="section">
+        <h2>Recent Test Runs</h2>
+        <p style="color:#8b949e;font-size:13px;margin-bottom:15px;">AI-driven QA tests that simulate user interactions with Voygent.</p>
+        <div id="qaTestRuns" style="max-height:300px;overflow-y:auto;">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Recent Test Sessions</h2>
+        <div id="qaTestSessions" style="max-height:400px;overflow-y:auto;">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Proposed FAQs from Tests</h2>
+        <p style="color:#8b949e;font-size:13px;margin-bottom:15px;">FAQ suggestions identified by the Judge agent during test evaluation.</p>
+        <div id="qaTestFAQs">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Add User Modal -->
@@ -1106,16 +1140,27 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
   <script>
     let ADMIN_KEY = localStorage.getItem('voygent_admin_key');
+    let ADMIN_NAME = localStorage.getItem('voygent_admin_name');
 
     function promptForAdminKey() {
       ADMIN_KEY = prompt('Enter admin key:');
       if (ADMIN_KEY) {
         localStorage.setItem('voygent_admin_key', ADMIN_KEY);
+        if (!ADMIN_NAME) promptForAdminName();
+        else location.reload();
+      }
+    }
+
+    function promptForAdminName() {
+      ADMIN_NAME = prompt('Enter your name (for audit tracking):');
+      if (ADMIN_NAME) {
+        localStorage.setItem('voygent_admin_name', ADMIN_NAME);
         location.reload();
       }
     }
 
     if (!ADMIN_KEY) promptForAdminKey();
+    if (ADMIN_KEY && !ADMIN_NAME) promptForAdminName();
 
     const API_BASE = window.location.origin;
 
@@ -1195,7 +1240,7 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     async function api(endpoint, options = {}) {
       const res = await fetch(API_BASE + endpoint, {
         ...options,
-        headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY, ...options.headers }
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY, 'X-Admin-Name': ADMIN_NAME || 'admin', ...options.headers }
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Unknown error' }));
@@ -2857,6 +2902,245 @@ Note: Also works on Claude iOS app (same steps in Settings)
       }
     }
 
+    // ========== QA TESTS ==========
+
+    async function loadQATestStats() {
+      try {
+        const data = await api('/admin/test/stats');
+        document.getElementById('qaTestTotalRuns').textContent = data.totalRuns || 0;
+        document.getElementById('qaTestPassRate').textContent = (data.passRate || 0) + '%';
+        document.getElementById('qaTestAvgScore').textContent = data.averageScores?.overall || '-';
+      } catch (e) {
+        console.error('Error loading QA test stats:', e);
+      }
+    }
+
+    async function loadQATestRuns() {
+      try {
+        const data = await api('/admin/test/runs?limit=10');
+
+        if (!data.runs || data.runs.length === 0) {
+          document.getElementById('qaTestRuns').innerHTML = '<p style="color:#8b949e;">No test runs yet. Run tests via Claude Code: "Run the onboarding test scenario"</p>';
+          return;
+        }
+
+        let html = '<table style="width:100%">';
+        html += '<thead><tr><th>Time</th><th>Scenarios</th><th>Passed</th><th>Failed</th><th>Avg Score</th></tr></thead>';
+        html += '<tbody>';
+
+        for (const run of data.runs) {
+          const time = new Date(run.completedAt).toLocaleString();
+          const passRate = run.passCount + run.failCount > 0
+            ? Math.round((run.passCount / (run.passCount + run.failCount)) * 100)
+            : 0;
+          const scoreColor = run.aggregateScores?.overall >= 80 ? '#3fb950' : run.aggregateScores?.overall >= 60 ? '#d29922' : '#f85149';
+
+          html += '<tr>';
+          html += '<td style="font-size:12px;">' + escapeHtml(time) + '</td>';
+          html += '<td>' + (run.scenariosRun?.length || 0) + '</td>';
+          html += '<td><span class="badge badge-green">' + run.passCount + '</span></td>';
+          html += '<td>' + (run.failCount > 0 ? '<span class="badge badge-red">' + run.failCount + '</span>' : '-') + '</td>';
+          html += '<td style="color:' + scoreColor + ';font-weight:bold;">' + (run.aggregateScores?.overall || '-') + '</td>';
+          html += '</tr>';
+        }
+
+        html += '</tbody></table>';
+        document.getElementById('qaTestRuns').innerHTML = html;
+      } catch (e) {
+        console.error('Error loading QA test runs:', e);
+        document.getElementById('qaTestRuns').innerHTML = '<p class="error">Error loading test runs</p>';
+      }
+    }
+
+    async function loadQATestSessions() {
+      try {
+        const data = await api('/admin/test/sessions?limit=20');
+
+        if (!data.sessions || data.sessions.length === 0) {
+          document.getElementById('qaTestSessions').innerHTML = '<p style="color:#8b949e;">No test sessions yet.</p>';
+          return;
+        }
+
+        let html = '<table style="width:100%">';
+        html += '<thead><tr><th>Time</th><th>Scenario</th><th>Tier</th><th>Status</th><th>Score</th><th>Action</th></tr></thead>';
+        html += '<tbody>';
+
+        for (const session of data.sessions) {
+          const time = new Date(session.completedAt).toLocaleString();
+          const passed = session.passed;
+          const scoreColor = session.overallScore >= 80 ? '#3fb950' : session.overallScore >= 60 ? '#d29922' : '#f85149';
+          const tierBadge = session.tier === 1 ? 'badge-blue' : session.tier === 2 ? 'badge-yellow' : 'badge-gray';
+
+          html += '<tr>';
+          html += '<td style="font-size:12px;">' + escapeHtml(time) + '</td>';
+          html += '<td>' + escapeHtml(session.scenarioName || session.scenarioId) + '</td>';
+          html += '<td><span class="badge ' + tierBadge + '">T' + session.tier + '</span></td>';
+          html += '<td>' + (passed === true ? '<span class="badge badge-green">PASS</span>' : passed === false ? '<span class="badge badge-red">FAIL</span>' : '<span class="badge badge-gray">-</span>') + '</td>';
+          html += '<td style="color:' + scoreColor + ';font-weight:bold;">' + (session.overallScore || '-') + '</td>';
+          html += '<td><button class="btn btn-small btn-secondary" onclick="viewTestSession(\\'' + session.id + '\\')">View</button></td>';
+          html += '</tr>';
+        }
+
+        html += '</tbody></table>';
+        document.getElementById('qaTestSessions').innerHTML = html;
+      } catch (e) {
+        console.error('Error loading QA test sessions:', e);
+        document.getElementById('qaTestSessions').innerHTML = '<p class="error">Error loading test sessions</p>';
+      }
+    }
+
+    async function loadQATestFAQs() {
+      try {
+        const data = await api('/admin/test/proposed-faqs');
+
+        document.getElementById('qaTestFAQCount').textContent = data.count || 0;
+
+        if (!data.faqs || data.faqs.length === 0) {
+          document.getElementById('qaTestFAQs').innerHTML = '<p style="color:#8b949e;">No FAQ suggestions from tests yet.</p>';
+          return;
+        }
+
+        let html = '';
+        for (let i = 0; i < data.faqs.length; i++) {
+          const faq = data.faqs[i];
+          const faqId = faq.sourceSession + '-' + i;
+          html += '<div class="comment-box" style="margin-bottom:15px;" id="faq-' + faqId + '">';
+          html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">';
+          html += '<div style="font-weight:600;color:#58a6ff;flex:1;">' + escapeHtml(faq.question) + '</div>';
+          html += '<div style="display:flex;gap:8px;margin-left:10px;">';
+          html += '<button class="btn btn-small btn-primary" onclick="approveTestFAQ(\\'' + escapeHtml(faq.sourceSession) + '\\', ' + i + ', this)">Add to KB</button>';
+          html += '<button class="btn btn-small btn-secondary" onclick="dismissTestFAQ(\\'' + escapeHtml(faq.sourceSession) + '\\', ' + i + ', this)">Dismiss</button>';
+          html += '</div></div>';
+          html += '<div style="color:#c9d1d9;margin-bottom:8px;">' + escapeHtml(faq.suggestedAnswer) + '</div>';
+          html += '<div class="comment-meta">Evidence: ' + escapeHtml(faq.evidence) + '</div>';
+          html += '<div class="comment-meta">Source: ' + escapeHtml(faq.sourceScenario || '-') + ' / ' + escapeHtml(faq.sourceSession || '-') + '</div>';
+          html += '</div>';
+        }
+
+        document.getElementById('qaTestFAQs').innerHTML = html;
+      } catch (e) {
+        console.error('Error loading QA test FAQs:', e);
+        document.getElementById('qaTestFAQs').innerHTML = '<p class="error">Error loading proposed FAQs</p>';
+      }
+    }
+
+    async function approveTestFAQ(sessionId, faqIndex, btn) {
+      if (!confirm('Add this FAQ to the knowledge base?')) return;
+      btn.disabled = true;
+      btn.textContent = 'Adding...';
+      try {
+        await api('/admin/test/faq/approve', {
+          method: 'POST',
+          body: JSON.stringify({ sessionId, faqIndex })
+        });
+        const faqEl = btn.closest('.comment-box');
+        faqEl.style.opacity = '0.5';
+        faqEl.innerHTML += '<div style="color:#3fb950;font-weight:bold;margin-top:10px;">✓ Added to Knowledge Base</div>';
+        // Update count
+        const countEl = document.getElementById('qaTestFAQCount');
+        countEl.textContent = Math.max(0, parseInt(countEl.textContent) - 1);
+      } catch (e) {
+        alert('Error: ' + e.message);
+        btn.disabled = false;
+        btn.textContent = 'Add to KB';
+      }
+    }
+
+    async function dismissTestFAQ(sessionId, faqIndex, btn) {
+      if (!confirm('Dismiss this FAQ suggestion?')) return;
+      btn.disabled = true;
+      btn.textContent = 'Dismissing...';
+      try {
+        await api('/admin/test/faq/dismiss', {
+          method: 'POST',
+          body: JSON.stringify({ sessionId, faqIndex })
+        });
+        const faqEl = btn.closest('.comment-box');
+        faqEl.style.transition = 'opacity 0.3s';
+        faqEl.style.opacity = '0';
+        setTimeout(() => faqEl.remove(), 300);
+        // Update count
+        const countEl = document.getElementById('qaTestFAQCount');
+        countEl.textContent = Math.max(0, parseInt(countEl.textContent) - 1);
+      } catch (e) {
+        alert('Error: ' + e.message);
+        btn.disabled = false;
+        btn.textContent = 'Dismiss';
+      }
+    }
+
+    async function viewTestSession(sessionId) {
+      try {
+        const session = await api('/admin/test/session/' + sessionId);
+
+        let html = '<div style="max-height:70vh;overflow-y:auto;">';
+
+        // Header
+        html += '<div style="margin-bottom:20px;">';
+        html += '<h4 style="color:#58a6ff;margin-bottom:10px;">' + escapeHtml(session.scenarioName) + '</h4>';
+        html += '<div class="detail-row"><span class="label">Scenario ID:</span><span>' + escapeHtml(session.scenarioId) + '</span></div>';
+        html += '<div class="detail-row"><span class="label">Persona:</span><span>' + escapeHtml(session.persona?.name || '-') + ' (' + escapeHtml(session.persona?.experience || '-') + ')</span></div>';
+        html += '<div class="detail-row"><span class="label">Completed:</span><span>' + new Date(session.completedAt).toLocaleString() + '</span></div>';
+        html += '<div class="detail-row"><span class="label">MCP Calls:</span><span>' + session.mcpCallCount + ' total, ' + session.mcpSuccessCount + ' successful</span></div>';
+        html += '<div class="detail-row"><span class="label">Tools Used:</span><span>' + (session.toolsUsed?.join(', ') || '-') + '</span></div>';
+        html += '</div>';
+
+        // Judge Result
+        if (session.judgeResult) {
+          const jr = session.judgeResult;
+          const scoreColor = jr.scores.overall >= 80 ? '#3fb950' : jr.scores.overall >= 60 ? '#d29922' : '#f85149';
+
+          html += '<div style="background:#161b22;padding:15px;border-radius:8px;margin-bottom:20px;">';
+          html += '<h4 style="color:#58a6ff;margin-bottom:10px;">Judge Evaluation</h4>';
+          html += '<div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:15px;">';
+          html += '<div><span class="badge ' + (jr.passed ? 'badge-green' : 'badge-red') + '">' + (jr.passed ? 'PASSED' : 'FAILED') + '</span></div>';
+          html += '<div>Overall: <strong style="color:' + scoreColor + ';">' + jr.scores.overall + '</strong></div>';
+          html += '<div>Task: ' + jr.scores.taskCompletion + '</div>';
+          html += '<div>UX: ' + jr.scores.uxQuality + '</div>';
+          html += '<div>Data: ' + jr.scores.dataQuality + '</div>';
+          html += '<div>Errors: ' + jr.scores.errorHandling + '</div>';
+          html += '</div>';
+          html += '<div style="color:#8b949e;font-size:13px;">' + escapeHtml(jr.summary || '') + '</div>';
+          html += '</div>';
+
+          // Findings
+          if (jr.findings && jr.findings.length > 0) {
+            html += '<div style="margin-bottom:20px;">';
+            html += '<h4 style="color:#58a6ff;margin-bottom:10px;">Findings</h4>';
+            for (const f of jr.findings) {
+              const typeColor = f.type === 'positive' ? '#3fb950' : f.type === 'negative' ? '#f85149' : '#d29922';
+              html += '<div style="border-left:3px solid ' + typeColor + ';padding:8px 12px;margin-bottom:8px;background:#161b22;border-radius:0 6px 6px 0;">';
+              html += '<div style="font-size:12px;color:' + typeColor + ';text-transform:uppercase;margin-bottom:4px;">' + escapeHtml(f.type) + ' - ' + escapeHtml(f.area || '') + '</div>';
+              html += '<div style="color:#c9d1d9;">' + escapeHtml(f.description || '') + '</div>';
+              if (f.evidence) html += '<div style="color:#8b949e;font-size:11px;margin-top:4px;">Evidence: ' + escapeHtml(f.evidence) + '</div>';
+              html += '</div>';
+            }
+            html += '</div>';
+          }
+        }
+
+        // Transcript (collapsed by default)
+        if (session.transcript) {
+          html += '<details style="margin-top:20px;">';
+          html += '<summary style="cursor:pointer;color:#58a6ff;font-weight:500;">View Full Transcript</summary>';
+          html += '<pre style="background:#0d1117;padding:15px;border-radius:8px;font-size:11px;overflow-x:auto;margin-top:10px;white-space:pre-wrap;color:#c9d1d9;">' + escapeHtml(session.transcript) + '</pre>';
+          html += '</details>';
+        }
+
+        html += '</div>';
+
+        // Show in modal
+        const modal = document.createElement('div');
+        modal.className = 'modal active';
+        modal.innerHTML = '<div class="modal-content wide"><h3>Test Session Details</h3>' + html + '<div style="margin-top:20px;"><button class="btn btn-secondary" onclick="this.closest(\\'.modal\\').remove()">Close</button></div></div>';
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+        document.body.appendChild(modal);
+      } catch (e) {
+        console.error('Error loading test session:', e);
+        alert('Error loading session: ' + e.message);
+      }
+    }
+
     // ========== MISSION CONTROL ==========
     let missionControlMode = 'live';
     let autoRefreshEnabled = true;
@@ -3380,7 +3664,7 @@ Note: Also works on Claude iOS app (same steps in Settings)
 
     // ========== INIT ==========
     async function init() {
-      await Promise.all([loadStats(), loadUsers(), loadActivity(), loadTrips(), loadComments(), loadSupport(), loadAISettings(), loadBillingStats(), loadPromoCodes(), loadMessages(), loadKnowledgeStats(), loadPendingProposals(), loadApprovedKnowledge(), loadMaintenanceStatus(), loadMaintenanceHistory()]);
+      await Promise.all([loadStats(), loadUsers(), loadActivity(), loadTrips(), loadComments(), loadSupport(), loadAISettings(), loadBillingStats(), loadPromoCodes(), loadMessages(), loadKnowledgeStats(), loadPendingProposals(), loadApprovedKnowledge(), loadMaintenanceStatus(), loadMaintenanceHistory(), loadQATestStats(), loadQATestRuns(), loadQATestSessions(), loadQATestFAQs()]);
       renderRecentActivity();
       renderSubscriptions();
       initMissionControl();

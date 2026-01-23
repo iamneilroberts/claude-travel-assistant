@@ -34,6 +34,50 @@ import { handleActivityStream } from './activity-stream';
 import { handleMetricsSummary } from './metrics-summary';
 import { handleInsights } from './insights';
 import { handleAdminMcp } from './mcp';
+import {
+  handleAISupportStatus,
+  handleAISupportQueue,
+  handleAISupportReview,
+  handleAISupportGetSettings,
+  handleAISupportUpdateSettings,
+  handleAISupportCosts,
+  handleAISupportLogs
+} from './ai-support';
+import {
+  handleListPendingKnowledge,
+  handleListApprovedKnowledge,
+  handleReviewProposal,
+  handleDeleteApprovedKnowledge,
+  handleKnowledgeStats
+} from './knowledge';
+import {
+  handleMaintenanceStatus,
+  handleMaintenanceHistory,
+  handleMaintenanceRun
+} from './maintenance';
+import {
+  handleListTestRuns,
+  handleListTestSessions,
+  handleGetTestSession,
+  handleGetTestRun,
+  handleTestStats,
+  handleProposedFAQs,
+  handleTestCleanup,
+  handleApproveFAQ,
+  handleDismissFAQ
+} from './test';
+import {
+  handleAdminToggleTest,
+  handleAdminArchive,
+  handleAdminDelete,
+  handleAdminCopy,
+  handleAdminRename,
+  handleAdminMoveTrip
+} from './trip-actions';
+import {
+  handleGetEmailUrl,
+  handleGetTripEmailUrl
+} from './email';
 
 // All admin route handlers
 const adminHandlers: RouteHandler[] = [
@@ -81,7 +125,45 @@ const adminHandlers: RouteHandler[] = [
   handleSendDirectMessage,
   handleGetThread,
   handleUpdateThread,
-  handleMarkThreadRead
+  handleMarkThreadRead,
+  // AI Support
+  handleAISupportStatus,
+  handleAISupportQueue,
+  handleAISupportReview,
+  handleAISupportGetSettings,
+  handleAISupportUpdateSettings,
+  handleAISupportCosts,
+  handleAISupportLogs,
+  // Knowledge Base
+  handleListPendingKnowledge,
+  handleListApprovedKnowledge,
+  handleReviewProposal,
+  handleDeleteApprovedKnowledge,
+  handleKnowledgeStats,
+  // Maintenance
+  handleMaintenanceStatus,
+  handleMaintenanceHistory,
+  handleMaintenanceRun,
+  // Test Results
+  handleListTestRuns,
+  handleListTestSessions,
+  handleGetTestSession,
+  handleGetTestRun,
+  handleTestStats,
+  handleProposedFAQs,
+  handleTestCleanup,
+  handleApproveFAQ,
+  handleDismissFAQ,
+  // Trip Actions
+  handleAdminToggleTest,
+  handleAdminArchive,
+  handleAdminDelete,
+  handleAdminCopy,
+  handleAdminRename,
+  handleAdminMoveTrip,
+  // Email
+  handleGetEmailUrl,
+  handleGetTripEmailUrl
 ];
 
 export const handleAdminRoutes: RouteHandler = async (request, env, ctx, url, corsHeaders) => {
@@ -154,5 +236,34 @@ export {
   handleSendDirectMessage,
   handleGetThread,
   handleUpdateThread,
-  handleMarkThreadRead
+  handleMarkThreadRead,
+  handleAISupportStatus,
+  handleAISupportQueue,
+  handleAISupportReview,
+  handleAISupportGetSettings,
+  handleAISupportUpdateSettings,
+  handleAISupportCosts,
+  handleAISupportLogs,
+  handleListPendingKnowledge,
+  handleListApprovedKnowledge,
+  handleReviewProposal,
+  handleDeleteApprovedKnowledge,
+  handleKnowledgeStats,
+  handleListTestRuns,
+  handleListTestSessions,
+  handleGetTestSession,
+  handleGetTestRun,
+  handleTestStats,
+  handleProposedFAQs,
+  handleTestCleanup,
+  handleApproveFAQ,
+  handleDismissFAQ,
+  handleAdminToggleTest,
+  handleAdminArchive,
+  handleAdminDelete,
+  handleAdminCopy,
+  handleAdminRename,
+  handleAdminMoveTrip,
+  handleGetEmailUrl,
+  handleGetTripEmailUrl
 };
