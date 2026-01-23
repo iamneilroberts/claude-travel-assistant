@@ -194,11 +194,12 @@ export const handleListTrips: McpToolHandler = async (args, env, keyPrefix, user
 };
 
 export const handleReadTrip: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
-  const tripId = args.key;
+  // Accept tripId or key (backwards compatibility)
+  const tripId = args.tripId || args.key;
 
   // Validate required parameter
   if (!tripId || typeof tripId !== 'string') {
-    throw new Error("Missing required parameter 'key' (trip ID)");
+    throw new Error("Missing required parameter 'tripId'");
   }
 
   // Security: Validate trip ID to prevent path traversal
@@ -289,18 +290,29 @@ export const handleReadTripSection: McpToolHandler = async (args, env, keyPrefix
 };
 
 export const handleSaveTrip: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
+  // Accept tripId or key (backwards compatibility)
+  const tripId = args.tripId || args.key;
+
+  // Validate required parameters with clear error messages
+  if (!tripId || typeof tripId !== 'string') {
+    throw new Error("Missing required parameter 'tripId'. Example: save_trip({ tripId: 'my-trip-id', data: {...} })");
+  }
+  if (!args.data || typeof args.data !== 'object') {
+    throw new Error("Missing required parameter 'data'. Provide the trip data object.");
+  }
+
   // Security: Validate trip ID to prevent path traversal
-  validateTripId(args.key);
+  validateTripId(tripId);
 
   // Validate and clean trip data before saving
   const { data: cleanedData, warnings } = validateAndCleanTripData(args.data);
 
-  const fullKey = keyPrefix + args.key;
+  const fullKey = keyPrefix + tripId;
   await env.TRIPS.put(fullKey, JSON.stringify(cleanedData));
-  const summary = await computeTripSummary(args.key, cleanedData);
-  await writeTripSummary(env, keyPrefix, args.key, summary, ctx);
-  await addToTripIndex(env, keyPrefix, args.key);
-  await removePendingTripDeletion(env, keyPrefix, args.key, ctx);
+  const summary = await computeTripSummary(tripId, cleanedData);
+  await writeTripSummary(env, keyPrefix, tripId, summary, ctx);
+  await addToTripIndex(env, keyPrefix, tripId);
+  await removePendingTripDeletion(env, keyPrefix, tripId, ctx);
 
   // PERFORMANCE: Move activity logging to background (don't block response)
   const activityUpdate = (async () => {
@@ -314,11 +326,11 @@ export const handleSaveTrip: McpToolHandler = async (args, env, keyPrefix, userP
 
     // Extract change description from trip meta if available
     const changeDescription = cleanedData?.meta?.status || "Updated";
-    const tripName = cleanedData?.meta?.clientName || cleanedData?.meta?.destination || args.key;
+    const tripName = cleanedData?.meta?.clientName || cleanedData?.meta?.destination || tripId;
 
     // Add to recent changes (prepend, newest first)
     activityLog.recentChanges.unshift({
-      tripId: args.key,
+      tripId: tripId,
       tripName,
       change: changeDescription,
       timestamp: new Date().toISOString()
@@ -333,8 +345,8 @@ export const handleSaveTrip: McpToolHandler = async (args, env, keyPrefix, userP
     activityLog.lastSession = new Date().toISOString();
 
     // Add trip to active list if not already present (O(1) vs O(n) list scan)
-    if (!activityLog.tripsActive.includes(args.key)) {
-      activityLog.tripsActive.push(args.key);
+    if (!activityLog.tripsActive.includes(tripId)) {
+      activityLog.tripsActive.push(tripId);
     }
 
     await env.TRIPS.put(activityLogKey, JSON.stringify(activityLog));
@@ -350,18 +362,29 @@ export const handleSaveTrip: McpToolHandler = async (args, env, keyPrefix, userP
     ? `\n⚠️ Data quality fixes applied:\n${warnings.map(w => `  - ${w}`).join('\n')}`
     : '';
   return {
-    content: [{ type: "text", text: `Successfully saved ${args.key}${warningText}` }]
+    content: [{ type: "text", text: `Successfully saved '${tripId}'${warningText}` }]
   };
 };
 
 export const handlePatchTrip: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
+  // Accept tripId or key (backwards compatibility)
+  const tripId = args.tripId || args.key;
+
+  // Validate required parameters with clear error messages
+  if (!tripId || typeof tripId !== 'string') {
+    throw new Error("Missing required parameter 'tripId'. Example: patch_trip({ tripId: 'my-trip-id', updates: {...} })");
+  }
+  if (!args.updates || typeof args.updates !== 'object') {
+    throw new Error("Missing required parameter 'updates'. Provide an object with dot-notation paths, e.g. { 'meta.status': 'confirmed' }");
+  }
+
   // Security: Validate trip ID to prevent path traversal
-  validateTripId(args.key);
+  validateTripId(tripId);
 
   // Read existing trip
-  const fullKey = keyPrefix + args.key;
+  const fullKey = keyPrefix + tripId;
   const existingData = await env.TRIPS.get(fullKey, "json") as any;
-  if (!existingData) throw new Error(`Trip '${args.key}' not found.`);
+  if (!existingData) throw new Error(`Trip '${tripId}' not found.`);
 
   // Apply updates using dot-notation paths (supports array indexing like "itinerary[0].title")
   const updates = args.updates as Record<string, any>;
@@ -458,8 +481,8 @@ export const handlePatchTrip: McpToolHandler = async (args, env, keyPrefix, user
 
   // Save updated trip
   await env.TRIPS.put(fullKey, JSON.stringify(cleanedData));
-  const summary = await computeTripSummary(args.key, cleanedData);
-  await writeTripSummary(env, keyPrefix, args.key, summary, ctx);
+  const summary = await computeTripSummary(tripId, cleanedData);
+  await writeTripSummary(env, keyPrefix, tripId, summary, ctx);
 
   // PERFORMANCE: Move activity logging to background (don't block response)
   const activityUpdate = (async () => {
@@ -472,10 +495,10 @@ export const handlePatchTrip: McpToolHandler = async (args, env, keyPrefix, user
     };
 
     const changeDescription = cleanedData?.meta?.status || `Updated: ${updatedFields.join(', ')}`;
-    const tripName = cleanedData?.meta?.clientName || cleanedData?.meta?.destination || args.key;
+    const tripName = cleanedData?.meta?.clientName || cleanedData?.meta?.destination || tripId;
 
     activityLog.recentChanges.unshift({
-      tripId: args.key,
+      tripId: tripId,
       tripName,
       change: changeDescription,
       timestamp: new Date().toISOString()
@@ -499,29 +522,37 @@ export const handlePatchTrip: McpToolHandler = async (args, env, keyPrefix, user
     ? `\n⚠️ Data quality fixes applied:\n${warnings.map(w => `  - ${w}`).join('\n')}`
     : '';
   return {
-    content: [{ type: "text", text: `Patched ${args.key}: updated ${updatedFields.join(', ')}${warningText}` }]
+    content: [{ type: "text", text: `Patched '${tripId}': updated ${updatedFields.join(', ')}${warningText}` }]
   };
 };
 
 export const handleDeleteTrip: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
-  // Security: Validate trip ID to prevent path traversal
-  validateTripId(args.key);
+  // Accept tripId or key (backwards compatibility)
+  const tripId = args.tripId || args.key;
 
-  const fullKey = keyPrefix + args.key;
+  // Validate required parameter
+  if (!tripId || typeof tripId !== 'string') {
+    throw new Error("Missing required parameter 'tripId'");
+  }
+
+  // Security: Validate trip ID to prevent path traversal
+  validateTripId(tripId);
+
+  const fullKey = keyPrefix + tripId;
   await env.TRIPS.delete(fullKey);
-  await deleteTripSummary(env, keyPrefix, args.key, ctx);
-  await removeFromTripIndex(env, keyPrefix, args.key);
-  await addPendingTripDeletion(env, keyPrefix, args.key, ctx);
+  await deleteTripSummary(env, keyPrefix, tripId, ctx);
+  await removeFromTripIndex(env, keyPrefix, tripId);
+  await addPendingTripDeletion(env, keyPrefix, tripId, ctx);
 
   // PERFORMANCE: Move activity logging to background (don't block response)
   const activityUpdate = (async () => {
     const activityLogKey = keyPrefix + "_activity-log";
     const activityLog = await env.TRIPS.get(activityLogKey, "json") as any;
     if (activityLog?.tripsActive) {
-      activityLog.tripsActive = activityLog.tripsActive.filter((t: string) => t !== args.key);
+      activityLog.tripsActive = activityLog.tripsActive.filter((t: string) => t !== tripId);
       activityLog.recentChanges.unshift({
-        tripId: args.key,
-        tripName: args.key,
+        tripId: tripId,
+        tripName: tripId,
         change: "Deleted",
         timestamp: new Date().toISOString()
       });
@@ -534,7 +565,7 @@ export const handleDeleteTrip: McpToolHandler = async (args, env, keyPrefix, use
   })();
 
   // Also remove from comment index if present (can run in parallel with activity update)
-  const commentCleanup = removeFromCommentIndex(env, keyPrefix, args.key);
+  const commentCleanup = removeFromCommentIndex(env, keyPrefix, tripId);
 
   if (ctx) {
     ctx.waitUntil(activityUpdate);
@@ -544,6 +575,145 @@ export const handleDeleteTrip: McpToolHandler = async (args, env, keyPrefix, use
   }
 
   return {
-    content: [{ type: "text", text: `Deleted ${args.key}` }]
+    content: [{ type: "text", text: `Deleted '${tripId}'` }]
+  };
+};
+
+/**
+ * Summarize group trip travelers for easy management
+ * Returns headcount, age breakdown, dietary restrictions, room suggestions
+ */
+export const handleSummarizeGroup: McpToolHandler = async (args, env, keyPrefix, userProfile, authKey, ctx) => {
+  const tripId = args.tripId;
+
+  if (!tripId || typeof tripId !== 'string') {
+    throw new Error("Missing required parameter 'tripId'");
+  }
+
+  validateTripId(tripId);
+
+  const fullKey = keyPrefix + tripId;
+  const tripData = await env.TRIPS.get(fullKey, "json") as any;
+  if (!tripData) throw new Error(`Trip '${tripId}' not found.`);
+
+  const travelers = tripData.travelers?.list || tripData.travelers?.travelers || [];
+
+  if (travelers.length === 0) {
+    return {
+      content: [{ type: "text", text: JSON.stringify({
+        tripId,
+        message: "No travelers found. Add travelers to the trip first.",
+        suggestion: "Use patch_trip to add travelers: { 'travelers.list': [...] }"
+      }, null, 2) }]
+    };
+  }
+
+  // Headcount
+  const totalCount = travelers.length;
+  const adults = travelers.filter((t: any) => !t.age || t.age >= 18).length;
+  const minors = travelers.filter((t: any) => t.age && t.age < 18).length;
+  const children = travelers.filter((t: any) => t.age && t.age < 13).length;
+
+  // Age breakdown
+  const ageGroups: Record<string, number> = {
+    'infants (0-2)': 0,
+    'children (3-12)': 0,
+    'teens (13-17)': 0,
+    'adults (18-64)': 0,
+    'seniors (65+)': 0,
+    'age unknown': 0
+  };
+
+  for (const t of travelers) {
+    const age = t.age;
+    if (age === undefined || age === null) ageGroups['age unknown']++;
+    else if (age <= 2) ageGroups['infants (0-2)']++;
+    else if (age <= 12) ageGroups['children (3-12)']++;
+    else if (age <= 17) ageGroups['teens (13-17)']++;
+    else if (age <= 64) ageGroups['adults (18-64)']++;
+    else ageGroups['seniors (65+)']++;
+  }
+
+  // Remove empty age groups
+  for (const key of Object.keys(ageGroups)) {
+    if (ageGroups[key] === 0) delete ageGroups[key];
+  }
+
+  // Dietary restrictions
+  const dietaryRestrictions: { traveler: string; restrictions: string[] }[] = [];
+  const dietarySummary: Record<string, number> = {};
+
+  for (const t of travelers) {
+    const name = t.name || t.firstName || 'Unknown';
+    const dietary = t.dietary || t.dietaryRestrictions || t.diet || [];
+    const restrictions = Array.isArray(dietary) ? dietary : (dietary ? [dietary] : []);
+
+    if (restrictions.length > 0) {
+      dietaryRestrictions.push({ traveler: name, restrictions });
+      for (const r of restrictions) {
+        dietarySummary[r] = (dietarySummary[r] || 0) + 1;
+      }
+    }
+  }
+
+  // Special needs / medical
+  const specialNeeds: { traveler: string; needs: string }[] = [];
+  for (const t of travelers) {
+    const name = t.name || t.firstName || 'Unknown';
+    const needs = t.specialNeeds || t.medical || t.mobility || t.accessibility;
+    if (needs) {
+      specialNeeds.push({ traveler: name, needs: String(needs) });
+    }
+  }
+
+  // Room assignment suggestions (for groups)
+  let roomSuggestions: string[] = [];
+  if (totalCount >= 4) {
+    const adultCount = adults;
+    const minorCount = minors;
+
+    if (minorCount > 0) {
+      // Family/group with minors
+      const chaperoneRatio = Math.ceil(minorCount / 4); // 1 adult per 4 minors
+      roomSuggestions.push(`Suggested chaperone ratio: ${chaperoneRatio} adult(s) per room with minors`);
+      roomSuggestions.push(`Quad rooms needed for minors: ${Math.ceil(minorCount / 4)}`);
+      roomSuggestions.push(`Rooms needed for adult chaperones: ${Math.ceil(chaperoneRatio / 2)}`);
+    }
+
+    if (adultCount >= 4) {
+      roomSuggestions.push(`Adult double rooms: ${Math.ceil(adultCount / 2)}`);
+    }
+
+    roomSuggestions.push(`Total estimated rooms: ${Math.ceil(totalCount / 2)} (doubles) or ${Math.ceil(totalCount / 4)} (quads)`);
+  }
+
+  // Build summary
+  const summary = {
+    tripId,
+    tripName: tripData.meta?.clientName || tripData.meta?.destination || tripId,
+    headcount: {
+      total: totalCount,
+      adults,
+      minors,
+      children
+    },
+    ageBreakdown: ageGroups,
+    dietaryRestrictions: dietaryRestrictions.length > 0 ? {
+      summary: dietarySummary,
+      byTraveler: dietaryRestrictions
+    } : null,
+    specialNeeds: specialNeeds.length > 0 ? specialNeeds : null,
+    roomSuggestions: roomSuggestions.length > 0 ? roomSuggestions : null,
+    travelerList: travelers.map((t: any) => ({
+      name: t.name || t.firstName || 'Unknown',
+      age: t.age || null,
+      role: t.role || (t.age && t.age < 18 ? 'minor' : 'adult'),
+      dietary: t.dietary || t.dietaryRestrictions || null,
+      notes: t.notes || t.specialNeeds || null
+    }))
+  };
+
+  return {
+    content: [{ type: "text", text: JSON.stringify(stripEmpty(summary), null, 2) }]
   };
 };

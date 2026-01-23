@@ -15,7 +15,8 @@ import {
   handleReadTripSection,
   handleSaveTrip,
   handlePatchTrip,
-  handleDeleteTrip
+  handleDeleteTrip,
+  handleSummarizeGroup
 } from './trips';
 import {
   handleGetComments,
@@ -35,6 +36,7 @@ import {
   handleGetPrompt
 } from './validation';
 import {
+  handleLogSupportIntent,
   handleSubmitSupport,
   handleReplyToAdmin,
   handleDismissAdminMessage
@@ -55,6 +57,7 @@ import {
   handleDeclineSampleTrips,
   handleClearSampleTrips
 } from './sample-trips';
+import { handleProposeSolution } from './knowledge';
 
 // Tool name to handler mapping - all wrapped with metrics
 export const toolHandlers: Record<string, McpToolHandler> = {
@@ -65,6 +68,7 @@ export const toolHandlers: Record<string, McpToolHandler> = {
   save_trip: withMetrics('save_trip', handleSaveTrip),
   patch_trip: withMetrics('patch_trip', handlePatchTrip),
   delete_trip: withMetrics('delete_trip', handleDeleteTrip),
+  summarize_group: withMetrics('summarize_group', handleSummarizeGroup),
   list_templates: withMetrics('list_templates', handleListTemplates),
   preview_publish: withMetrics('preview_publish', handlePreviewPublish),
   publish_trip: withMetrics('publish_trip', handlePublishTrip),
@@ -76,6 +80,7 @@ export const toolHandlers: Record<string, McpToolHandler> = {
   get_all_comments: withMetrics('get_all_comments', handleGetAllComments),
   dismiss_comments: withMetrics('dismiss_comments', handleDismissComments),
   reply_to_comment: withMetrics('reply_to_comment', handleReplyToComment),
+  log_support_intent: withMetrics('log_support_intent', handleLogSupportIntent),
   submit_support: withMetrics('submit_support', handleSubmitSupport),
   reply_to_admin: withMetrics('reply_to_admin', handleReplyToAdmin),
   dismiss_admin_message: withMetrics('dismiss_admin_message', handleDismissAdminMessage),
@@ -88,7 +93,8 @@ export const toolHandlers: Record<string, McpToolHandler> = {
   list_sample_trips: withMetrics('list_sample_trips', handleListSampleTrips),
   accept_sample_trips: withMetrics('accept_sample_trips', handleAcceptSampleTrips),
   decline_sample_trips: withMetrics('decline_sample_trips', handleDeclineSampleTrips),
-  clear_sample_trips: withMetrics('clear_sample_trips', handleClearSampleTrips)
+  clear_sample_trips: withMetrics('clear_sample_trips', handleClearSampleTrips),
+  propose_solution: withMetrics('propose_solution', handleProposeSolution)
 };
 
 // Re-export all handlers for direct imports if needed
@@ -100,6 +106,7 @@ export {
   handleSaveTrip,
   handlePatchTrip,
   handleDeleteTrip,
+  handleSummarizeGroup,
   handleListTemplates,
   handlePreviewPublish,
   handlePublishTrip,
@@ -111,6 +118,7 @@ export {
   handleGetAllComments,
   handleDismissComments,
   handleReplyToComment,
+  handleLogSupportIntent,
   handleSubmitSupport,
   handleReplyToAdmin,
   handleDismissAdminMessage,
@@ -120,5 +128,6 @@ export {
   handleListSampleTrips,
   handleAcceptSampleTrips,
   handleDeclineSampleTrips,
-  handleClearSampleTrips
+  handleClearSampleTrips,
+  handleProposeSolution
 };

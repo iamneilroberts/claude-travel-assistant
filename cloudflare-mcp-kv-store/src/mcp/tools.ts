@@ -71,9 +71,10 @@ export const CORE_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        key: { type: "string", description: "Trip ID" }
+        tripId: { type: "string", description: "Trip ID" },
+        key: { type: "string", description: "Trip ID (deprecated, use tripId)" }
       },
-      required: ["key"]
+      required: ["tripId"]
     }
   },
   {
@@ -105,10 +106,11 @@ export const CORE_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        key: { type: "string", description: "Trip ID" },
+        tripId: { type: "string", description: "Trip ID" },
+        key: { type: "string", description: "Trip ID (deprecated, use tripId)" },
         data: { type: "object", description: "Complete trip JSON" }
       },
-      required: ["key", "data"]
+      required: ["tripId", "data"]
     }
   },
   {
@@ -117,13 +119,14 @@ export const CORE_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        key: { type: "string", description: "Trip ID" },
+        tripId: { type: "string", description: "Trip ID" },
+        key: { type: "string", description: "Trip ID (deprecated, use tripId)" },
         updates: {
           type: "object",
           description: "Dot-notation paths: {'meta.status': 'value'}"
         }
       },
-      required: ["key", "updates"]
+      required: ["tripId", "updates"]
     }
   },
   {
@@ -131,8 +134,11 @@ export const CORE_TOOLS: ToolDefinition[] = [
     description: "Delete a trip.",
     inputSchema: {
       type: "object",
-      properties: { key: { type: "string" } },
-      required: ["key"]
+      properties: {
+        tripId: { type: "string", description: "Trip ID" },
+        key: { type: "string", description: "Trip ID (deprecated, use tripId)" }
+      },
+      required: ["tripId"]
     }
   },
 
@@ -165,6 +171,19 @@ export const CORE_TOOLS: ToolDefinition[] = [
         }
       },
       required: ["name"]
+    }
+  },
+
+  // ============ GROUP TRIPS ============
+  {
+    name: "summarize_group",
+    description: "Get a summary of travelers for group trip management. Returns headcount, age breakdown, dietary restrictions, and room assignment suggestions.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        tripId: { type: "string", description: "Trip ID" }
+      },
+      required: ["tripId"]
     }
   },
 

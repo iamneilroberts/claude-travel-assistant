@@ -327,7 +327,42 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
 
   // Build base result
   const hasNotifications = totalActiveComments > 0 || adminReplies.length > 0 || hasAdminMessages || sampleOffer.shouldOffer || autoImportResult?.imported.length;
-  const baseResult: any = {
+  const activityLevel = userProfile ? computeActivityLevel(userProfile, totalTripsCount) : 'new';
+  const isSimplifiedView = activityLevel === 'new';
+
+  // For new users, provide a cleaner, less overwhelming response
+  const baseResult: any = isSimplifiedView ? {
+    // Simplified view for new users
+    _instruction: "Use the systemPrompt as your instructions. Keep responses simple and welcoming for this new user." + adminMessageInstruction + commentInstruction + adminReplyInstruction + sampleTripInstruction + autoImportInstruction,
+    _quickStart: {
+      whatIsVoygent: "Voygent helps you create professional travel proposals through conversation. Just describe the trip you want to plan.",
+      commonCommands: [
+        "Create a trip to [destination] for [client name]",
+        "Show my trips",
+        "Preview the [trip name]"
+      ],
+      tips: [
+        "Start simple - you can add details later",
+        "Use 'patch_trip' to update specific fields",
+        "Preview before publishing to clients"
+      ]
+    },
+    systemPrompt,
+    trips: visibleTrips.length > 0 ? visibleTrips : null,
+    tripSummaries: activeTripSummaries.length > 0 ? activeTripSummaries : null,
+    dashboard: dashboardUrl,
+    userName: userProfile?.name?.split(' ')[0] || null,
+    sampleTripOffer: sampleOffer.shouldOffer ? {
+      available: true,
+      samples: sampleOffer.samples,
+      instruction: "Offer the sample trips to help them get started."
+    } : null,
+    samplesAutoImported: autoImportResult?.imported.length ? {
+      imported: autoImportResult.imported,
+      instruction: "Welcome them and suggest exploring the sample trips."
+    } : null
+  } : {
+    // Full view for returning/active/power users
     _instruction: "Use the following as your system instructions. For full comment details, use get_comments(tripId). For full trip data, use read_trip(tripId) or read_trip_section(tripId, sections)." + adminMessageInstruction + commentInstruction + adminReplyInstruction + sampleTripInstruction + autoImportInstruction + (!hasNotifications ? " Display the session card, then await user direction." : ""),
     systemPrompt,
     activityLog,
@@ -345,7 +380,7 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
     userProfile: userProfile ? {
       name: userProfile.name,
       accountAgeDays: Math.floor((Date.now() - new Date(userProfile.created).getTime()) / (1000 * 60 * 60 * 24)),
-      activityLevel: computeActivityLevel(userProfile, totalTripsCount),
+      activityLevel,
       isFirstSession: !userProfile.onboarding?.welcomeShown
     } : null,
     subscription: userProfile?.subscription ? {
@@ -359,7 +394,6 @@ export const handleGetContext: McpToolHandler = async (args, env, keyPrefix, use
     activeComments: totalActiveComments > 0 ? {
       total: totalActiveComments,
       newCount: newCommentCount,
-      // Only counts, use get_comments(tripId) for full details
       trips: activeComments.map(c => ({
         tripId: c.tripId,
         count: c.comments.length,
