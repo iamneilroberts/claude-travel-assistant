@@ -1,11 +1,25 @@
 /**
- * Admin Routes: Comment listing
- * Handles: GET /admin/comments
+ * Admin Routes: Comment listing and management
+ * Handles:
+ *   GET    /admin/comments        - List all comments
+ *   DELETE /admin/comments/single - Delete individual comment
+ *   DELETE /admin/comments/all    - Delete all comments
  */
 
 import type { Env, UserProfile, RouteHandler } from '../../types';
 import { listAllKeys, getKeyPrefix } from '../../lib/kv';
 import { getValidAuthKeys } from '../../lib/auth';
+
+interface CommentData {
+  comments: Array<{
+    id: string;
+    section: string;
+    message: string;
+    timestamp: string;
+    name?: string;
+    read?: boolean;
+  }>;
+}
 
 export const handleListComments: RouteHandler = async (request, env, ctx, url, corsHeaders) => {
   if (url.pathname !== "/admin/comments" || request.method !== "GET") return null;
@@ -60,6 +74,70 @@ export const handleListComments: RouteHandler = async (request, env, ctx, url, c
   });
 
   return new Response(JSON.stringify({ comments: allComments, total: allComments.length }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" }
+  });
+};
+
+/**
+ * DELETE /admin/comments/single - Delete a single comment
+ * Body: { tripKey: string, commentId: string }
+ */
+export const handleDeleteComment: RouteHandler = async (request, env, _ctx, url, corsHeaders) => {
+  if (url.pathname !== "/admin/comments/single" || request.method !== "DELETE") return null;
+
+  const body = await request.json() as { tripKey: string; commentId: string };
+  const { tripKey, commentId } = body;
+
+  if (!tripKey || !commentId) {
+    return new Response(JSON.stringify({ error: "tripKey and commentId required" }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+
+  const commentsKey = `${tripKey}/_comments`;
+  const data = await env.TRIPS.get(commentsKey, "json") as CommentData | null;
+
+  if (!data?.comments) {
+    return new Response(JSON.stringify({ error: "Comments not found" }), {
+      status: 404,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+
+  const idx = data.comments.findIndex(c => c.id === commentId);
+  if (idx === -1) {
+    return new Response(JSON.stringify({ error: "Comment not found" }), {
+      status: 404,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+
+  data.comments.splice(idx, 1);
+  await env.TRIPS.put(commentsKey, JSON.stringify(data));
+
+  return new Response(JSON.stringify({ success: true, deleted: commentId }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" }
+  });
+};
+
+/**
+ * DELETE /admin/comments/all - Delete all comments across all trips
+ */
+export const handleDeleteAllComments: RouteHandler = async (request, env, _ctx, url, corsHeaders) => {
+  if (url.pathname !== "/admin/comments/all" || request.method !== "DELETE") return null;
+
+  const allKeys = await listAllKeys(env);
+  let deleted = 0;
+
+  for (const key of allKeys) {
+    if (key.name.endsWith('/_comments')) {
+      await env.TRIPS.delete(key.name);
+      deleted++;
+    }
+  }
+
+  return new Response(JSON.stringify({ success: true, deletedKeys: deleted }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" }
   });
 };

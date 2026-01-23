@@ -2272,20 +2272,60 @@ Note: Also works on Claude iOS app (same steps in Settings)
 
     function renderRecentComments() {
       const recent = commentsCache.slice(0, 5);
+      const dismissAllBtn = document.getElementById('dismissAllCommentsBtn');
       if (recent.length === 0) {
         document.getElementById('recentComments').innerHTML = '<p style="color:#666;">No comments yet.</p>';
+        if (dismissAllBtn) dismissAllBtn.style.display = 'none';
         return;
       }
+      if (dismissAllBtn) dismissAllBtn.style.display = 'inline-block';
       const html = recent.map(c => \`
-        <div class="comment-box" data-action="view-trip" data-user-id="\${escapeHtml(c.userId)}" data-trip-id="\${escapeHtml(c.tripId)}" style="cursor:pointer;">
+        <div class="comment-box" id="comment-\${escapeHtml(c.id)}" style="position:relative;">
           <div class="comment-meta">
             <strong>\${escapeHtml(c.section || 'General')}</strong> on <code>\${escapeHtml(c.tripId)}</code> · \${escapeHtml(c.name || 'Anonymous')} · \${formatTime(c.timestamp)}
             \${c.read ? '' : '<span class="badge badge-red">New</span>'}
+            <button class="btn btn-small" style="position:absolute;right:10px;top:10px;padding:2px 8px;font-size:11px;background:#6e7681;border:none;" onclick="event.stopPropagation();dismissComment('\${escapeHtml(c.tripKey)}', '\${escapeHtml(c.id)}', this)">×</button>
           </div>
           <div>\${escapeHtml(c.message)}</div>
         </div>
       \`).join('');
       document.getElementById('recentComments').innerHTML = html;
+    }
+
+    async function dismissComment(tripKey, commentId, btn) {
+      btn.disabled = true;
+      btn.textContent = '...';
+      try {
+        await api('/admin/comments/single', {
+          method: 'DELETE',
+          body: JSON.stringify({ tripKey, commentId })
+        });
+        // Remove from cache and re-render
+        commentsCache = commentsCache.filter(c => c.id !== commentId);
+        renderRecentComments();
+        applyCommentFilters();
+      } catch (e) {
+        alert('Error dismissing comment: ' + e.message);
+        btn.disabled = false;
+        btn.textContent = '×';
+      }
+    }
+
+    async function dismissAllComments() {
+      if (!confirm('Dismiss ALL comments? This cannot be undone.')) return;
+      const btn = document.getElementById('dismissAllCommentsBtn');
+      btn.disabled = true;
+      btn.textContent = 'Dismissing...';
+      try {
+        await api('/admin/comments/all', { method: 'DELETE' });
+        commentsCache = [];
+        renderRecentComments();
+        applyCommentFilters();
+      } catch (e) {
+        alert('Error dismissing comments: ' + e.message);
+      }
+      btn.disabled = false;
+      btn.textContent = 'Dismiss All';
     }
 
     // ========== ACTIVITY (for Overview) ==========
