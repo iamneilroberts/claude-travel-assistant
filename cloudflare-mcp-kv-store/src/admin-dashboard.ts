@@ -58,6 +58,7 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     .badge-yellow { background: rgba(210,153,34,0.2); color: #d29922; }
     .badge-blue { background: rgba(88,166,255,0.2); color: #58a6ff; }
     .badge-gray { background: rgba(139,148,158,0.2); color: #8b949e; }
+    .badge-purple { background: rgba(163,113,247,0.2); color: #a371f7; }
     .comment-box { background: #0d1117; border-left: 3px solid #58a6ff; padding: 10px; margin: 8px 0; border-radius: 0 6px 6px 0; }
     .comment-meta { font-size: 11px; color: #8b949e; margin-bottom: 5px; }
     .link-external { color: #58a6ff; text-decoration: none; }
@@ -3304,14 +3305,14 @@ Note: Also works on Claude iOS app (same steps in Settings)
         }
 
         let html = '<table style="width:100%">';
-        html += '<thead><tr><th>Time</th><th>Scenario</th><th>Tier</th><th>Status</th><th>Score</th><th>Action</th></tr></thead>';
+        html += '<thead><tr><th>Time</th><th>Scenario</th><th>Tier</th><th>Status</th><th>Score</th><th>Preview</th><th>Action</th></tr></thead>';
         html += '<tbody>';
 
         for (const session of data.sessions) {
           const time = new Date(session.completedAt).toLocaleString();
           const passed = session.passed;
           const scoreColor = session.overallScore >= 80 ? '#3fb950' : session.overallScore >= 60 ? '#d29922' : '#f85149';
-          const tierBadge = session.tier === 1 ? 'badge-blue' : session.tier === 2 ? 'badge-yellow' : 'badge-gray';
+          const tierBadge = session.tier === 1 ? 'badge-blue' : session.tier === 2 ? 'badge-yellow' : session.tier === 4 ? 'badge-purple' : 'badge-gray';
 
           html += '<tr>';
           html += '<td style="font-size:12px;">' + escapeHtml(time) + '</td>';
@@ -3319,7 +3320,8 @@ Note: Also works on Claude iOS app (same steps in Settings)
           html += '<td><span class="badge ' + tierBadge + '">T' + session.tier + '</span></td>';
           html += '<td>' + (passed === true ? '<span class="badge badge-green">PASS</span>' : passed === false ? '<span class="badge badge-red">FAIL</span>' : '<span class="badge badge-gray">-</span>') + '</td>';
           html += '<td style="color:' + scoreColor + ';font-weight:bold;">' + (session.overallScore || '-') + '</td>';
-          html += '<td><button class="btn btn-small btn-secondary" onclick="viewTestSession(\\'' + session.id + '\\')">View</button></td>';
+          html += '<td>' + (session.previewUrl ? '<a href="' + escapeHtml(session.previewUrl) + '" target="_blank" class="btn btn-small" style="background:#238636;">View Trip</a>' : (session.tripId ? '<span style="color:#8b949e;font-size:11px;">' + escapeHtml(session.tripId) + '</span>' : '-')) + '</td>';
+          html += '<td><button class="btn btn-small btn-secondary" onclick="viewTestSession(\\'' + session.id + '\\')">Details</button></td>';
           html += '</tr>';
         }
 
@@ -3425,6 +3427,12 @@ Note: Also works on Claude iOS app (same steps in Settings)
         html += '<div class="detail-row"><span class="label">Completed:</span><span>' + new Date(session.completedAt).toLocaleString() + '</span></div>';
         html += '<div class="detail-row"><span class="label">MCP Calls:</span><span>' + session.mcpCallCount + ' total, ' + session.mcpSuccessCount + ' successful</span></div>';
         html += '<div class="detail-row"><span class="label">Tools Used:</span><span>' + (session.toolsUsed?.join(', ') || '-') + '</span></div>';
+        if (session.tripId) {
+          html += '<div class="detail-row"><span class="label">Trip ID:</span><span>' + escapeHtml(session.tripId) + '</span></div>';
+        }
+        if (session.previewUrl) {
+          html += '<div class="detail-row"><span class="label">Preview:</span><span><a href="' + escapeHtml(session.previewUrl) + '" target="_blank" class="btn btn-small" style="background:#238636;">View Published Trip</a></span></div>';
+        }
         html += '</div>';
 
         // Judge Result

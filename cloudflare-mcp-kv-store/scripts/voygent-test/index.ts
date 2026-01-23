@@ -2,6 +2,16 @@
  * Voygent Test Runner - Module Exports
  *
  * This module provides automated QA testing for Voygent using Claude Code subagents.
+ *
+ * TWO TEST MODES:
+ *
+ * 1. CONVERSATIONAL TEST (Recommended)
+ *    Simulates real Claude.ai sessions with natural user-assistant dialogue.
+ *    Use: conversation-test.ts exports
+ *
+ * 2. DIRECT API TEST (Legacy)
+ *    Makes direct MCP API calls without conversation simulation.
+ *    Use: mcp-client.ts exports
  */
 
 // Scenarios
@@ -17,7 +27,18 @@ export {
   type SuccessCriteria
 } from './scenarios';
 
-// MCP Client
+// Conversational Test Framework (RECOMMENDED)
+export {
+  buildUserAgentPrompt,
+  buildAssistantAgentPrompt,
+  CONVERSATION_TEST_INSTRUCTIONS,
+  toAdminSession,
+  type ConversationTurn,
+  type ConversationTestResult,
+  type TestSessionForAdmin
+} from './conversation-test';
+
+// MCP Client (for making actual HTTP calls)
 export {
   createSession,
   callTool,
@@ -29,7 +50,7 @@ export {
   type McpToolResult
 } from './mcp-client';
 
-// Prompts
+// Legacy Prompts (for direct API testing)
 export {
   buildTestAgentPrompt,
   JUDGE_SYSTEM_PROMPT,

@@ -27,6 +27,8 @@ interface TestSessionResult {
     experience: string;
     description?: string;  // Full persona description for realistic scenarios
   };
+  tripId?: string;  // The trip created during the test (for preview link)
+  previewUrl?: string;  // Direct link to preview the trip created
   mcpCallCount: number;
   mcpSuccessCount: number;
   toolsUsed: string[];
@@ -118,6 +120,8 @@ export const handleListTestSessions: RouteHandler = async (request, env, ctx, ur
     passed?: boolean;
     overallScore?: number;
     completedAt: string;
+    tripId?: string;
+    previewUrl?: string;
   }> = [];
 
   for (const key of keys) {
@@ -132,7 +136,9 @@ export const handleListTestSessions: RouteHandler = async (request, env, ctx, ur
         tier: session.tier,
         passed: session.judgeResult?.passed,
         overallScore: session.judgeResult?.scores.overall,
-        completedAt: session.completedAt
+        completedAt: session.completedAt,
+        tripId: session.tripId,
+        previewUrl: session.previewUrl
       });
     }
     if (sessions.length >= limit * 2) break;
