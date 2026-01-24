@@ -59,6 +59,20 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     .badge-blue { background: rgba(88,166,255,0.2); color: #58a6ff; }
     .badge-gray { background: rgba(139,148,158,0.2); color: #8b949e; }
     .badge-purple { background: rgba(163,113,247,0.2); color: #a371f7; }
+
+    /* Cache Staleness Indicator */
+    .cache-status { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+    .cache-status .staleness-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 12px; font-weight: 500; }
+    .cache-status .staleness-badge.fresh { background: rgba(63,185,80,0.2); color: #3fb950; }
+    .cache-status .staleness-badge.recent { background: rgba(88,166,255,0.15); color: #79c0ff; }
+    .cache-status .staleness-badge.stale { background: rgba(210,153,34,0.2); color: #d29922; }
+    .cache-status .staleness-badge.old { background: rgba(248,81,73,0.2); color: #f85149; }
+    .cache-status .refresh-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; transition: all 0.15s; }
+    .cache-status .refresh-btn:hover { background: rgba(255,255,255,0.2); }
+    .cache-status .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .cache-status .refresh-btn.loading { animation: pulse 1s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
     .comment-box { background: #0d1117; border-left: 3px solid #58a6ff; padding: 10px; margin: 8px 0; border-radius: 0 6px 6px 0; }
     .comment-meta { font-size: 11px; color: #8b949e; margin-bottom: 5px; }
     .link-external { color: #58a6ff; text-decoration: none; }
@@ -460,8 +474,20 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 </head>
 <body>
   <div class="header">
-    <h1>Voygent Admin Dashboard</h1>
-    <p>Manage users, trips, and support</p>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;">
+      <div>
+        <h1>Voygent Admin Dashboard</h1>
+        <p>Manage users, trips, and support</p>
+      </div>
+      <div class="cache-status" id="cacheStatus" style="display:none;">
+        <span class="staleness-badge fresh" id="stalenessBadge">
+          <span id="stalenessIcon">●</span>
+          <span id="stalenessText">Fresh</span>
+        </span>
+        <span id="cacheAge" style="color:rgba(255,255,255,0.6);font-size:11px;"></span>
+        <button class="refresh-btn" id="refreshCacheBtn" onclick="refreshDashboardCache()">Refresh</button>
+      </div>
+    </div>
     <div class="nav-tabs">
       <button class="nav-tab mission-control" onclick="showTab('missioncontrol')">Mission Control</button>
       <button class="nav-tab active" onclick="showTab('overview')">Overview</button>
@@ -646,12 +672,13 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
           </select>
           <input type="text" id="tripFilterSearch" onkeyup="applyTripFilters()" placeholder="Search trips..." style="width:200px;">
           <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#8b949e;cursor:pointer;">
-            <input type="checkbox" id="tripFilterShowTest" onchange="applyTripFilters()"> Show test
+            <input type="checkbox" id="tripFilterShowTest" onchange="applyTripFilters()" checked> Show test
           </label>
           <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#8b949e;cursor:pointer;">
             <input type="checkbox" id="tripFilterShowArchived" onchange="applyTripFilters()"> Show archived
           </label>
           <span id="tripCount" style="color:#8b949e;font-size:12px;"></span>
+          <button class="btn btn-small btn-secondary" onclick="loadTrips()" style="margin-left:auto;">↻ Refresh</button>
         </div>
         <div id="tripsTable" style="max-height:600px;overflow-y:auto;"><div class="loading">Loading...</div></div>
       </div>
@@ -1321,6 +1348,114 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
     let tripsCache = [];
     let commentsCache = [];
     let activityCache = [];
+    let cacheStatus = null;
+
+    // ========== CACHE STATUS ==========
+    async function loadCacheStatus() {
+      try {
+        cacheStatus = await api('/admin/cache-status');
+        updateCacheStatusUI();
+      } catch (e) {
+        console.warn('Failed to load cache status:', e);
+      }
+    }
+
+    function updateCacheStatusUI() {
+      const statusEl = document.getElementById('cacheStatus');
+      const badgeEl = document.getElementById('stalenessBadge');
+      const iconEl = document.getElementById('stalenessIcon');
+      const textEl = document.getElementById('stalenessText');
+      const ageEl = document.getElementById('cacheAge');
+
+      if (!cacheStatus || !cacheStatus.exists) {
+        statusEl.style.display = 'flex';
+        badgeEl.className = 'staleness-badge old';
+        iconEl.textContent = '○';
+        textEl.textContent = 'No Cache';
+        ageEl.textContent = 'Building...';
+        return;
+      }
+
+      statusEl.style.display = 'flex';
+
+      // Update badge style based on staleness
+      badgeEl.className = 'staleness-badge ' + cacheStatus.staleness;
+
+      // Update icon and text
+      switch (cacheStatus.staleness) {
+        case 'fresh':
+          iconEl.textContent = '●';
+          textEl.textContent = 'Fresh';
+          break;
+        case 'recent':
+          iconEl.textContent = '●';
+          textEl.textContent = 'Recent';
+          break;
+        case 'stale':
+          iconEl.textContent = '◐';
+          textEl.textContent = 'Stale';
+          break;
+        case 'old':
+          iconEl.textContent = '○';
+          textEl.textContent = 'Old';
+          break;
+      }
+
+      // Update age text
+      if (cacheStatus.ageMinutes < 1) {
+        ageEl.textContent = 'Updated just now';
+      } else if (cacheStatus.ageMinutes === 1) {
+        ageEl.textContent = 'Updated 1 min ago';
+      } else if (cacheStatus.ageMinutes < 60) {
+        ageEl.textContent = 'Updated ' + cacheStatus.ageMinutes + ' mins ago';
+      } else {
+        const hours = Math.floor(cacheStatus.ageMinutes / 60);
+        ageEl.textContent = 'Updated ' + hours + 'h ago';
+      }
+
+      // Add stale marker if explicitly marked
+      if (cacheStatus.isStale && cacheStatus.staleness !== 'old') {
+        textEl.textContent += '*';
+      }
+    }
+
+    async function refreshDashboardCache() {
+      const btn = document.getElementById('refreshCacheBtn');
+      btn.disabled = true;
+      btn.classList.add('loading');
+      btn.textContent = 'Refreshing...';
+
+      try {
+        const result = await api('/admin/cache-refresh', { method: 'POST' });
+        // Reload cache status
+        await loadCacheStatus();
+        // Reload stats and trips with fresh data
+        loadStats();
+        loadTrips();
+        btn.textContent = 'Done!';
+        setTimeout(() => { btn.textContent = 'Refresh'; }, 2000);
+      } catch (e) {
+        showError('Failed to refresh cache: ' + e.message);
+        btn.textContent = 'Retry';
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+      }
+    }
+
+    // Update cache status from API response metadata
+    function updateCacheFromResponse(data) {
+      if (data && data._cache) {
+        cacheStatus = {
+          exists: true,
+          updatedAt: data._cache.updatedAt,
+          isStale: data._cache.isStale,
+          staleness: data._cache.staleness,
+          ageMinutes: data._cache.ageMinutes
+        };
+        updateCacheStatusUI();
+      }
+    }
 
     async function api(endpoint, options = {}) {
       const res = await fetch(API_BASE + endpoint, {
@@ -1353,6 +1488,8 @@ export const ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         document.getElementById('totalUsers').textContent = data.totalUsers;
         document.getElementById('totalTrips').textContent = data.totalTrips;
         document.getElementById('totalComments').textContent = data.totalComments;
+        // Update cache status from response metadata
+        updateCacheFromResponse(data);
       } catch (e) {
         showError(e.message);
       }
@@ -1864,17 +2001,32 @@ Note: Also works on Claude iOS app (same steps in Settings)
     // ========== TRIPS ==========
     async function loadTrips() {
       try {
+        // Preserve current filter selections before reload
+        const previousUserFilter = document.getElementById('tripFilterUser').value;
+        const previousPhaseFilter = document.getElementById('tripFilterPhase').value;
+
         const data = await api('/admin/trips');
         tripsCache = data.trips || [];
 
-        // Populate user filter
+        // Populate user filter (preserving selection)
         const users = [...new Set(tripsCache.map(t => JSON.stringify({id: t.userId, name: t.userName})))].map(s => JSON.parse(s));
         document.getElementById('tripFilterUser').innerHTML = '<option value="">All Users</option>' +
           users.map(u => \`<option value="\${u.id}">\${u.name}</option>\`).join('');
 
+        // Restore previous selection if still valid
+        if (previousUserFilter && users.some(u => u.id === previousUserFilter)) {
+          document.getElementById('tripFilterUser').value = previousUserFilter;
+        }
+        if (previousPhaseFilter) {
+          document.getElementById('tripFilterPhase').value = previousPhaseFilter;
+        }
+
         // Update unread count
         const totalUnread = tripsCache.reduce((sum, t) => sum + (t.unreadComments || 0), 0);
         document.getElementById('totalUnread').textContent = totalUnread;
+
+        // Update cache status from response metadata
+        updateCacheFromResponse(data);
 
         applyTripFilters();
       } catch (e) {
@@ -1912,7 +2064,7 @@ Note: Also works on Claude iOS app (same steps in Settings)
       }
 
       const html = \`<table>
-        <thead><tr><th>Trip</th><th>Client</th><th>Agent</th><th>Phase</th><th>Cost</th><th>Comments</th><th>Published</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Trip</th><th>Client</th><th>Agent</th><th>Phase</th><th>Created</th><th>Last Worked</th><th>Published</th><th>Cost</th><th>Actions</th></tr></thead>
         <tbody>\${filtered.map(t => {
           const phase = t.meta.phase || '';
           const badgeColor = phase === 'confirmed' ? 'green' : phase === 'proposal' ? 'blue' : 'gray';
@@ -1932,9 +2084,10 @@ Note: Also works on Claude iOS app (same steps in Settings)
             <td>\${escapeHtml(t.meta.clientName || '-')}<br><small style="color:#8b949e;">\${escapeHtml(t.meta.dates || '')}</small></td>
             <td>\${escapeHtml(t.userName)}<br><small style="color:#6e7681;">\${escapeHtml(t.agency)}</small></td>
             <td><span class="badge badge-\${badgeColor}">\${escapeHtml(phase || '-')}</span></td>
+            <td style="font-size:11px;color:#8b949e;">\${formatUserDate(t.meta.created)}</td>
+            <td style="font-size:11px;color:#8b949e;">\${formatUserDate(t.meta.lastUpdated)}</td>
+            <td style="font-size:11px;">\${validUrl ? \`<a href="\${escapeHtml(validUrl)}" target="_blank" class="link-external" onclick="event.stopPropagation()">\${formatUserDate(t.meta.lastPublished)}</a>\` : (t.meta.lastPublished ? formatUserDate(t.meta.lastPublished) : '-')}</td>
             <td style="font-size:11px;color:#d29922;">\${costDisplay}\${opsCount > 0 ? '<br><small style="color:#8b949e;">' + opsCount + ' ops</small>' : ''}</td>
-            <td>\${t.commentCount > 0 ? \`<span class="badge \${t.unreadComments > 0 ? 'badge-red' : 'badge-gray'}">\${t.commentCount}\${t.unreadComments > 0 ? ' (' + t.unreadComments + ' new)' : ''}</span>\` : '-'}</td>
-            <td>\${validUrl ? \`<a href="\${escapeHtml(validUrl)}" target="_blank" class="link-external" onclick="event.stopPropagation()">View</a>\` : '-'}</td>
             <td onclick="event.stopPropagation()">
               <div class="action-menu" data-trip-menu="\${escapeHtml(t.userId)}_\${escapeHtml(t.tripId)}">
                 <button class="action-menu-btn" onclick="toggleTripMenu('\${escapeHtml(t.userId)}', '\${escapeHtml(t.tripId)}')">Actions ▾</button>
@@ -1968,9 +2121,82 @@ Note: Also works on Claude iOS app (same steps in Settings)
       document.getElementById('tripDetailTitle').textContent = tripId;
 
       try {
-        const data = await api(\`/admin/trips/\${userId}/\${tripId}\`);
+        // Fetch trip data and costs in parallel
+        const [data, costs] = await Promise.all([
+          api(\`/admin/trips/\${userId}/\${tripId}\`),
+          api(\`/admin/trips/\${userId}/\${tripId}/costs\`).catch(() => null)
+        ]);
         const meta = data.data?.meta || {};
         const publishedUrl = meta.publishedUrl || (meta.tripId ? \`https://somotravel.us/\${meta.tripId}.html\` : null);
+
+        // Build cost section HTML
+        let costHtml = '';
+        if (costs && costs.operationCount > 0) {
+          // Per-tool breakdown
+          const byToolHtml = costs.byTool ? Object.entries(costs.byTool)
+            .sort((a, b) => b[1].cost - a[1].cost)
+            .map(([tool, stats]) => \`
+              <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #30363d;">
+                <span><code style="font-size:11px;">\${tool}</code></span>
+                <span style="color:#d29922;">\${stats.calls} calls · $\${stats.cost.toFixed(3)}</span>
+              </div>
+            \`).join('') : '';
+
+          // Recent operations
+          const opsHtml = costs.operations?.slice(0, 10).map(op => \`
+            <div style="padding:6px 0;border-bottom:1px solid #30363d;font-size:11px;">
+              <div style="display:flex;justify-content:space-between;">
+                <span>
+                  <code>\${op.tool}</code>
+                  \${op.success ? '<span class="badge badge-green" style="font-size:9px;margin-left:4px;">OK</span>' : '<span class="badge badge-red" style="font-size:9px;margin-left:4px;">ERR</span>'}
+                </span>
+                <span style="color:#8b949e;">\${formatTime(op.timestamp)}</span>
+              </div>
+              <div style="color:#8b949e;margin-top:2px;">
+                \${op.argsPreview ? \`<span title="\${escapeHtml(op.argsPreview)}">\${escapeHtml(op.argsPreview.substring(0, 60))}\${op.argsPreview.length > 60 ? '...' : ''}</span>\` : ''}
+              </div>
+              <div style="display:flex;gap:12px;margin-top:2px;color:#6e7681;">
+                <span>In: \${op.inputTokens || op.argsSize || 0} tok</span>
+                <span>Out: \${op.outputTokens || 0} tok</span>
+                <span>\${op.durationMs}ms</span>
+                <span style="color:#d29922;">$\${op.cost?.toFixed(4) || '0.0000'}</span>
+              </div>
+              \${op.error ? \`<div style="color:#f85149;margin-top:2px;">\${escapeHtml(op.error)}</div>\` : ''}
+            </div>
+          \`).join('') || '';
+
+          costHtml = \`
+            <div class="detail-section">
+              <h4>Cost Summary</h4>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;">
+                <div style="background:#161b22;padding:10px;border-radius:6px;text-align:center;">
+                  <div style="font-size:18px;color:#d29922;font-weight:600;">$\${costs.totalCost?.toFixed(3) || '0.000'}</div>
+                  <div style="font-size:11px;color:#8b949e;">Total Cost</div>
+                </div>
+                <div style="background:#161b22;padding:10px;border-radius:6px;text-align:center;">
+                  <div style="font-size:18px;color:#58a6ff;">\${costs.operationCount || 0}</div>
+                  <div style="font-size:11px;color:#8b949e;">Operations</div>
+                </div>
+                <div style="background:#161b22;padding:10px;border-radius:6px;text-align:center;">
+                  <div style="font-size:18px;color:#8b949e;">\${((costs.totalInputTokens || 0) + (costs.totalOutputTokens || 0)).toLocaleString()}</div>
+                  <div style="font-size:11px;color:#8b949e;">Total Tokens</div>
+                </div>
+              </div>
+              \${byToolHtml ? \`<h5 style="margin:12px 0 6px;font-size:12px;color:#8b949e;">By Tool</h5>\${byToolHtml}\` : ''}
+            </div>
+            <div class="detail-section">
+              <h4>Recent Operations (\${costs.operations?.length || 0})</h4>
+              \${opsHtml || '<p style="color:#666;">No operations recorded.</p>'}
+            </div>
+          \`;
+        } else {
+          costHtml = \`
+            <div class="detail-section">
+              <h4>Cost Tracking</h4>
+              <p style="color:#666;">No cost data recorded for this trip yet.</p>
+            </div>
+          \`;
+        }
 
         let html = \`<div class="detail-grid">
           <div>
@@ -1993,6 +2219,7 @@ Note: Also works on Claude iOS app (same steps in Settings)
               <h4>Published</h4>
               <a href="\${publishedUrl}" target="_blank" class="link-external">\${publishedUrl}</a>
             </div>\` : ''}
+            \${costHtml}
           </div>
           <div>
             <div class="detail-section">
@@ -2053,7 +2280,20 @@ Note: Also works on Claude iOS app (same steps in Settings)
       try {
         const result = await api(\`/admin/trips/\${userId}/\${tripId}/\${action}\`, { method: 'POST' });
         if (result.success) {
-          loadTrips();
+          // Update local cache immediately for responsive UI
+          const trip = tripsCache.find(t => t.userId === userId && t.tripId === tripId);
+          if (trip) {
+            if (action === 'toggle-test') {
+              trip.meta.isTest = result.isTest;
+            } else if (action === 'archive') {
+              trip.meta.isArchived = result.isArchived;
+            }
+            // Re-apply filters to update the display
+            applyTripFilters();
+          } else {
+            // Trip not in cache, do a full reload
+            loadTrips();
+          }
         } else {
           alert('Error: ' + (result.error || 'Unknown error'));
         }
@@ -4101,7 +4341,7 @@ Note: Also works on Claude iOS app (same steps in Settings)
 
     // ========== INIT ==========
     async function init() {
-      await Promise.all([loadStats(), loadUsers(), loadActivity(), loadTrips(), loadComments(), loadSupport(), loadAISettings(), loadBillingStats(), loadPromoCodes(), loadMessages(), loadKnowledgeStats(), loadPendingProposals(), loadApprovedKnowledge(), loadMaintenanceStatus(), loadMaintenanceHistory(), loadQATestStats(), loadQATestRuns(), loadQATestSessions(), loadQATestFAQs()]);
+      await Promise.all([loadCacheStatus(), loadStats(), loadUsers(), loadActivity(), loadTrips(), loadComments(), loadSupport(), loadAISettings(), loadBillingStats(), loadPromoCodes(), loadMessages(), loadKnowledgeStats(), loadPendingProposals(), loadApprovedKnowledge(), loadMaintenanceStatus(), loadMaintenanceHistory(), loadQATestStats(), loadQATestRuns(), loadQATestSessions(), loadQATestFAQs()]);
       renderRecentActivity();
       renderSubscriptions();
       initMissionControl();

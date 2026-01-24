@@ -4,9 +4,65 @@
 
 import type { McpToolHandler, UserProfile, Env } from '../types';
 import { recordToolCall, updateTripCost } from '../lib/metrics';
+import { markDashboardCacheStale } from '../lib/indexes';
 
 // Approximate token estimation: ~4 chars per token
 const CHARS_PER_TOKEN = 4;
+
+// All trip-related tools that should be tracked in per-trip cost records
+const TRIP_COST_TOOLS = [
+  // Write operations
+  'save_trip', 'patch_trip', 'delete_trip',
+  // Publishing
+  'preview_publish', 'publish_trip', 'trip_checklist',
+  // Read operations
+  'read_trip', 'read_trip_section',
+  // Validation & analysis
+  'validate_trip', 'analyze_profitability',
+  // Media
+  'prepare_image_upload', 'add_trip_image'
+];
+
+// Tools that mutate trip/comment data and should invalidate the dashboard cache
+const CACHE_INVALIDATING_TOOLS = [
+  'save_trip', 'patch_trip', 'delete_trip',
+  'dismiss_comments', 'add_comment',
+  'publish_trip', 'preview_publish'
+];
+
+// Sensitive fields to redact from args preview
+const SENSITIVE_FIELDS = ['password', 'token', 'secret', 'key', 'auth', 'credential', 'apiKey'];
+
+/**
+ * Generate a preview of args for logging, redacting sensitive fields
+ */
+function generateArgsPreview(args: Record<string, any>, maxLength: number = 200): string {
+  try {
+    // Create a shallow copy and redact sensitive fields
+    const redacted: Record<string, any> = {};
+    for (const [key, value] of Object.entries(args)) {
+      const lowerKey = key.toLowerCase();
+      if (SENSITIVE_FIELDS.some(f => lowerKey.includes(f))) {
+        redacted[key] = '[REDACTED]';
+      } else if (typeof value === 'string' && value.length > 100) {
+        // Truncate long string values in preview
+        redacted[key] = value.substring(0, 100) + '...';
+      } else if (typeof value === 'object' && value !== null) {
+        // For objects/arrays, just show type and length
+        redacted[key] = Array.isArray(value)
+          ? `[Array(${value.length})]`
+          : `{Object(${Object.keys(value).length} keys)}`;
+      } else {
+        redacted[key] = value;
+      }
+    }
+
+    const str = JSON.stringify(redacted);
+    return str.length > maxLength ? str.substring(0, maxLength) + '...' : str;
+  } catch {
+    return '{}';
+  }
+}
 
 // Claude pricing (per million tokens)
 const PRICING = {
@@ -243,21 +299,35 @@ export function withMetrics(toolName: string, handler: McpToolHandler): McpToolH
 
       // Update per-trip cost if this is a trip-related operation
       const tripId = args.tripId || args.trip_id;
-      if (tripId && ['save_trip', 'patch_trip', 'preview_publish', 'publish_trip', 'delete_trip'].includes(toolName)) {
+      if (tripId && TRIP_COST_TOOLS.includes(toolName)) {
         updateTripCost(
           env,
           keyPrefix,
           tripId,
           {
             tool: toolName,
+            argsPreview: generateArgsPreview(args),
+            argsSize: requestBytes || 0,
             inputTokens,
             outputTokens,
+            responseSize: responseBytes || 0,
             cost: costEstimate,
             durationMs,
+            success,
+            error: errorType,
             timestamp: new Date().toISOString()
           },
           ctx
         );
+      }
+
+      // Invalidate dashboard cache if this was a successful mutation
+      if (success && CACHE_INVALIDATING_TOOLS.includes(toolName)) {
+        const invalidateCache = markDashboardCacheStale(env);
+        if (ctx) {
+          ctx.waitUntil(invalidateCache);
+        }
+        // Don't await - fire and forget
       }
     }
   };

@@ -16,8 +16,8 @@ import {
   handleAddSampleTrips
 } from './user-tools';
 import { handleGetActivity } from './activity';
-import { handleGetStats, handleGetBillingStats } from './stats';
-import { handleListTrips, handleRebuildSummaries, handleGetTrip } from './trips';
+import { handleGetStats, handleGetBillingStats, handleGetCacheStatus, handleRefreshCache } from './stats';
+import { handleListTrips, handleRebuildSummaries, handleGetTrip, handleGetTripCosts } from './trips';
 import { handleListComments, handleDeleteComment, handleDeleteAllComments } from './comments';
 import { handleListSupport, handleUpdateSupport } from './support';
 import { handleListPromoCodes, handleCreatePromoCode, handleDeletePromoCode } from './promo-codes';
@@ -107,13 +107,16 @@ const adminHandlers: RouteHandler[] = [
   handleAddSampleTrips,
   // Activity
   handleGetActivity,
-  // Stats
+  // Stats & Cache
   handleGetStats,
   handleGetBillingStats,
+  handleGetCacheStatus,
+  handleRefreshCache,
   // Trips
   handleListTrips,
   handleRebuildSummaries,
   handleGetTrip,
+  handleGetTripCosts,
   // Comments
   handleListComments,
   handleDeleteComment,
@@ -234,9 +237,12 @@ export {
   handleGetActivity,
   handleGetStats,
   handleGetBillingStats,
+  handleGetCacheStatus,
+  handleRefreshCache,
   handleListTrips,
   handleRebuildSummaries,
   handleGetTrip,
+  handleGetTripCosts,
   handleListComments,
   handleDeleteComment,
   handleDeleteAllComments,

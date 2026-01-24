@@ -1,12 +1,14 @@
 /**
  * Admin Routes: Trip management
- * Handles: GET /admin/trips, GET /admin/trips/:userId/:tripId, POST /admin/trip-summaries/rebuild
+ * Handles: GET /admin/trips, GET /admin/trips/:userId/:tripId, GET /admin/trips/:userId/:tripId/costs, POST /admin/trip-summaries/rebuild
  */
 
 import type { Env, UserProfile, RouteHandler } from '../../types';
 import { listAllKeys, getKeyPrefix, getTripIndex } from '../../lib/kv';
 import { getValidAuthKeys } from '../../lib/auth';
 import { computeTripSummary } from '../../lib/trip-summary';
+import { getTripCost, type TripCostRecord } from '../../lib/metrics';
+import { getDashboardCache, getDashboardCacheStatus } from '../../lib/indexes';
 
 // Helper to get trip summary key
 function getTripSummaryKey(keyPrefix: string, tripId: string): string {
@@ -16,6 +18,60 @@ function getTripSummaryKey(keyPrefix: string, tripId: string): string {
 export const handleListTrips: RouteHandler = async (request, env, ctx, url, corsHeaders) => {
   if (url.pathname !== "/admin/trips" || request.method !== "GET") return null;
 
+  // Try to use dashboard cache first (fast path - 1 KV read)
+  const cache = await getDashboardCache(env);
+
+  if (cache) {
+    const cacheStatus = await getDashboardCacheStatus(env);
+
+    // Transform cached trip summaries to match expected format
+    const trips = cache.tripSummaries.map(t => ({
+      tripId: t.tripId,
+      userId: t.userId,
+      userName: t.userName,
+      agency: t.agency,
+      fullKey: `${t.userId}/${t.tripId}`,
+      meta: {
+        clientName: t.clientName,
+        destination: t.destination,
+        dates: t.dates,
+        phase: t.phase,
+        status: t.status,
+        created: t.created,
+        lastUpdated: t.lastUpdated,
+        lastPublished: t.lastPublished,
+        isTest: t.isTest,
+        isArchived: t.isArchived
+      },
+      travelers: t.travelerCount,
+      commentCount: t.commentCount,
+      unreadComments: t.unreadComments,
+      publishedUrl: t.publishedUrl,
+      hasItinerary: t.hasItinerary,
+      hasLodging: t.hasLodging,
+      hasTiers: t.hasTiers,
+      costs: t.totalCost > 0 ? {
+        totalCost: t.totalCost,
+        operationCount: t.operationCount,
+        lastUpdated: null
+      } : null
+    }));
+
+    return new Response(JSON.stringify({
+      trips,
+      total: trips.length,
+      _cache: {
+        updatedAt: cache.updatedAt,
+        isStale: cacheStatus.isStale,
+        staleness: cacheStatus.staleness,
+        ageMinutes: cacheStatus.ageMinutes
+      }
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+
+  // Fallback to full scan (slow path) if no cache exists
   const allTrips: any[] = [];
 
   // Build user map for both KV and legacy users
@@ -79,7 +135,11 @@ export const handleListTrips: RouteHandler = async (request, env, ctx, url, cors
           dates: tripData.meta?.dates || tripData.dates?.start || '',
           phase: tripData.meta?.phase || 'unknown',
           status: tripData.meta?.status || '',
-          lastUpdated: tripData.meta?.lastUpdated || ''
+          created: tripData.meta?.created || tripData.meta?.lastUpdated || '',
+          lastUpdated: tripData.meta?.lastUpdated || '',
+          lastPublished: tripData.meta?.lastPublished || tripData.meta?.publishedAt || null,
+          isTest: tripData.meta?.isTest || false,
+          isArchived: tripData.meta?.isArchived || false
         },
         travelers: tripData.travelers?.count || 0,
         commentCount: comments.length,
@@ -105,7 +165,11 @@ export const handleListTrips: RouteHandler = async (request, env, ctx, url, cors
     return dateB - dateA;
   });
 
-  return new Response(JSON.stringify({ trips: allTrips, total: allTrips.length }), {
+  return new Response(JSON.stringify({
+    trips: allTrips,
+    total: allTrips.length,
+    _cache: null // No cache available
+  }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" }
   });
 };
@@ -245,6 +309,42 @@ export const handleGetTrip: RouteHandler = async (request, env, ctx, url, corsHe
     data: tripData,
     comments: commentsData?.comments || [],
     activity: tripActivity
+  }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" }
+  });
+};
+
+export const handleGetTripCosts: RouteHandler = async (request, env, ctx, url, corsHeaders) => {
+  if (!url.pathname.match(/^\/admin\/trips\/[^/]+\/[^/]+\/costs$/) || request.method !== "GET") return null;
+
+  const parts = url.pathname.split('/');
+  parts.pop();  // Remove 'costs'
+  const tripId = parts.pop();
+  const userId = parts.pop();
+  const keyPrefix = `${userId}/`;
+
+  const costRecord = await getTripCost(env, keyPrefix, tripId!);
+
+  if (!costRecord) {
+    return new Response(JSON.stringify({
+      tripId,
+      userId,
+      totalCost: 0,
+      totalInputTokens: 0,
+      totalOutputTokens: 0,
+      operationCount: 0,
+      operations: [],
+      byTool: {},
+      lastUpdated: null,
+      message: "No cost data recorded for this trip yet"
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+
+  return new Response(JSON.stringify({
+    userId,
+    ...costRecord
   }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" }
   });
